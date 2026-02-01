@@ -30,9 +30,7 @@
   const SNOW_COUNT = 80;
 
   const ASSET_ROOT = "../assets/";
-  const ASSET_BASE = `${ASSET_ROOT}Pixel Art Video Game Barron Nina/`;
-  const asset = (name) => encodeURI(`${ASSET_BASE}${name}`);
-  const assetRoot = (name) => encodeURI(`${ASSET_ROOT}${name}`);
+  const asset = (name) => encodeURI(`${ASSET_ROOT}${name}`);
   const rootFile = (name) => encodeURI(`../${name}`);
 
   class MeetingScene extends Phaser.Scene {
@@ -70,7 +68,7 @@
 
       this.load.image("far", asset("far-bg.png"));
       this.load.image("mid", asset("mid-bg.png"));
-      this.load.image("near", assetRoot("bg-near.png"));
+      this.load.image("near", asset("bg-near.png"));
       this.load.image("barron", asset("barron-v1.png"));
       this.load.audio(
         "bgm",
