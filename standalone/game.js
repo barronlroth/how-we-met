@@ -2,12 +2,14 @@
 (() => {
   const WIDTH = 640;
   const HEIGHT = 360;
-  const FLOOR_HEIGHT = 40;
+  const FLOOR_HEIGHT = 32;
   const GROUND_Y = HEIGHT - FLOOR_HEIGHT;
   const WALK_SPEED = 140;
   const MEET_DISTANCE = 2000;
-  const ASSET_BASE = "../assets/Pixel Art Video Game Barron Nina/";
+  const ASSET_ROOT = "../assets/";
+  const ASSET_BASE = `${ASSET_ROOT}Pixel Art Video Game Barron Nina/`;
   const asset = (name) => encodeURI(`${ASSET_BASE}${name}`);
+  const assetRoot = (name) => encodeURI(`${ASSET_ROOT}${name}`);
 
   class MeetingScene extends Phaser.Scene {
     preload() {
@@ -44,6 +46,7 @@
 
       this.load.image("far", asset("far-bg.png"));
       this.load.image("mid", asset("mid-bg.png"));
+      this.load.image("near", assetRoot("bg-near.png"));
       this.load.image("barron", asset("barron-v1.png"));
     }
 
@@ -54,11 +57,9 @@
       this.far = this.add.tileSprite(0, 0, WIDTH, HEIGHT, "far").setOrigin(0, 0);
       this.horizon = this.add.tileSprite(0, 0, WIDTH, HEIGHT, "mid").setOrigin(0, 0);
 
-      const streetHeight = Math.round(HEIGHT * 0.4);
-      this.street = this.add
-        .tileSprite(0, HEIGHT - streetHeight, WIDTH, streetHeight, "mid")
-        .setOrigin(0, 0);
-      this.street.tilePositionY = -Math.round(HEIGHT * 0.6);
+      const nearHeight = HEIGHT;
+      const nearY = HEIGHT - FLOOR_HEIGHT - nearHeight;
+      this.near = this.add.tileSprite(0, nearY, WIDTH, nearHeight, "near").setOrigin(0, 0);
 
       this.floor = this.add
         .tileSprite(0, HEIGHT - FLOOR_HEIGHT, WIDTH, FLOOR_HEIGHT, "floor")
@@ -102,7 +103,7 @@
 
         this.far.tilePositionX += dx * 0.1;
         this.horizon.tilePositionX += dx * 0.3;
-        this.street.tilePositionX += dx * 0.6;
+        this.near.tilePositionX += dx * 0.6;
         this.floor.tilePositionX += dx;
 
         if (!this.nina.visible && this.distance >= MEET_DISTANCE) {
