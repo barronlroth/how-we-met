@@ -29,9 +29,9 @@
   const INVINCIBLE_MS = 800;
   const SNOW_COUNT = 80;
 
-  const ASSET_ROOT = "../assets/";
+  const ASSET_ROOT = "assets/";
   const asset = (name) => encodeURI(`${ASSET_ROOT}${name}`);
-  const rootFile = (name) => encodeURI(`../${name}`);
+  const rootFile = (name) => encodeURI(`${name}`);
 
   class MeetingScene extends Phaser.Scene {
     preload() {

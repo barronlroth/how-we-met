@@ -9,7 +9,7 @@ A small standalone Phaser prototype for the "Meeting Nina" walking-simulator sce
 - Distance-triggered meet event with a simple message overlay
 
 ## Project layout
-- `standalone/` - The prototype page and Phaser scene
+- `index.html` / `styles.css` / `game.js` - The prototype page and Phaser scene
 - `assets/` - Pixel art backgrounds and character images
 
 ## Run locally
@@ -22,7 +22,7 @@ python3 -m http.server
 Then open:
 
 ```
-http://localhost:8000/standalone/
+http://localhost:8000/
 ```
 
 ## Controls
