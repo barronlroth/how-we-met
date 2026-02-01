@@ -70,6 +70,7 @@
       this.load.image("mid", asset("mid-bg.png"));
       this.load.image("near", asset("bg-near.png"));
       this.load.image("barron", asset("barron-v1.png"));
+      this.load.image("nina", asset("nina.png"));
       this.load.audio(
         "bgm",
         [
@@ -82,7 +83,6 @@
 
     create() {
       this.createFloorTexture();
-      this.createNinaTexture();
       this.createSnowTexture();
       this.createSnowballTexture();
       this.createRaccoonTexture();
@@ -458,22 +458,6 @@
       g.fillRect(24, 6, 2, 4);
 
       g.generateTexture("raccoon", width, height);
-      g.destroy();
-    }
-
-    createNinaTexture() {
-      const g = this.add.graphics();
-      const width = 26;
-      const height = 62;
-
-      g.fillStyle(0xff7aa2, 1);
-      g.fillRoundedRect(0, 8, width, height - 8, 6);
-      g.fillStyle(0xffc1d6, 1);
-      g.fillRoundedRect(4, 0, width - 8, 16, 6);
-      g.fillStyle(0xffffff, 1);
-      g.fillRect(6, 26, width - 12, 6);
-
-      g.generateTexture("nina", width, height);
       g.destroy();
     }
 
