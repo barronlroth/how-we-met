@@ -74,7 +74,7 @@
         "bgm",
         [
           rootFile(
-            "Drake MEGA-MIX (8 Bit Cover Compilation) [Tribute to Drake] - 8 Bit Universe-low.mp3"
+            "Passionfruit [8 Bit Tribute to Drake] - 8 Bit Universe-64k-stereo.mp3"
           ),
         ]
       );
