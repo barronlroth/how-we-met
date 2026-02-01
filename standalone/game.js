@@ -10,6 +10,7 @@
   const ASSET_BASE = `${ASSET_ROOT}Pixel Art Video Game Barron Nina/`;
   const asset = (name) => encodeURI(`${ASSET_BASE}${name}`);
   const assetRoot = (name) => encodeURI(`${ASSET_ROOT}${name}`);
+  const rootFile = (name) => encodeURI(`../${name}`);
 
   class MeetingScene extends Phaser.Scene {
     preload() {
@@ -48,6 +49,10 @@
       this.load.image("mid", asset("mid-bg.png"));
       this.load.image("near", assetRoot("bg-near.png"));
       this.load.image("barron", asset("barron-v1.png"));
+      this.load.audio(
+        "bgm",
+        [rootFile("Nokia [8 Bit Tribute to Drake] - 8 Bit Universe-low.mp3")]
+      );
     }
 
     create() {
@@ -73,6 +78,17 @@
       this.nina.setDepth(5);
 
       this.messageBox = this.createMessageBox();
+
+      this.musicStarted = false;
+      this.music = this.sound.add("bgm", { loop: true, volume: 0.35 });
+      this.startMusic = () => {
+        if (this.musicStarted) return;
+        this.musicStarted = true;
+        this.music.play();
+      };
+
+      this.input.once("pointerdown", this.startMusic);
+      this.input.keyboard.once("keydown", this.startMusic);
 
       this.pointerDown = false;
       this.distance = 0;
