@@ -51,7 +51,7 @@
       this.load.image("barron", asset("barron-v1.png"));
       this.load.audio(
         "bgm",
-        [rootFile("Nokia [8 Bit Tribute to Drake] - 8 Bit Universe-low.mp3")]
+        [rootFile("Drake MEGA-MIX (8 Bit Cover Compilation) [Tribute to Drake] - 8 Bit Universe-low.mp3")]
       );
     }
 
