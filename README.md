@@ -1,6 +1,6 @@
 # Meeting Nina Prototype
 
-A small standalone Phaser prototype for the "Meeting Nina" walking-simulator scene.
+A small Phaser prototype for the "Meeting Nina" walking-simulator scene.
 
 ## What it is
 - 640x360 pixel-art canvas scaled to fit the container
@@ -30,7 +30,7 @@ http://localhost:8000/
 - Press and hold (mouse/touch) to walk
 
 ## Tuning
-Edit `standalone/game.js`:
+Edit `game.js`:
 - `WALK_SPEED` - walking speed
 - `MEET_DISTANCE` - distance before Nina appears
 - Parallax multipliers in `update()`
