@@ -20,8 +20,10 @@
   const RACCOON_SPEED = 90;
   const RACCOON_SPAWN_MS = 3200;
 
-  const HAZE_COLOR = 0x0b1d33;
-  const HAZE_ALPHA = 0.2;
+  const HAZE_COLOR = 0x3e6bc0;
+  const HAZE_ALPHA = 0.28;
+  const HAZE_MID_COLOR = 0x2c80e5;
+  const HAZE_MID_ALPHA = 0.32;
 
   const MAX_HEALTH = 3;
   const INVINCIBLE_MS = 800;
@@ -92,6 +94,7 @@
         .rectangle(0, 0, WIDTH, HEIGHT, HAZE_COLOR, HAZE_ALPHA)
         .setOrigin(0, 0)
         .setDepth(1);
+      this.hazeFar.setBlendMode(Phaser.BlendModes.SCREEN);
 
       this.horizon = this.add
         .tileSprite(0, 0, WIDTH, HEIGHT, "mid")
@@ -99,9 +102,10 @@
         .setDepth(2);
 
       this.hazeMid = this.add
-        .rectangle(0, 0, WIDTH, HEIGHT, HAZE_COLOR, HAZE_ALPHA)
+        .rectangle(0, 0, WIDTH, HEIGHT, HAZE_MID_COLOR, HAZE_MID_ALPHA)
         .setOrigin(0, 0)
         .setDepth(3);
+      this.hazeMid.setBlendMode(Phaser.BlendModes.DIFFERENCE);
 
       const nearHeight = HEIGHT;
       const nearY = HEIGHT - FLOOR_HEIGHT - nearHeight;
