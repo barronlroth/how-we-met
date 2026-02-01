@@ -4,8 +4,29 @@
   const HEIGHT = 360;
   const FLOOR_HEIGHT = 32;
   const GROUND_Y = HEIGHT - FLOOR_HEIGHT;
-  const WALK_SPEED = 140;
+  const PLAYER_X = 160;
+
+  const MOVE_SPEED = 140;
   const MEET_DISTANCE = 2000;
+
+  const GRAVITY = 1200;
+  const JUMP_VELOCITY = 420;
+
+  const SNOWBALL_SPEED = 260;
+  const SNOWBALL_ARC = 260;
+  const SNOWBALL_GRAVITY = 800;
+  const SNOWBALL_COOLDOWN_MS = 220;
+
+  const RACCOON_SPEED = 90;
+  const RACCOON_SPAWN_MS = 3200;
+
+  const HAZE_COLOR = 0x0b1d33;
+  const HAZE_ALPHA = 0.2;
+
+  const MAX_HEALTH = 3;
+  const INVINCIBLE_MS = 800;
+  const SNOW_COUNT = 80;
+
   const ASSET_ROOT = "../assets/";
   const ASSET_BASE = `${ASSET_ROOT}Pixel Art Video Game Barron Nina/`;
   const asset = (name) => encodeURI(`${ASSET_BASE}${name}`);
@@ -51,33 +72,60 @@
       this.load.image("barron", asset("barron-v1.png"));
       this.load.audio(
         "bgm",
-        [rootFile("Drake MEGA-MIX (8 Bit Cover Compilation) [Tribute to Drake] - 8 Bit Universe-low.mp3")]
+        [
+          rootFile(
+            "Drake MEGA-MIX (8 Bit Cover Compilation) [Tribute to Drake] - 8 Bit Universe-low.mp3"
+          ),
+        ]
       );
     }
 
     create() {
       this.createFloorTexture();
       this.createNinaTexture();
+      this.createSnowTexture();
+      this.createSnowballTexture();
+      this.createRaccoonTexture();
 
-      this.far = this.add.tileSprite(0, 0, WIDTH, HEIGHT, "far").setOrigin(0, 0);
-      this.horizon = this.add.tileSprite(0, 0, WIDTH, HEIGHT, "mid").setOrigin(0, 0);
+      this.far = this.add.tileSprite(0, 0, WIDTH, HEIGHT, "far").setOrigin(0, 0).setDepth(0);
+      this.hazeFar = this.add
+        .rectangle(0, 0, WIDTH, HEIGHT, HAZE_COLOR, HAZE_ALPHA)
+        .setOrigin(0, 0)
+        .setDepth(1);
+
+      this.horizon = this.add
+        .tileSprite(0, 0, WIDTH, HEIGHT, "mid")
+        .setOrigin(0, 0)
+        .setDepth(2);
+
+      this.hazeMid = this.add
+        .rectangle(0, 0, WIDTH, HEIGHT, HAZE_COLOR, HAZE_ALPHA)
+        .setOrigin(0, 0)
+        .setDepth(3);
 
       const nearHeight = HEIGHT;
       const nearY = HEIGHT - FLOOR_HEIGHT - nearHeight;
-      this.near = this.add.tileSprite(0, nearY, WIDTH, nearHeight, "near").setOrigin(0, 0);
+      this.near = this.add
+        .tileSprite(0, nearY, WIDTH, nearHeight, "near")
+        .setOrigin(0, 0)
+        .setDepth(4);
 
       this.floor = this.add
         .tileSprite(0, HEIGHT - FLOOR_HEIGHT, WIDTH, FLOOR_HEIGHT, "floor")
-        .setOrigin(0, 0);
+        .setOrigin(0, 0)
+        .setDepth(6);
 
-      this.barron = this.add.sprite(160, GROUND_Y, "barron").setOrigin(0.5, 1);
-      this.barron.setDepth(5);
+      this.barron = this.add.sprite(PLAYER_X, GROUND_Y, "barron").setOrigin(0.5, 1);
+      this.barron.setDepth(7);
 
       this.nina = this.add.sprite(WIDTH + 60, GROUND_Y, "nina").setOrigin(0.5, 1);
       this.nina.setVisible(false);
-      this.nina.setDepth(5);
+      this.nina.setDepth(7);
 
       this.messageBox = this.createMessageBox();
+      this.gameOverText = this.createGameOverText();
+
+      this.createSnowField();
 
       this.musicStarted = false;
       this.music = this.sound.add("bgm", { loop: true, volume: 0.35 });
@@ -94,7 +142,40 @@
       this.distance = 0;
       this.met = false;
 
+      this.barronVy = 0;
+      this.barronGrounded = true;
+      this.facing = 1;
+
+      this.snowballs = [];
+      this.lastSnowballAt = 0;
+
+      this.raccoons = [];
+      this.raccoonTimer = this.time.addEvent({
+        delay: RACCOON_SPAWN_MS,
+        loop: true,
+        callback: this.spawnRaccoon,
+        callbackScope: this,
+      });
+
+      this.health = MAX_HEALTH;
+      this.invincibleUntil = 0;
+      this.gameOver = false;
+      this.healthText = this.add
+        .text(16, 16, `Health: ${this.health}`, {
+          fontFamily: "Arial, sans-serif",
+          fontSize: "14px",
+          color: "#e6eefc",
+        })
+        .setDepth(12);
+
       this.cursors = this.input.keyboard.createCursorKeys();
+      this.keys = this.input.keyboard.addKeys({
+        w: Phaser.Input.Keyboard.KeyCodes.W,
+        a: Phaser.Input.Keyboard.KeyCodes.A,
+        d: Phaser.Input.Keyboard.KeyCodes.D,
+        space: Phaser.Input.Keyboard.KeyCodes.SPACE,
+      });
+
       this.input.on("pointerdown", () => {
         this.pointerDown = true;
       });
@@ -111,16 +192,16 @@
 
     update(_time, delta) {
       const dt = delta / 1000;
-      const walking = (this.cursors.right && this.cursors.right.isDown) || this.pointerDown;
 
-      if (!this.met && walking) {
-        const dx = WALK_SPEED * dt;
-        this.distance += dx;
+      this.updateSnow(dt);
 
-        this.far.tilePositionX += dx * 0.1;
-        this.horizon.tilePositionX += dx * 0.3;
-        this.near.tilePositionX += dx * 0.6;
-        this.floor.tilePositionX += dx;
+      const moveDir = this.getMoveDir();
+      if (!this.gameOver && !this.met && moveDir !== 0) {
+        const dx = MOVE_SPEED * dt * moveDir;
+        this.scrollWorld(dx);
+        if (moveDir > 0) {
+          this.distance += dx;
+        }
 
         if (!this.nina.visible && this.distance >= MEET_DISTANCE) {
           this.nina.setVisible(true);
@@ -131,9 +212,184 @@
         }
       }
 
+      const jumpPressed =
+        Phaser.Input.Keyboard.JustDown(this.cursors.up) ||
+        Phaser.Input.Keyboard.JustDown(this.keys.w);
+
+      if (!this.gameOver && jumpPressed && this.barronGrounded) {
+        this.barronVy = -JUMP_VELOCITY;
+        this.barronGrounded = false;
+      }
+
+      if (!this.barronGrounded) {
+        this.barronVy += GRAVITY * dt;
+        this.barron.y += this.barronVy * dt;
+        if (this.barron.y >= GROUND_Y) {
+          this.barron.y = GROUND_Y;
+          this.barronVy = 0;
+          this.barronGrounded = true;
+        }
+      }
+
+      const throwPressed = Phaser.Input.Keyboard.JustDown(this.keys.space);
+      if (!this.gameOver && throwPressed) {
+        this.throwSnowball();
+      }
+
+      this.updateSnowballs(dt);
+      this.updateRaccoons(dt);
+
       if (!this.met && this.nina.visible && this.checkMeet()) {
         this.triggerMeet();
       }
+    }
+
+    getMoveDir() {
+      const moveRight =
+        (this.cursors.right && this.cursors.right.isDown) || this.keys.d.isDown || this.pointerDown;
+      const moveLeft = (this.cursors.left && this.cursors.left.isDown) || this.keys.a.isDown;
+
+      if (moveRight === moveLeft) {
+        return 0;
+      }
+
+      const dir = moveRight ? 1 : -1;
+      this.facing = dir;
+      return dir;
+    }
+
+    scrollWorld(dx) {
+      this.far.tilePositionX += dx * 0.1;
+      this.horizon.tilePositionX += dx * 0.3;
+      this.near.tilePositionX += dx * 0.6;
+      this.floor.tilePositionX += dx;
+    }
+
+    updateSnow(dt) {
+      for (const flake of this.snowflakes) {
+        flake.sprite.y += flake.speed * dt;
+        flake.sprite.x += flake.drift * dt;
+
+        if (flake.sprite.y > HEIGHT + 4) {
+          flake.sprite.y = -4;
+          flake.sprite.x = Phaser.Math.Between(0, WIDTH);
+        }
+
+        if (flake.sprite.x < -4) {
+          flake.sprite.x = WIDTH + 4;
+        } else if (flake.sprite.x > WIDTH + 4) {
+          flake.sprite.x = -4;
+        }
+      }
+    }
+
+    throwSnowball() {
+      const now = this.time.now;
+      if (now - this.lastSnowballAt < SNOWBALL_COOLDOWN_MS) return;
+      this.lastSnowballAt = now;
+
+      const spawnX = this.barron.x + this.facing * 12;
+      const spawnY = this.barron.y - 26;
+      const sprite = this.add.sprite(spawnX, spawnY, "snowball").setDepth(8);
+      this.snowballs.push({
+        sprite,
+        vx: this.facing * SNOWBALL_SPEED,
+        vy: -SNOWBALL_ARC,
+      });
+    }
+
+    updateSnowballs(dt) {
+      for (let i = this.snowballs.length - 1; i >= 0; i -= 1) {
+        const snowball = this.snowballs[i];
+        snowball.vy += SNOWBALL_GRAVITY * dt;
+        snowball.sprite.x += snowball.vx * dt;
+        snowball.sprite.y += snowball.vy * dt;
+
+        if (
+          snowball.sprite.x < -20 ||
+          snowball.sprite.x > WIDTH + 20 ||
+          snowball.sprite.y > HEIGHT + 20
+        ) {
+          snowball.sprite.destroy();
+          this.snowballs.splice(i, 1);
+          continue;
+        }
+
+        for (let j = this.raccoons.length - 1; j >= 0; j -= 1) {
+          const raccoon = this.raccoons[j];
+          if (!raccoon.alive) continue;
+          if (this.overlaps(snowball.sprite, raccoon.sprite)) {
+            snowball.sprite.destroy();
+            this.snowballs.splice(i, 1);
+            this.killRaccoon(j);
+            break;
+          }
+        }
+      }
+    }
+
+    spawnRaccoon() {
+      if (this.gameOver) return;
+      const sprite = this.add.sprite(WIDTH + 40, GROUND_Y, "raccoon").setOrigin(0.5, 1);
+      sprite.setDepth(6);
+      this.raccoons.push({ sprite, alive: true });
+    }
+
+    updateRaccoons(dt) {
+      const playerBounds = this.barron.getBounds();
+
+      for (let i = this.raccoons.length - 1; i >= 0; i -= 1) {
+        const raccoon = this.raccoons[i];
+        raccoon.sprite.x -= RACCOON_SPEED * dt;
+
+        if (raccoon.sprite.x < -60) {
+          raccoon.sprite.destroy();
+          this.raccoons.splice(i, 1);
+          continue;
+        }
+
+        if (!raccoon.alive) continue;
+
+        if (Phaser.Geom.Intersects.RectangleToRectangle(playerBounds, raccoon.sprite.getBounds())) {
+          const raccoonBounds = raccoon.sprite.getBounds();
+          const stompHit = this.barronVy > 0 && playerBounds.bottom <= raccoonBounds.top + 8;
+          if (stompHit) {
+            this.killRaccoon(i);
+            this.barronVy = -JUMP_VELOCITY * 0.6;
+            this.barronGrounded = false;
+          } else {
+            this.damagePlayer();
+          }
+        }
+      }
+    }
+
+    killRaccoon(index) {
+      const raccoon = this.raccoons[index];
+      if (!raccoon) return;
+      raccoon.alive = false;
+      raccoon.sprite.destroy();
+      this.raccoons.splice(index, 1);
+    }
+
+    damagePlayer() {
+      if (this.time.now < this.invincibleUntil || this.gameOver) return;
+      this.health = Math.max(0, this.health - 1);
+      this.healthText.setText(`Health: ${this.health}`);
+      this.invincibleUntil = this.time.now + INVINCIBLE_MS;
+      this.barron.setAlpha(0.6);
+      this.time.delayedCall(INVINCIBLE_MS, () => {
+        this.barron.setAlpha(1);
+      });
+
+      if (this.health <= 0) {
+        this.gameOver = true;
+        this.gameOverText.setVisible(true);
+      }
+    }
+
+    overlaps(a, b) {
+      return Phaser.Geom.Intersects.RectangleToRectangle(a.getBounds(), b.getBounds());
     }
 
     checkMeet() {
@@ -166,6 +422,43 @@
       g.destroy();
     }
 
+    createSnowTexture() {
+      const g = this.add.graphics();
+      g.fillStyle(0xffffff, 1);
+      g.fillRect(0, 0, 2, 2);
+      g.generateTexture("snow", 2, 2);
+      g.destroy();
+    }
+
+    createSnowballTexture() {
+      const g = this.add.graphics();
+      g.fillStyle(0xffffff, 1);
+      g.fillRect(0, 0, 3, 3);
+      g.generateTexture("snowball", 3, 3);
+      g.destroy();
+    }
+
+    createRaccoonTexture() {
+      const g = this.add.graphics();
+      const width = 28;
+      const height = 16;
+
+      g.fillStyle(0x2f2f2f, 1);
+      g.fillRoundedRect(0, 4, width, 10, 3);
+      g.fillStyle(0x4f4f4f, 1);
+      g.fillRoundedRect(4, 0, 10, 8, 2);
+      g.fillStyle(0x1a1a1a, 1);
+      g.fillRect(6, 4, 6, 2);
+      g.fillStyle(0x6f6f6f, 1);
+      g.fillRect(18, 6, 8, 4);
+      g.fillStyle(0x3a3a3a, 1);
+      g.fillRect(20, 6, 2, 4);
+      g.fillRect(24, 6, 2, 4);
+
+      g.generateTexture("raccoon", width, height);
+      g.destroy();
+    }
+
     createNinaTexture() {
       const g = this.add.graphics();
       const width = 26;
@@ -180,6 +473,20 @@
 
       g.generateTexture("nina", width, height);
       g.destroy();
+    }
+
+    createSnowField() {
+      this.snowflakes = [];
+      for (let i = 0; i < SNOW_COUNT; i += 1) {
+        const sprite = this.add
+          .image(Phaser.Math.Between(0, WIDTH), Phaser.Math.Between(0, HEIGHT), "snow")
+          .setDepth(9);
+        this.snowflakes.push({
+          sprite,
+          speed: Phaser.Math.Between(20, 60),
+          drift: Phaser.Math.Between(-12, 12),
+        });
+      }
     }
 
     createMessageBox() {
@@ -207,6 +514,19 @@
       container.setDepth(10);
       container.setVisible(false);
       return container;
+    }
+
+    createGameOverText() {
+      return this.add
+        .text(WIDTH / 2, HEIGHT / 2, "Raccoon got you!", {
+          fontFamily: "Arial, sans-serif",
+          fontSize: "18px",
+          color: "#ffe6e6",
+          align: "center",
+        })
+        .setOrigin(0.5)
+        .setDepth(12)
+        .setVisible(false);
     }
   }
 
