@@ -216,18 +216,25 @@
         space: Phaser.Input.Keyboard.KeyCodes.SPACE,
       });
 
-      this.input.on("pointerdown", () => {
-        this.pointerDown = true;
-      });
-      this.input.on("pointerup", () => {
+      // Touch state
+      this.touchLeft = false;
+      this.touchRight = false;
+      this.touchJump = false;
+      this.touchThrow = false;
+
+      // Detect touch device and create on-screen controls
+      this.isTouchDevice = this.sys.game.device.input.touch;
+      if (this.isTouchDevice) {
+        this.input.addPointer(2); // support 3 simultaneous touches
+        this.createTouchControls();
+      } else {
+        // Desktop: tap-to-walk fallback
         this.pointerDown = false;
-      });
-      this.input.on("pointerout", () => {
-        this.pointerDown = false;
-      });
-      this.input.on("gameout", () => {
-        this.pointerDown = false;
-      });
+        this.input.on("pointerdown", () => { this.pointerDown = true; });
+        this.input.on("pointerup", () => { this.pointerDown = false; });
+        this.input.on("pointerout", () => { this.pointerDown = false; });
+        this.input.on("gameout", () => { this.pointerDown = false; });
+      }
     }
 
     update(_time, delta) {
@@ -266,9 +273,13 @@
         this.barron.setFrame(0);
       }
 
+      // Jump: keyboard or touch (edge-detect touch)
+      const touchJumpJust = this.touchJump && !this._prevTouchJump;
+      this._prevTouchJump = this.touchJump;
       const jumpPressed =
         Phaser.Input.Keyboard.JustDown(this.cursors.up) ||
-        Phaser.Input.Keyboard.JustDown(this.keys.w);
+        Phaser.Input.Keyboard.JustDown(this.keys.w) ||
+        touchJumpJust;
 
       if (!this.gameOver && jumpPressed && this.barronGrounded) {
         this.barronVy = -JUMP_VELOCITY;
@@ -285,7 +296,10 @@
         }
       }
 
-      const throwPressed = Phaser.Input.Keyboard.JustDown(this.keys.space);
+      // Throw: keyboard or touch (edge-detect touch)
+      const touchThrowJust = this.touchThrow && !this._prevTouchThrow;
+      this._prevTouchThrow = this.touchThrow;
+      const throwPressed = Phaser.Input.Keyboard.JustDown(this.keys.space) || touchThrowJust;
       if (!this.gameOver && throwPressed) {
         this.throwSnowball();
       }
@@ -300,8 +314,8 @@
 
     getMoveDir() {
       const moveRight =
-        (this.cursors.right && this.cursors.right.isDown) || this.keys.d.isDown || this.pointerDown;
-      const moveLeft = (this.cursors.left && this.cursors.left.isDown) || this.keys.a.isDown;
+        (this.cursors.right && this.cursors.right.isDown) || this.keys.d.isDown || this.pointerDown || this.touchRight;
+      const moveLeft = (this.cursors.left && this.cursors.left.isDown) || this.keys.a.isDown || this.touchLeft;
 
       if (moveRight === moveLeft) {
         return 0;
@@ -496,6 +510,88 @@
       this.messageBox.setVisible(true);
     }
 
+    createTouchControls() {
+      const btnSize = 48;
+      const pad = 12;
+      const y = HEIGHT - btnSize - pad;
+      const alpha = 0.3;
+      const activeAlpha = 0.6;
+      const depth = 20;
+
+      const makeBtn = (x, yPos, label) => {
+        const bg = this.add.graphics();
+        bg.fillStyle(0xffffff, alpha);
+        bg.fillRoundedRect(0, 0, btnSize, btnSize, 10);
+        const txt = this.add.text(btnSize / 2, btnSize / 2, label, {
+          fontFamily: "Arial, sans-serif",
+          fontSize: "20px",
+          color: "#ffffff",
+        }).setOrigin(0.5);
+        const container = this.add.container(x, yPos, [bg, txt]).setDepth(depth);
+        container.setSize(btnSize, btnSize);
+        container.setInteractive();
+        container._bg = bg;
+        container._alpha = alpha;
+        container._activeAlpha = activeAlpha;
+        return container;
+      };
+
+      // Left side: ◀ ▶
+      const leftBtn = makeBtn(pad, y, "◀");
+      const rightBtn = makeBtn(pad + btnSize + pad, y, "▶");
+
+      // Right side: Jump + Throw
+      const throwBtn = makeBtn(WIDTH - pad - btnSize, y, "❄");
+      const jumpBtn = makeBtn(WIDTH - pad * 2 - btnSize * 2, y, "▲");
+
+      const bindBtn = (btn, prop) => {
+        btn.on("pointerdown", () => {
+          this[prop] = true;
+          btn._bg.clear();
+          btn._bg.fillStyle(0xffffff, btn._activeAlpha);
+          btn._bg.fillRoundedRect(0, 0, btnSize, btnSize, 10);
+        });
+        btn.on("pointerup", () => {
+          this[prop] = false;
+          btn._bg.clear();
+          btn._bg.fillStyle(0xffffff, btn._alpha);
+          btn._bg.fillRoundedRect(0, 0, btnSize, btnSize, 10);
+        });
+        btn.on("pointerout", () => {
+          this[prop] = false;
+          btn._bg.clear();
+          btn._bg.fillStyle(0xffffff, btn._alpha);
+          btn._bg.fillRoundedRect(0, 0, btnSize, btnSize, 10);
+        });
+      };
+
+      bindBtn(leftBtn, "touchLeft");
+      bindBtn(rightBtn, "touchRight");
+      bindBtn(jumpBtn, "touchJump");
+      bindBtn(throwBtn, "touchThrow");
+
+      // Fullscreen button (top-right)
+      const fsBg = this.add.graphics();
+      fsBg.fillStyle(0x000000, 0.5);
+      fsBg.fillRoundedRect(0, 0, 80, 28, 8);
+      const fsTxt = this.add.text(40, 14, "⛶ PLAY", {
+        fontFamily: "Arial, sans-serif",
+        fontSize: "12px",
+        color: "#ffffff",
+        fontStyle: "bold",
+      }).setOrigin(0.5);
+      const fsBtn = this.add.container(WIDTH - 88, 8, [fsBg, fsTxt]).setDepth(depth);
+      fsBtn.setSize(80, 28);
+      fsBtn.setInteractive();
+      fsBtn.on("pointerdown", () => {
+        this.scale.startFullscreen();
+      });
+
+      // Track jump/throw edge detection for touch
+      this._prevTouchJump = false;
+      this._prevTouchThrow = false;
+    }
+
     createFloorTexture() {
       const g = this.add.graphics();
       const tileWidth = 32;
@@ -591,6 +687,10 @@
     scale: {
       mode: Phaser.Scale.FIT,
       autoCenter: Phaser.Scale.CENTER_BOTH,
+      fullscreenTarget: "game",
+    },
+    input: {
+      activePointers: 3,
     },
     scene: [MeetingScene],
   };
