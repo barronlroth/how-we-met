@@ -143,7 +143,7 @@
       });
       this.anims.create({
         key: "barron-throw",
-        frames: this.anims.generateFrameNumbers("barron", { start: 6, end: 11 }),
+        frames: this.anims.generateFrameNumbers("barron", { start: 6, end: 10 }),
         frameRate: 10,
         repeat: 0,
       });
@@ -262,6 +262,7 @@
       if (!this.throwing && moveDir !== 0) {
         this.barron.anims.play("barron-run", true);
       } else if (!this.throwing && moveDir === 0) {
+        this.barron.anims.stop();
         this.barron.setFrame(0);
       }
 
@@ -348,6 +349,7 @@
         if (this.getMoveDir() !== 0) {
           this.barron.anims.play("barron-run", true);
         } else {
+          this.barron.anims.stop();
           this.barron.setFrame(0);
         }
       });
