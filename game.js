@@ -81,7 +81,10 @@
         frameWidth: 64,
         frameHeight: 64,
       });
-      this.load.image("snowball", asset("snowball-projectile.png"));
+      this.load.spritesheet("snowball", asset("snowball-projectile.png"), {
+        frameWidth: 18,
+        frameHeight: 10,
+      });
       this.load.audio(
         "bgm",
         [
@@ -154,6 +157,12 @@
         key: "raccoon-run",
         frames: this.anims.generateFrameNumbers("raccoon", { start: 0, end: 5 }),
         frameRate: 10,
+        repeat: -1,
+      });
+      this.anims.create({
+        key: "snowball-fly",
+        frames: this.anims.generateFrameNumbers("snowball", { start: 0, end: 5 }),
+        frameRate: 12,
         repeat: -1,
       });
 
@@ -353,6 +362,8 @@
       const spawnX = this.barron.x + this.facing * 12;
       const spawnY = this.barron.y - 26;
       const sprite = this.add.sprite(spawnX, spawnY, "snowball").setDepth(8);
+      sprite.anims.play("snowball-fly", true);
+      sprite.setFlipX(this.facing < 0);
       this.snowballs.push({
         sprite,
         vx: this.facing * SNOWBALL_SPEED,
