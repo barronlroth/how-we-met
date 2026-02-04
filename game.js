@@ -82,7 +82,7 @@
         frameHeight: 64,
       });
       this.load.spritesheet("snowball", asset("snowball-projectile.png"), {
-        frameWidth: 18,
+        frameWidth: 36,
         frameHeight: 10,
       });
       this.load.audio(
@@ -159,12 +159,7 @@
         frameRate: 10,
         repeat: -1,
       });
-      this.anims.create({
-        key: "snowball-fly",
-        frames: this.anims.generateFrameNumbers("snowball", { start: 0, end: 5 }),
-        frameRate: 12,
-        repeat: -1,
-      });
+      // Snowball lifecycle: frame 0 = intact, frame 1 = streaking, frame 2 = splatter
 
       this.messageBox = this.createMessageBox();
       this.gameOverText = this.createGameOverText();
@@ -362,8 +357,12 @@
       const spawnX = this.barron.x + this.facing * 12;
       const spawnY = this.barron.y - 26;
       const sprite = this.add.sprite(spawnX, spawnY, "snowball").setDepth(8);
-      sprite.anims.play("snowball-fly", true);
+      sprite.setFrame(0);
       sprite.setFlipX(this.facing < 0);
+      // Transition to streaking frame after brief launch
+      this.time.delayedCall(80, () => {
+        if (sprite.active) sprite.setFrame(1);
+      });
       this.snowballs.push({
         sprite,
         vx: this.facing * SNOWBALL_SPEED,
@@ -392,8 +391,12 @@
           const raccoon = this.raccoons[j];
           if (!raccoon.alive) continue;
           if (this.overlaps(snowball.sprite, raccoon.sprite)) {
-            snowball.sprite.destroy();
+            // Show splatter frame, then destroy
+            snowball.sprite.setFrame(2);
+            snowball.sprite.body && (snowball.sprite.body.enable = false);
+            const splatSprite = snowball.sprite;
             this.snowballs.splice(i, 1);
+            this.time.delayedCall(120, () => splatSprite.destroy());
             this.killRaccoon(j);
             break;
           }
