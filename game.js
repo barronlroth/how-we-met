@@ -262,7 +262,6 @@
       if (!this.throwing && moveDir !== 0) {
         this.barron.anims.play("barron-run", true);
       } else if (!this.throwing && moveDir === 0) {
-        this.barron.anims.stop();
         this.barron.setFrame(0);
       }
 
@@ -349,7 +348,6 @@
         if (this.getMoveDir() !== 0) {
           this.barron.anims.play("barron-run", true);
         } else {
-          this.barron.anims.stop();
           this.barron.setFrame(0);
         }
       });
@@ -390,7 +388,7 @@
         for (let j = this.raccoons.length - 1; j >= 0; j -= 1) {
           const raccoon = this.raccoons[j];
           if (!raccoon.alive) continue;
-          if (this.overlaps(snowball.sprite, raccoon.sprite)) {
+          if (Phaser.Geom.Intersects.RectangleToRectangle(snowball.sprite.getBounds(), this.raccoonBounds(raccoon.sprite))) {
             // Show splatter frame, then destroy
             snowball.sprite.setFrame(2);
             snowball.sprite.body && (snowball.sprite.body.enable = false);
@@ -429,9 +427,9 @@
 
         if (!raccoon.alive) continue;
 
-        if (Phaser.Geom.Intersects.RectangleToRectangle(playerBounds, raccoon.sprite.getBounds())) {
-          const raccoonBounds = raccoon.sprite.getBounds();
-          const stompHit = this.barronVy > 0 && playerBounds.bottom <= raccoonBounds.top + 8;
+        const rBounds = this.raccoonBounds(raccoon.sprite);
+        if (Phaser.Geom.Intersects.RectangleToRectangle(playerBounds, rBounds)) {
+          const stompHit = this.barronVy > 0 && playerBounds.bottom <= rBounds.top + 8;
           if (stompHit) {
             this.killRaccoon(i);
             this.barronVy = -JUMP_VELOCITY * 0.6;
@@ -469,6 +467,20 @@
 
     overlaps(a, b) {
       return Phaser.Geom.Intersects.RectangleToRectangle(a.getBounds(), b.getBounds());
+    }
+
+    // Tighter hitbox for raccoon sprites (art is ~30x20 inside 64x64 frame)
+    raccoonBounds(sprite) {
+      const full = sprite.getBounds();
+      const insetX = 17;
+      const insetTop = 22;
+      const insetBottom = 22;
+      return new Phaser.Geom.Rectangle(
+        full.x + insetX,
+        full.y + insetTop,
+        full.width - insetX * 2,
+        full.height - insetTop - insetBottom
+      );
     }
 
     checkMeet() {
