@@ -3,24 +3,159 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Meeting Nina Prototype</title>
+    <title>How We Met — A Love Story in Pixels</title>
     <link
-      href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Quicksand:wght@400;600;700&display=swap"
       rel="stylesheet"
     />
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
+    <!-- Floating pixel hearts -->
+    <div class="hearts" aria-hidden="true">
+      <span class="heart" style="--x: 8%; --delay: 0s; --dur: 14s;">♥</span>
+      <span class="heart" style="--x: 22%; --delay: 3s; --dur: 18s;">♥</span>
+      <span class="heart" style="--x: 45%; --delay: 7s; --dur: 16s;">♥</span>
+      <span class="heart" style="--x: 68%; --delay: 2s; --dur: 20s;">♥</span>
+      <span class="heart" style="--x: 85%; --delay: 5s; --dur: 15s;">♥</span>
+      <span class="heart" style="--x: 35%; --delay: 10s; --dur: 17s;">♥</span>
+      <span class="heart" style="--x: 55%; --delay: 1s; --dur: 19s;">♥</span>
+      <span class="heart" style="--x: 92%; --delay: 8s; --dur: 13s;">♥</span>
+    </div>
+
+    <!-- Snow particles -->
+    <div class="snow" aria-hidden="true">
+      <span class="flake" style="--x: 5%; --delay: 0s; --dur: 8s;"></span>
+      <span class="flake" style="--x: 15%; --delay: 1.5s; --dur: 10s;"></span>
+      <span class="flake" style="--x: 25%; --delay: 3s; --dur: 7s;"></span>
+      <span class="flake" style="--x: 38%; --delay: 0.5s; --dur: 9s;"></span>
+      <span class="flake" style="--x: 50%; --delay: 4s; --dur: 11s;"></span>
+      <span class="flake" style="--x: 62%; --delay: 2s; --dur: 8s;"></span>
+      <span class="flake" style="--x: 75%; --delay: 5s; --dur: 10s;"></span>
+      <span class="flake" style="--x: 88%; --delay: 1s; --dur: 9s;"></span>
+      <span class="flake" style="--x: 95%; --delay: 3.5s; --dur: 7s;"></span>
+      <span class="flake" style="--x: 42%; --delay: 6s; --dur: 12s;"></span>
+    </div>
+
     <main class="page">
       <header class="intro">
-        <h1>Meeting Nina</h1>
-        <p>Hold right to walk, up/W to jump, space to throw snowballs.</p>
+        <p class="pretitle">Press Start</p>
+        <h1 class="title">How We Met</h1>
+        <p class="tagline">A love story in pixels</p>
+        <p class="story-intro">
+          Walk through the snow. Find each other. Throw a few snowballs along the way.
+        </p>
       </header>
+
       <section class="frame">
         <div id="game" class="game"></div>
       </section>
+
+      <section class="controls">
+        <div class="control-group">
+          <div class="control-item">
+            <div class="keys">
+              <kbd>←</kbd><kbd>→</kbd>
+            </div>
+            <span class="control-label">Move</span>
+          </div>
+          <div class="control-item">
+            <div class="keys">
+              <kbd>↑</kbd>
+            </div>
+            <span class="control-label">Jump</span>
+          </div>
+          <div class="control-item">
+            <div class="keys">
+              <kbd>Space</kbd>
+            </div>
+            <span class="control-label">Snowball</span>
+          </div>
+        </div>
+        <p class="touch-hint">On mobile: tap left/right to move, swipe up to jump</p>
+      </section>
+
+      <!-- Score Submit Overlay -->
+      <div id="score-overlay" class="score-overlay hidden">
+        <div class="score-modal">
+          <p class="score-final-label">Your Score</p>
+          <p class="score-final-number" id="score-final">0</p>
+          <div class="score-input-row">
+            <input type="text" id="score-name" class="score-name-input" maxlength="12" placeholder="Your name" />
+            <button id="score-submit-btn" class="score-submit-btn">Save</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Leaderboard -->
+      <section class="leaderboard">
+        <h2 class="leaderboard-title">♛ Leaderboard</h2>
+        <div class="leaderboard-table" id="leaderboard-body">
+          <p class="leaderboard-empty">No scores yet. Be the first!</p>
+        </div>
+      </section>
+
+      <footer class="footer">
+        <p>Built with 🦉 by Alfred · A Barron &amp; Nina story</p>
+      </footer>
     </main>
+
     <script src="https://cdn.jsdelivr.net/npm/phaser@3.70.0/dist/phaser.min.js"></script>
     <script src="game.js"></script>
+    <script>
+      // Leaderboard logic (localStorage)
+      const LB_KEY = 'howwemet_leaderboard';
+
+      function getScores() {
+        try { return JSON.parse(localStorage.getItem(LB_KEY)) || []; }
+        catch { return []; }
+      }
+
+      function saveScore(name, score) {
+        const scores = getScores();
+        scores.push({ name: name, score: score, date: new Date().toISOString() });
+        scores.sort((a, b) => b.score - a.score);
+        localStorage.setItem(LB_KEY, JSON.stringify(scores.slice(0, 10)));
+        renderLeaderboard();
+      }
+
+      function renderLeaderboard() {
+        const scores = getScores();
+        const el = document.getElementById('leaderboard-body');
+        if (scores.length === 0) {
+          el.innerHTML = '<p class="leaderboard-empty">No scores yet. Be the first!</p>';
+          return;
+        }
+        el.innerHTML = scores.map(function(s, i) {
+          const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : (i + 1) + '.';
+          return '<div class="lb-row' + (i < 3 ? ' lb-top' : '') + '">' +
+            '<span class="lb-rank">' + medal + '</span>' +
+            '<span class="lb-name">' + s.name + '</span>' +
+            '<span class="lb-score">' + s.score + '</span>' +
+          '</div>';
+        }).join('');
+      }
+
+      // Called from game.js when game ends
+      window.showScoreSubmit = function(score) {
+        document.getElementById('score-final').textContent = score;
+        document.getElementById('score-overlay').classList.remove('hidden');
+        document.getElementById('score-name').value = '';
+        document.getElementById('score-name').focus();
+      };
+
+      document.getElementById('score-submit-btn').addEventListener('click', function() {
+        const name = document.getElementById('score-name').value.trim() || 'Anonymous';
+        const score = parseInt(document.getElementById('score-final').textContent) || 0;
+        saveScore(name, score);
+        document.getElementById('score-overlay').classList.add('hidden');
+      });
+
+      document.getElementById('score-name').addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') document.getElementById('score-submit-btn').click();
+      });
+
+      renderLeaderboard();
+    </script>
   </body>
 </html>
