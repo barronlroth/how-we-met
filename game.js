@@ -304,12 +304,21 @@
       this.health = MAX_HEALTH;
       this.invincibleUntil = 0;
       this.gameOver = false;
+      this.score = 0;
       this.healthText = this.add
-        .text(16, 16, `Health: ${this.health}`, {
-          fontFamily: "Arial, sans-serif",
-          fontSize: "14px",
+        .text(16, 16, `♥ ${this.health}`, {
+          fontFamily: '"Press Start 2P", monospace',
+          fontSize: "10px",
           color: "#e6eefc",
         })
+        .setDepth(12);
+      this.scoreText = this.add
+        .text(WIDTH - 16, 16, `Score: ${this.score}`, {
+          fontFamily: '"Press Start 2P", monospace',
+          fontSize: "10px",
+          color: "#ffe9a8",
+        })
+        .setOrigin(1, 0)
         .setDepth(12);
 
       this.cursors = this.input.keyboard.createCursorKeys();
@@ -709,6 +718,7 @@
                 this.time.delayedCall(80, () => splatSprite.destroy());
               });
             });
+            this.addScore(2);
             this.killRaccoon(j);
             break;
           }
@@ -745,6 +755,7 @@
         if (Phaser.Geom.Intersects.RectangleToRectangle(playerBounds, rBounds)) {
           const stompHit = this.barronVy > 0 && playerBounds.bottom <= rBounds.top + 8;
           if (stompHit) {
+            this.addScore(3);
             this.killRaccoon(i);
             this.barronVy = -JUMP_VELOCITY * 0.6;
             this.barronGrounded = false;
@@ -798,7 +809,7 @@
     damagePlayer() {
       if (this.time.now < this.invincibleUntil || this.gameOver) return;
       this.health = Math.max(0, this.health - 1);
-      this.healthText.setText(`Health: ${this.health}`);
+      this.healthText.setText(`♥ ${this.health}`);
       this.invincibleUntil = this.time.now + INVINCIBLE_MS;
       this.barron.setAlpha(0.6);
       this.time.delayedCall(INVINCIBLE_MS, () => {
@@ -809,6 +820,18 @@
         this.gameOver = true;
         this.gameOverText.setVisible(true);
         this.restartButton.setVisible(true);
+        this.submitScore();
+      }
+    }
+
+    addScore(points) {
+      this.score += points;
+      this.scoreText.setText(`Score: ${this.score}`);
+    }
+
+    submitScore() {
+      if (typeof window.showScoreSubmit === 'function') {
+        window.showScoreSubmit(this.score);
       }
     }
 
@@ -838,6 +861,7 @@
 
     triggerMeet() {
       this.met = true;
+      this.submitScore();
       this.startDialogue();
     }
 
