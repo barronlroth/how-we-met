@@ -8,7 +8,7 @@
       href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Quicksand:wght@400;600;700&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="styles.css" />
+    <link rel="stylesheet" href="styles.css?v=florida-v9" />
   </head>
   <body>
     <!-- Floating pixel hearts -->
@@ -43,7 +43,7 @@
         <h1 class="title">How We Met</h1>
         <p class="tagline">A love story in pixels</p>
         <p class="story-intro">
-          Walk through the snow. Find each other. Throw a few snowballs along the way.
+          Walk through the snow, then cruise the canals. Dodge trouble and find each other.
         </p>
       </header>
 
@@ -57,22 +57,22 @@
             <div class="keys">
               <kbd>←</kbd><kbd>→</kbd>
             </div>
-            <span class="control-label">Move</span>
+            <span class="control-label">Move / Speed</span>
           </div>
           <div class="control-item">
             <div class="keys">
-              <kbd>↑</kbd>
+              <kbd>↑</kbd><kbd>↓</kbd>
             </div>
-            <span class="control-label">Jump</span>
+            <span class="control-label">Jump / Lane</span>
           </div>
           <div class="control-item">
             <div class="keys">
               <kbd>Space</kbd>
             </div>
-            <span class="control-label">Snowball</span>
+            <span class="control-label">Throw</span>
           </div>
         </div>
-        <p class="touch-hint">On mobile: tap left/right to move, swipe up to jump</p>
+        <p class="touch-hint">On mobile: use the on-screen buttons for movement, lanes, and throws</p>
       </section>
 
       <!-- Score Submit Overlay -->
@@ -101,7 +101,7 @@
     </main>
 
     <script src="https://cdn.jsdelivr.net/npm/phaser@3.70.0/dist/phaser.min.js"></script>
-    <script src="game.js"></script>
+    <script src="game.js?v=florida-v9"></script>
     <script>
       // Leaderboard logic (localStorage)
       const LB_KEY = 'howwemet_leaderboard';

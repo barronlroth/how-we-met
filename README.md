@@ -25,9 +25,15 @@ Then open:
 http://localhost:8000/
 ```
 
+To jump straight into the Florida canal prototype:
+
+```
+http://localhost:8000/?level=florida
+```
+
 ## Controls
-- Hold Right Arrow to walk
-- Press and hold (mouse/touch) to walk
+- Toronto: hold Right Arrow / D / pointer press to walk, Up / W to jump, Space to throw
+- Florida: Up / Down changes canal lanes, Left / Right switches slow/cruise/fast, Space throws a beach ball
 
 ## Tuning
 Edit `game.js`:
