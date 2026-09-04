@@ -1097,7 +1097,7 @@
         .setOrigin(0.5);
 
       const hint = this.add
-        .text(WIDTH / 2, cardY + cardH - 14, "click to replay", {
+        .text(WIDTH / 2, cardY + cardH - 14, "click or press Enter to race", {
           fontFamily: "\"Press Start 2P\", \"VT323\", monospace",
           fontSize: "8px",
           color: "#9fc3ff",
@@ -1180,7 +1180,8 @@
       this.dialogueAdvanceAt = this.time.now + 140;
 
       if (this.transitionActive) {
-        this.restartGame();
+        if (this.music) this.music.stop();
+        window.location.assign(new URL("florida/", window.location.href).href);
         return;
       }
 

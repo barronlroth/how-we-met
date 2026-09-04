@@ -13,6 +13,14 @@
   --body-font: "Quicksand", system-ui, sans-serif;
 }
 
+.florida-chapter { display: flex; align-items: center; justify-content: space-between; gap: 24px; margin: 26px 0; padding: 24px 28px; background: #174e58; border-radius: 14px; text-decoration: none; color: #fff7df; box-shadow: 0 7px 24px #08081133; }
+.florida-chapter h2 { font-family: var(--body-font); font-size: 24px; margin: 0 0 7px; }
+.florida-chapter p { margin: 0; font-size: 15px; line-height: 1.5; }
+.florida-chapter > span { color: #ffdf64; font-weight: 700; white-space: nowrap; font-size: 16px; }
+.florida-chapter:hover { background: #1c626a; }
+.florida-chapter:focus-visible { outline: 3px solid #ffdf64; outline-offset: 5px; }
+@media (max-width: 600px) { .florida-chapter { align-items: flex-start; flex-direction: column; gap: 15px; padding: 22px; } }
+
 * {
   box-sizing: border-box;
   margin: 0;
