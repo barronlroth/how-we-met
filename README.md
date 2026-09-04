@@ -16,6 +16,8 @@ Run `npm ci`, `npm test`, and `npm run build`, then `npm run preview`. Open `htt
 
 `florida/core.js` owns the independently tested race rules. `art.js` contains the original low-poly models, `world.js` places the course and shaders, `audio.js` synthesizes sound, and `main.js` runs the rendered game and UI. `scripts/build.mjs` preserves the Toronto files and bundles Three.js plus Florida into `dist/`. Vercel serves that output on the existing project, `how-we-met-six.vercel.app`.
 
+To publish an update, run the tests and build, commit the source, and run `vercel --prod` from this repository linked to the existing `how-we-met` project. The live Florida chapter is at `https://how-we-met-six.vercel.app/florida/`.
+
 ## Original Toronto prototype
 
 A small Phaser prototype for the "Meeting Nina" walking-simulator scene.
