@@ -1,1 +1,452 @@
-{"schemaVersion":2,"generatedAt":"2026-09-04T23:29:50.557Z","title":"Design System: How We Met — Florida","extensions":{"colorMeta":{"navy":{"role":"neutral","displayName":"Navy","tonalRamp":["oklch(15% 0.0512 221.85)","oklch(26.4% 0.0512 221.85)","oklch(37.9% 0.0512 221.85)","oklch(49.3% 0.0512 221.85)","oklch(60.7% 0.0512 221.85)","oklch(72.1% 0.0512 221.85)","oklch(83.6% 0.0512 221.85)","oklch(95% 0.0512 221.85)"]},"cream":{"role":"neutral","displayName":"Cream","tonalRamp":["oklch(15% 0.0220 89.79)","oklch(26.4% 0.0220 89.79)","oklch(37.9% 0.0220 89.79)","oklch(49.3% 0.0220 89.79)","oklch(60.7% 0.0220 89.79)","oklch(72.1% 0.0220 89.79)","oklch(83.6% 0.0220 89.79)","oklch(95% 0.0220 89.79)"]},"yellow":{"role":"primary","displayName":"Yellow","tonalRamp":["oklch(15% 0.1449 94.75)","oklch(26.4% 0.1449 94.75)","oklch(37.9% 0.1449 94.75)","oklch(49.3% 0.1449 94.75)","oklch(60.7% 0.1449 94.75)","oklch(72.1% 0.1449 94.75)","oklch(83.6% 0.1449 94.75)","oklch(95% 0.1449 94.75)"]},"yellow-hover":{"role":"primary","displayName":"Yellow Hover","tonalRamp":["oklch(15% 0.1114 97.04)","oklch(26.4% 0.1114 97.04)","oklch(37.9% 0.1114 97.04)","oklch(49.3% 0.1114 97.04)","oklch(60.7% 0.1114 97.04)","oklch(72.1% 0.1114 97.04)","oklch(83.6% 0.1114 97.04)","oklch(95% 0.1114 97.04)"]},"coral":{"role":"secondary","displayName":"Coral","tonalRamp":["oklch(15% 0.1664 31.95)","oklch(26.4% 0.1664 31.95)","oklch(37.9% 0.1664 31.95)","oklch(49.3% 0.1664 31.95)","oklch(60.7% 0.1664 31.95)","oklch(72.1% 0.1664 31.95)","oklch(83.6% 0.1664 31.95)","oklch(95% 0.1664 31.95)"]},"toolbar":{"role":"neutral","displayName":"Toolbar","tonalRamp":["oklch(15% 0.0521 221.18 / 0.851)","oklch(26.4% 0.0521 221.18 / 0.851)","oklch(37.9% 0.0521 221.18 / 0.851)","oklch(49.3% 0.0521 221.18 / 0.851)","oklch(60.7% 0.0521 221.18 / 0.851)","oklch(72.1% 0.0521 221.18 / 0.851)","oklch(83.6% 0.0521 221.18 / 0.851)","oklch(95% 0.0521 221.18 / 0.851)"]},"toolbar-hover":{"role":"neutral","displayName":"Toolbar Hover","tonalRamp":["oklch(15% 0.0623 212.11)","oklch(26.4% 0.0623 212.11)","oklch(37.9% 0.0623 212.11)","oklch(49.3% 0.0623 212.11)","oklch(60.7% 0.0623 212.11)","oklch(72.1% 0.0623 212.11)","oklch(83.6% 0.0623 212.11)","oklch(95% 0.0623 212.11)"]},"instrument":{"role":"neutral","displayName":"Instrument","tonalRamp":["oklch(15% 0.0512 221.85 / 0.922)","oklch(26.4% 0.0512 221.85 / 0.922)","oklch(37.9% 0.0512 221.85 / 0.922)","oklch(49.3% 0.0512 221.85 / 0.922)","oklch(60.7% 0.0512 221.85 / 0.922)","oklch(72.1% 0.0512 221.85 / 0.922)","oklch(83.6% 0.0512 221.85 / 0.922)","oklch(95% 0.0512 221.85 / 0.922)"]},"caption":{"role":"neutral","displayName":"Caption","tonalRamp":["oklch(15% 0.0512 221.85 / 0.910)","oklch(26.4% 0.0512 221.85 / 0.910)","oklch(37.9% 0.0512 221.85 / 0.910)","oklch(49.3% 0.0512 221.85 / 0.910)","oklch(60.7% 0.0512 221.85 / 0.910)","oklch(72.1% 0.0512 221.85 / 0.910)","oklch(83.6% 0.0512 221.85 / 0.910)","oklch(95% 0.0512 221.85 / 0.910)"]},"panel":{"role":"neutral","displayName":"Panel","tonalRamp":["oklch(15% 0.0512 221.85 / 0.961)","oklch(26.4% 0.0512 221.85 / 0.961)","oklch(37.9% 0.0512 221.85 / 0.961)","oklch(49.3% 0.0512 221.85 / 0.961)","oklch(60.7% 0.0512 221.85 / 0.961)","oklch(72.1% 0.0512 221.85 / 0.961)","oklch(83.6% 0.0512 221.85 / 0.961)","oklch(95% 0.0512 221.85 / 0.961)"]},"silver":{"role":"neutral","displayName":"Silver","tonalRamp":["oklch(15% 0.0107 189.82)","oklch(26.4% 0.0107 189.82)","oklch(37.9% 0.0107 189.82)","oklch(49.3% 0.0107 189.82)","oklch(60.7% 0.0107 189.82)","oklch(72.1% 0.0107 189.82)","oklch(83.6% 0.0107 189.82)","oklch(95% 0.0107 189.82)"]},"bronze":{"role":"neutral","displayName":"Bronze","tonalRamp":["oklch(15% 0.1001 58.62)","oklch(26.4% 0.1001 58.62)","oklch(37.9% 0.1001 58.62)","oklch(49.3% 0.1001 58.62)","oklch(60.7% 0.1001 58.62)","oklch(72.1% 0.1001 58.62)","oklch(83.6% 0.1001 58.62)","oklch(95% 0.1001 58.62)"]},"chapter-bg":{"role":"neutral","displayName":"Chapter Bg","tonalRamp":["oklch(15% 0.0582 212.06)","oklch(26.4% 0.0582 212.06)","oklch(37.9% 0.0582 212.06)","oklch(49.3% 0.0582 212.06)","oklch(60.7% 0.0582 212.06)","oklch(72.1% 0.0582 212.06)","oklch(83.6% 0.0582 212.06)","oklch(95% 0.0582 212.06)"]},"chapter-hover":{"role":"neutral","displayName":"Chapter Hover","tonalRamp":["oklch(15% 0.0681 206.10)","oklch(26.4% 0.0681 206.10)","oklch(37.9% 0.0681 206.10)","oklch(49.3% 0.0681 206.10)","oklch(60.7% 0.0681 206.10)","oklch(72.1% 0.0681 206.10)","oklch(83.6% 0.0681 206.10)","oklch(95% 0.0681 206.10)"]},"chapter-text":{"role":"neutral","displayName":"Chapter Text","tonalRamp":["oklch(15% 0.0325 91.66)","oklch(26.4% 0.0325 91.66)","oklch(37.9% 0.0325 91.66)","oklch(49.3% 0.0325 91.66)","oklch(60.7% 0.0325 91.66)","oklch(72.1% 0.0325 91.66)","oklch(83.6% 0.0325 91.66)","oklch(95% 0.0325 91.66)"]},"model-cream":{"role":"tertiary","displayName":"Model Cream","tonalRamp":["oklch(15% 0.0384 89.09)","oklch(26.4% 0.0384 89.09)","oklch(37.9% 0.0384 89.09)","oklch(49.3% 0.0384 89.09)","oklch(60.7% 0.0384 89.09)","oklch(72.1% 0.0384 89.09)","oklch(83.6% 0.0384 89.09)","oklch(95% 0.0384 89.09)"]},"model-coral":{"role":"tertiary","displayName":"Model Coral","tonalRamp":["oklch(15% 0.1493 30.64)","oklch(26.4% 0.1493 30.64)","oklch(37.9% 0.1493 30.64)","oklch(49.3% 0.1493 30.64)","oklch(60.7% 0.1493 30.64)","oklch(72.1% 0.1493 30.64)","oklch(83.6% 0.1493 30.64)","oklch(95% 0.1493 30.64)"]},"model-teal":{"role":"tertiary","displayName":"Model Teal","tonalRamp":["oklch(15% 0.0930 195.07)","oklch(26.4% 0.0930 195.07)","oklch(37.9% 0.0930 195.07)","oklch(49.3% 0.0930 195.07)","oklch(60.7% 0.0930 195.07)","oklch(72.1% 0.0930 195.07)","oklch(83.6% 0.0930 195.07)","oklch(95% 0.0930 195.07)"]},"model-navy":{"role":"tertiary","displayName":"Model Navy","tonalRamp":["oklch(15% 0.0490 223.03)","oklch(26.4% 0.0490 223.03)","oklch(37.9% 0.0490 223.03)","oklch(49.3% 0.0490 223.03)","oklch(60.7% 0.0490 223.03)","oklch(72.1% 0.0490 223.03)","oklch(83.6% 0.0490 223.03)","oklch(95% 0.0490 223.03)"]},"terracotta":{"role":"tertiary","displayName":"Terracotta","tonalRamp":["oklch(15% 0.1161 43.72)","oklch(26.4% 0.1161 43.72)","oklch(37.9% 0.1161 43.72)","oklch(49.3% 0.1161 43.72)","oklch(60.7% 0.1161 43.72)","oklch(72.1% 0.1161 43.72)","oklch(83.6% 0.1161 43.72)","oklch(95% 0.1161 43.72)"]},"flamingo-pink":{"role":"secondary","displayName":"Flamingo Pink","tonalRamp":["oklch(15% 0.1563 359.50)","oklch(26.4% 0.1563 359.50)","oklch(37.9% 0.1563 359.50)","oklch(49.3% 0.1563 359.50)","oklch(60.7% 0.1563 359.50)","oklch(72.1% 0.1563 359.50)","oklch(83.6% 0.1563 359.50)","oklch(95% 0.1563 359.50)"]},"palm-leaf":{"role":"tertiary","displayName":"Palm Leaf","tonalRamp":["oklch(15% 0.1059 147.37)","oklch(26.4% 0.1059 147.37)","oklch(37.9% 0.1059 147.37)","oklch(49.3% 0.1059 147.37)","oklch(60.7% 0.1059 147.37)","oklch(72.1% 0.1059 147.37)","oklch(83.6% 0.1059 147.37)","oklch(95% 0.1059 147.37)"]},"dock-wood":{"role":"tertiary","displayName":"Dock Wood","tonalRamp":["oklch(15% 0.0846 70.62)","oklch(26.4% 0.0846 70.62)","oklch(37.9% 0.0846 70.62)","oklch(49.3% 0.0846 70.62)","oklch(60.7% 0.0846 70.62)","oklch(72.1% 0.0846 70.62)","oklch(83.6% 0.0846 70.62)","oklch(95% 0.0846 70.62)"]}},"typographyMeta":{"display":{"displayName":"Florida Display","purpose":"Desktop introduction title; narrow and short-screen overrides remain in Florida CSS."},"headline":{"displayName":"Sector Heading","purpose":"Short race sector titles."},"body":{"displayName":"Florida Body","purpose":"Introduction sentences; dialogs and supporting text use smaller observed sizes."},"label":{"displayName":"Control Label","purpose":"Tools and keyboard guide labels."},"action":{"displayName":"Race Action","purpose":"Primary start, resume, and replay controls."},"clock":{"displayName":"Race Clock","purpose":"Timing with tabular figures."},"chapter-title":{"displayName":"Homepage Chapter Title","purpose":"Quicksand on the homepage Florida link only; does not change Toronto typography."}},"shadows":[{"name":"primary-action","value":"0 6px 22px #0529323a","purpose":"Soft lift beneath yellow actions."},{"name":"nina-caption","value":"0 4px 22px #0742502b","purpose":"Small ambient depth behind commentary."},{"name":"dialog","value":"0 16px 70px #052a4455","purpose":"Pause, result, and graphics-error panels."},{"name":"homepage-chapter","value":"0 7px 24px #08081133","purpose":"Homepage chapter link only."}],"motion":[{"name":"action-transition","value":"transform .15s, background .15s","purpose":"Hover lifts 2px; active moves down 1px."},{"name":"introduction-shade","value":"opacity .4s","purpose":"Shade fades away when racing begins."},{"name":"caption-fade","value":"opacity .3s","purpose":"Callout departure after its runtime duration."},{"name":"boost-state","value":"background .2s","purpose":"Yellow fuel turns cream during boost."},{"name":"impact-flash","value":"opacity .25s; pulse reset after 160ms","purpose":"Brief peripheral feedback, skipped for reduced motion."},{"name":"camera-follow","value":"1 - exp(-dt * 5); normal FOV 58deg; boost FOV 65deg","purpose":"Smooth chase camera; reduced motion disables boost expansion and shake."},{"name":"reduced-motion","value":"prefers-reduced-motion: reduce","purpose":"Removes CSS transitions, flashes, shake, and hull bob/roll/pitch. World, fan, pickups, some character motion, and camera following continue."}],"breakpoints":[{"name":"Florida max-width","value":"760px"},{"name":"Florida desktop result min-width","value":"761px"},{"name":"Florida compact max-height","value":"720px"},{"name":"Homepage chapter max-width","value":"600px"}]},"components":[{"name":"Primary Race Button","kind":"button","refersTo":"button-primary","description":"Start, resume, and replay action; includes loading, hover, press, focus, and reduced-motion states.","html":"<button class=\"ds-primary\">Start race</button>","css":".ds-primary{border:0;background:var(--yellow,#ffdf64);color:var(--navy,#103b48);padding:15px 27px;border-radius:10px;font:950 18px Nunito,sans-serif;box-shadow:0 6px 22px #0529323a;transition:transform .15s,background .15s;min-width:178px;cursor:pointer}.ds-primary:hover{background:#ffeb92;transform:translateY(-2px)}.ds-primary:active{transform:translateY(1px)}.ds-primary:disabled{opacity:.65;cursor:wait;transform:none}.ds-primary:focus-visible{outline:3px solid var(--yellow,#ffdf64);outline-offset:5px}@media(prefers-reduced-motion:reduce){.ds-primary{transition:none}.ds-primary:hover{transform:none}}"},{"name":"Race Clock","kind":"custom","refersTo":"race-clock","description":"Dense navy backing keeps tabular timing legible against moving sky and water. The sample pace matches the reviewed core configuration.","html":"<div class=\"ds-clock\"><span>0:21.07</span><small>GOLD PACE · 2:25</small></div>","css":".ds-clock{display:inline-block;background:#103b48eb;padding:12px 16px;border-radius:10px;color:var(--cream,#fff9e9);text-align:right}.ds-clock>span{display:block;font:400 38px/1.3 Bungee,sans-serif;font-variant-numeric:tabular-nums}.ds-clock small{display:block;color:var(--yellow,#ffdf64);font:950 12px Nunito,sans-serif;letter-spacing:.04em}@media(max-width:760px){.ds-clock>span{font-size:28px}}"},{"name":"Nina Caption","kind":"custom","refersTo":"nina-caption","description":"Short, polite live commentary; runtime controls its opacity and duration.","html":"<div class=\"ds-caption\" aria-live=\"polite\"><span>NINA</span><p>Let’s take the scenic route. Fast.</p></div>","css":".ds-caption{display:flex;align-items:baseline;gap:10px;max-width:610px;padding:10px 17px;border-radius:9px;background:#103b48e8;color:var(--cream,#fff9e9);transition:opacity .3s;box-shadow:0 4px 22px #0742502b;font-family:Nunito,sans-serif}.ds-caption>span{color:#ff9f99;font-size:12px;font-weight:1000;letter-spacing:.06em}.ds-caption p{margin:0;font-size:15px;font-weight:800;line-height:1.35}@media(max-width:760px){.ds-caption p{font-size:13px}}@media(prefers-reduced-motion:reduce){.ds-caption{transition:none}}"},{"name":"Result Card","kind":"card","refersTo":"result-panel","description":"Desktop result panel with a named medal, tabular time, browser-local best, compact stats, replay, and home exit. Runtime positions it beside the arrival scene.","html":"<section class=\"ds-result\" aria-label=\"Race result\"><div class=\"ds-medal\" data-medal=\"SILVER\">SILVER MEDAL</div><h2>TABLE FOR TWO.</h2><p>You made it to the bridge.<br>Nina’s already picking the appetizers.</p><div class=\"ds-final-time\">2:39.93</div><p class=\"ds-best\">Your best on this browser: 2:39.93</p><div class=\"ds-stats\"><span><strong>4</strong>jumps</span><span><strong>6</strong>near misses</span><span><strong>3</strong>bumps</span></div><button class=\"ds-result-primary\">One more run</button><a class=\"ds-result-home\" href=\"/\">Back to How We Met</a></section>","css":".ds-result{padding:30px;background:#103b48f5;border-radius:16px;max-width:calc(100vw - 32px);width:390px;text-align:center;box-shadow:0 16px 70px #052a4455;color:var(--cream,#fff9e9);font-family:Nunito,sans-serif}.ds-result h2{font:400 28px/1.3 Bungee,sans-serif;margin:0 0 12px}.ds-result p{font-size:16px;line-height:1.5;margin:0 0 22px}.ds-medal{display:inline-block;color:var(--navy,#103b48);background:var(--yellow,#ffdf64);padding:9px 18px;border-radius:25px;font-size:14px;font-weight:1000;letter-spacing:.07em;margin-bottom:18px}.ds-medal[data-medal=SILVER]{background:#e4eeed}.ds-medal[data-medal=BRONZE]{background:#e8a876}.ds-final-time{font:400 48px Bungee,sans-serif;font-variant-numeric:tabular-nums;margin:4px 0}.ds-result .ds-best{color:var(--yellow,#ffdf64);font-size:14px;font-weight:900;margin-bottom:20px}.ds-stats{display:flex;justify-content:center;gap:24px;font-size:13px;margin:16px 0 28px;color:#d5eee8}.ds-stats strong{display:block;font-size:23px;color:var(--cream,#fff9e9)}.ds-result-home{display:block;margin:15px auto 0;color:var(--cream,#fff9e9);font-size:15px;font-weight:850;padding:7px;text-decoration:none}.ds-result-home:hover{text-decoration:underline;text-underline-offset:4px}.ds-result-home:focus-visible{outline:3px solid var(--yellow,#ffdf64);outline-offset:5px}.ds-result-primary{border:0;background:var(--yellow,#ffdf64);color:var(--navy,#103b48);padding:15px 27px;border-radius:10px;font:950 18px Nunito,sans-serif;box-shadow:0 6px 22px #0529323a;transition:transform .15s,background .15s;min-width:178px;cursor:pointer}.ds-result-primary:hover{background:#ffeb92;transform:translateY(-2px)}.ds-result-primary:active{transform:translateY(1px)}.ds-result-primary:disabled{opacity:.65;cursor:wait;transform:none}.ds-result-primary:focus-visible{outline:3px solid var(--yellow,#ffdf64);outline-offset:5px}@media(prefers-reduced-motion:reduce){.ds-result-primary{transition:none}.ds-result-primary:hover{transform:none}}@media(max-width:760px){.ds-result{width:510px;padding:28px 20px}.ds-result h2{font-size:30px}.ds-stats{gap:17px}}"},{"name":"Florida Chapter Link","kind":"card","refersTo":"chapter-link","description":"Homepage-only bridge into Florida. Its Quicksand text preserves Toronto's existing page typography.","html":"<a class=\"ds-chapter\" href=\"/florida/\"><div><h2>Next stop: Florida</h2><p>You, Nina, an airboat, and the Intracoastal.</p></div><span>Play the 3D race →</span></a>","css":".ds-chapter{display:flex;align-items:center;justify-content:space-between;gap:24px;margin:26px 0;padding:24px 28px;background:#174e58;border-radius:14px;text-decoration:none;color:#fff7df;box-shadow:0 7px 24px #08081133;font-family:Quicksand,system-ui,sans-serif}.ds-chapter h2{font-size:24px;font-weight:700;margin:0 0 7px}.ds-chapter p{margin:0;font-size:15px;line-height:1.5}.ds-chapter>span{color:#ffdf64;font-weight:700;white-space:nowrap;font-size:16px}.ds-chapter:hover{background:#1c626a}.ds-chapter:focus-visible{outline:3px solid var(--yellow,#ffdf64);outline-offset:5px}@media(max-width:600px){.ds-chapter{align-items:flex-start;flex-direction:column;gap:15px;padding:22px}}"}],"narrative":{"northStar":"A Florida Postcard in Motion","overview":"Florida is a sunny, playful 3D place to race through with Barron and Nina. Faceted characters, warm waterfront buildings, palm silhouettes, and animated turquoise water carry the experience. The interface is a small set of arcade instruments: substantial type, clear controls, and room to see the course.\n\nThis record applies to florida/ and the Florida chapter link on the homepage. Its descriptive language follows the user-approved cute 3D Intracoastal brief. Toronto keeps its pixel art, Press Start 2P, and Quicksand; Florida's tokens are not global Toronto rules.","keyCharacteristics":["Original low-poly geometry with warm daylight and visible material facets.","Cream and navy instruments, yellow actions, and coral accents.","Motion expressed through steering, wakes, the fan, and the couple.","A finish composition that includes the couple, bridge, and Fisheries."],"rules":[{"name":"The Chapter Boundary Rule","body":"Extend these tokens within Florida; retain the homepage's Quicksand for its chapter link.","section":"overview"},{"name":"The Moving Background Rule","body":"Keep the race clock and sector label on their navy instrument plates. Text shadows alone do not replace these surfaces.","section":"colors"},{"name":"The Instrument Type Rule","body":"Use Bungee for short race titles and numbers; use Nunito for sentences, controls, and captions.","section":"typography"},{"name":"The Arrival Rule","body":"Keep the couple, the 17th Street bridge, and Fisheries visible together beside the desktop result panel, including the reviewed 989px viewport.","section":"layout"}],"dos":["Keep the couple, course, hazards, and arrival landmarks readable.","Build Florida scenery and characters as coherent, faceted 3D forms.","Pair color-coded states with text, visible geometry, or both.","Preserve keyboard focus, pause behavior, and the honest phone-controls message.","Use the approved surface brief and current runtime as visual evidence."],"donts":["Apply Florida's fonts, palette, or 3D art rules to Toronto.","Replace live gameplay or the world background with the concept image.","Remove the navy backing from the race clock or sector label.","Describe responsive layouts as shipped touch controls.","Hide the couple or either arrival landmark behind the desktop result panel."]}}
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-09-05T00:51:11.186965+00:00",
+  "title": "Design System: How We Met — Florida V2",
+  "extensions": {
+    "colorMeta": {
+      "navy": {
+        "role": "neutral",
+        "displayName": "Navy",
+        "tonalRamp": [
+          "oklch(15.0% 0.0512 221.85)",
+          "oklch(26.4% 0.0512 221.85)",
+          "oklch(37.9% 0.0512 221.85)",
+          "oklch(49.3% 0.0512 221.85)",
+          "oklch(60.7% 0.0512 221.85)",
+          "oklch(72.1% 0.0512 221.85)",
+          "oklch(83.6% 0.0512 221.85)",
+          "oklch(95.0% 0.0512 221.85)"
+        ]
+      },
+      "cream": {
+        "role": "neutral",
+        "displayName": "Cream",
+        "tonalRamp": [
+          "oklch(15.0% 0.0220 89.79)",
+          "oklch(26.4% 0.0220 89.79)",
+          "oklch(37.9% 0.0220 89.79)",
+          "oklch(49.3% 0.0220 89.79)",
+          "oklch(60.7% 0.0220 89.79)",
+          "oklch(72.1% 0.0220 89.79)",
+          "oklch(83.6% 0.0220 89.79)",
+          "oklch(95.0% 0.0220 89.79)"
+        ]
+      },
+      "yellow": {
+        "role": "primary",
+        "displayName": "Yellow",
+        "tonalRamp": [
+          "oklch(15.0% 0.1527 94.27)",
+          "oklch(26.4% 0.1527 94.27)",
+          "oklch(37.9% 0.1527 94.27)",
+          "oklch(49.3% 0.1527 94.27)",
+          "oklch(60.7% 0.1527 94.27)",
+          "oklch(72.1% 0.1527 94.27)",
+          "oklch(83.6% 0.1527 94.27)",
+          "oklch(95.0% 0.1527 94.27)"
+        ]
+      },
+      "action-hover": {
+        "role": "primary",
+        "displayName": "Action Hover",
+        "tonalRamp": [
+          "oklch(15.0% 0.1086 95.49)",
+          "oklch(26.4% 0.1086 95.49)",
+          "oklch(37.9% 0.1086 95.49)",
+          "oklch(49.3% 0.1086 95.49)",
+          "oklch(60.7% 0.1086 95.49)",
+          "oklch(72.1% 0.1086 95.49)",
+          "oklch(83.6% 0.1086 95.49)",
+          "oklch(95.0% 0.1086 95.49)"
+        ]
+      },
+      "aqua": {
+        "role": "primary",
+        "displayName": "Aqua",
+        "tonalRamp": [
+          "oklch(15.0% 0.1290 186.48)",
+          "oklch(26.4% 0.1290 186.48)",
+          "oklch(37.9% 0.1290 186.48)",
+          "oklch(49.3% 0.1290 186.48)",
+          "oklch(60.7% 0.1290 186.48)",
+          "oklch(72.1% 0.1290 186.48)",
+          "oklch(83.6% 0.1290 186.48)",
+          "oklch(95.0% 0.1290 186.48)"
+        ]
+      },
+      "coral": {
+        "role": "secondary",
+        "displayName": "Coral",
+        "tonalRamp": [
+          "oklch(15.0% 0.1478 35.62)",
+          "oklch(26.4% 0.1478 35.62)",
+          "oklch(37.9% 0.1478 35.62)",
+          "oklch(49.3% 0.1478 35.62)",
+          "oklch(60.7% 0.1478 35.62)",
+          "oklch(72.1% 0.1478 35.62)",
+          "oklch(83.6% 0.1478 35.62)",
+          "oklch(95.0% 0.1478 35.62)"
+        ]
+      },
+      "clock": {
+        "role": "neutral",
+        "displayName": "Clock",
+        "tonalRamp": [
+          "oklch(15.0% 0.0512 221.85 / 0.8)",
+          "oklch(26.4% 0.0512 221.85 / 0.8)",
+          "oklch(37.9% 0.0512 221.85 / 0.8)",
+          "oklch(49.3% 0.0512 221.85 / 0.8)",
+          "oklch(60.7% 0.0512 221.85 / 0.8)",
+          "oklch(72.1% 0.0512 221.85 / 0.8)",
+          "oklch(83.6% 0.0512 221.85 / 0.8)",
+          "oklch(95.0% 0.0512 221.85 / 0.8)"
+        ]
+      },
+      "sector": {
+        "role": "neutral",
+        "displayName": "Sector",
+        "tonalRamp": [
+          "oklch(15.0% 0.0512 221.85 / 0.78)",
+          "oklch(26.4% 0.0512 221.85 / 0.78)",
+          "oklch(37.9% 0.0512 221.85 / 0.78)",
+          "oklch(49.3% 0.0512 221.85 / 0.78)",
+          "oklch(60.7% 0.0512 221.85 / 0.78)",
+          "oklch(72.1% 0.0512 221.85 / 0.78)",
+          "oklch(83.6% 0.0512 221.85 / 0.78)",
+          "oklch(95.0% 0.0512 221.85 / 0.78)"
+        ]
+      },
+      "panel": {
+        "role": "neutral",
+        "displayName": "Panel",
+        "tonalRamp": [
+          "oklch(15.0% 0.0512 221.85 / 0.929)",
+          "oklch(26.4% 0.0512 221.85 / 0.929)",
+          "oklch(37.9% 0.0512 221.85 / 0.929)",
+          "oklch(49.3% 0.0512 221.85 / 0.929)",
+          "oklch(60.7% 0.0512 221.85 / 0.929)",
+          "oklch(72.1% 0.0512 221.85 / 0.929)",
+          "oklch(83.6% 0.0512 221.85 / 0.929)",
+          "oklch(95.0% 0.0512 221.85 / 0.929)"
+        ]
+      },
+      "caption": {
+        "role": "neutral",
+        "displayName": "Caption",
+        "tonalRamp": [
+          "oklch(15.0% 0.0512 221.85 / 0.863)",
+          "oklch(26.4% 0.0512 221.85 / 0.863)",
+          "oklch(37.9% 0.0512 221.85 / 0.863)",
+          "oklch(49.3% 0.0512 221.85 / 0.863)",
+          "oklch(60.7% 0.0512 221.85 / 0.863)",
+          "oklch(72.1% 0.0512 221.85 / 0.863)",
+          "oklch(83.6% 0.0512 221.85 / 0.863)",
+          "oklch(95.0% 0.0512 221.85 / 0.863)"
+        ]
+      },
+      "tool": {
+        "role": "neutral",
+        "displayName": "Tool",
+        "tonalRamp": [
+          "oklch(15.0% 0.0521 221.18 / 0.878)",
+          "oklch(26.4% 0.0521 221.18 / 0.878)",
+          "oklch(37.9% 0.0521 221.18 / 0.878)",
+          "oklch(49.3% 0.0521 221.18 / 0.878)",
+          "oklch(60.7% 0.0521 221.18 / 0.878)",
+          "oklch(72.1% 0.0521 221.18 / 0.878)",
+          "oklch(83.6% 0.0521 221.18 / 0.878)",
+          "oklch(95.0% 0.0521 221.18 / 0.878)"
+        ]
+      },
+      "tool-hover": {
+        "role": "neutral",
+        "displayName": "Tool Hover",
+        "tonalRamp": [
+          "oklch(15.0% 0.0640 208.44)",
+          "oklch(26.4% 0.0640 208.44)",
+          "oklch(37.9% 0.0640 208.44)",
+          "oklch(49.3% 0.0640 208.44)",
+          "oklch(60.7% 0.0640 208.44)",
+          "oklch(72.1% 0.0640 208.44)",
+          "oklch(83.6% 0.0640 208.44)",
+          "oklch(95.0% 0.0640 208.44)"
+        ]
+      },
+      "silver": {
+        "role": "neutral",
+        "displayName": "Silver",
+        "tonalRamp": [
+          "oklch(15.0% 0.0183 188.37)",
+          "oklch(26.4% 0.0183 188.37)",
+          "oklch(37.9% 0.0183 188.37)",
+          "oklch(49.3% 0.0183 188.37)",
+          "oklch(60.7% 0.0183 188.37)",
+          "oklch(72.1% 0.0183 188.37)",
+          "oklch(83.6% 0.0183 188.37)",
+          "oklch(95.0% 0.0183 188.37)"
+        ]
+      },
+      "bronze": {
+        "role": "neutral",
+        "displayName": "Bronze",
+        "tonalRamp": [
+          "oklch(15.0% 0.0816 60.74)",
+          "oklch(26.4% 0.0816 60.74)",
+          "oklch(37.9% 0.0816 60.74)",
+          "oklch(49.3% 0.0816 60.74)",
+          "oklch(60.7% 0.0816 60.74)",
+          "oklch(72.1% 0.0816 60.74)",
+          "oklch(83.6% 0.0816 60.74)",
+          "oklch(95.0% 0.0816 60.74)"
+        ]
+      },
+      "chapter-bg": {
+        "role": "neutral",
+        "displayName": "Chapter Bg",
+        "tonalRamp": [
+          "oklch(15.0% 0.0582 212.06)",
+          "oklch(26.4% 0.0582 212.06)",
+          "oklch(37.9% 0.0582 212.06)",
+          "oklch(49.3% 0.0582 212.06)",
+          "oklch(60.7% 0.0582 212.06)",
+          "oklch(72.1% 0.0582 212.06)",
+          "oklch(83.6% 0.0582 212.06)",
+          "oklch(95.0% 0.0582 212.06)"
+        ]
+      },
+      "chapter-hover": {
+        "role": "neutral",
+        "displayName": "Chapter Hover",
+        "tonalRamp": [
+          "oklch(15.0% 0.0681 206.10)",
+          "oklch(26.4% 0.0681 206.10)",
+          "oklch(37.9% 0.0681 206.10)",
+          "oklch(49.3% 0.0681 206.10)",
+          "oklch(60.7% 0.0681 206.10)",
+          "oklch(72.1% 0.0681 206.10)",
+          "oklch(83.6% 0.0681 206.10)",
+          "oklch(95.0% 0.0681 206.10)"
+        ]
+      },
+      "chapter-text": {
+        "role": "neutral",
+        "displayName": "Chapter Text",
+        "tonalRamp": [
+          "oklch(15.0% 0.0325 91.66)",
+          "oklch(26.4% 0.0325 91.66)",
+          "oklch(37.9% 0.0325 91.66)",
+          "oklch(49.3% 0.0325 91.66)",
+          "oklch(60.7% 0.0325 91.66)",
+          "oklch(72.1% 0.0325 91.66)",
+          "oklch(83.6% 0.0325 91.66)",
+          "oklch(95.0% 0.0325 91.66)"
+        ]
+      },
+      "chapter-yellow": {
+        "role": "neutral",
+        "displayName": "Chapter Yellow",
+        "tonalRamp": [
+          "oklch(15.0% 0.1449 94.75)",
+          "oklch(26.4% 0.1449 94.75)",
+          "oklch(37.9% 0.1449 94.75)",
+          "oklch(49.3% 0.1449 94.75)",
+          "oklch(60.7% 0.1449 94.75)",
+          "oklch(72.1% 0.1449 94.75)",
+          "oklch(83.6% 0.1449 94.75)",
+          "oklch(95.0% 0.1449 94.75)"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Florida Title",
+        "purpose": "Slanted entry title with responsive wrapping."
+      },
+      "clock": {
+        "displayName": "Race Timing",
+        "purpose": "Tabular Bungee race clock; smaller on narrow screens."
+      },
+      "chapter-title": {
+        "displayName": "Homepage Chapter Title",
+        "purpose": "Quicksand; preserves the Toronto page typography."
+      }
+    },
+    "shadows": [
+      {
+        "name": "primary-action",
+        "value": "0 5px 15px #09384855",
+        "purpose": "Small lift beneath yellow actions."
+      },
+      {
+        "name": "dialog",
+        "value": "0 15px 60px #052a4438",
+        "purpose": "Pause, finish, and graphics-failure panels."
+      },
+      {
+        "name": "homepage-chapter",
+        "value": "0 7px 24px #08081133",
+        "purpose": "Homepage chapter link only."
+      }
+    ],
+    "motion": [
+      {
+        "name": "action-transition",
+        "value": "transform .15s, background .15s",
+        "purpose": "Hover rises 2px; press moves down 2px."
+      },
+      {
+        "name": "shade-and-caption",
+        "value": "opacity .3s",
+        "purpose": "Entry shade and Nina caption transitions."
+      },
+      {
+        "name": "impact-and-speed",
+        "value": "opacity .2s",
+        "purpose": "Peripheral feedback; disabled for reduced motion."
+      },
+      {
+        "name": "camera",
+        "value": "follow: 1 - exp(-dt * 8); FOV: 63deg staged, 68deg race, 84deg boost",
+        "purpose": "Separate staged and chase compositions; boost expansion disabled for reduced motion."
+      },
+      {
+        "name": "reduced-motion",
+        "value": "prefers-reduced-motion: reduce",
+        "purpose": "Suppresses transitions, streaks, flash, vibration/shake, hull bob/roll/pitch, Nina body roll, and boost FOV expansion; world animation and camera following continue."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "Florida compact width",
+        "value": "1000px"
+      },
+      {
+        "name": "Florida small width",
+        "value": "760px"
+      },
+      {
+        "name": "Florida title and homepage stack",
+        "value": "600px"
+      },
+      {
+        "name": "Florida compact height",
+        "value": "740px"
+      },
+      {
+        "name": "Camera compact (strictly below)",
+        "value": "1100px"
+      },
+      {
+        "name": "Camera phone (strictly below)",
+        "value": "600px"
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Race Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Start, resume, and replay with loading, hover, press, and keyboard-focus states.",
+      "html": "<button class=\"ds-primary\">Start race</button>",
+      "css": ".ds-primary{border:0;background:var(--yellow,#ffdc57);color:var(--navy,#103b48);padding:15px 28px;border-radius:9px;font:1000 18px Nunito,sans-serif;box-shadow:0 5px 15px #09384855;transition:transform .15s,background .15s;min-width:180px;cursor:pointer}.ds-primary:hover{background:#ffe993;transform:translateY(-2px)}.ds-primary:active{transform:translateY(2px)}.ds-primary:disabled{opacity:.55;cursor:wait}.ds-primary:focus-visible{outline:3px solid var(--yellow,#ffdc57);outline-offset:5px}@media(max-width:760px){.ds-primary{font-size:16px;min-width:160px;padding:13px 22px}}@media(prefers-reduced-motion:reduce){.ds-primary{transition:none}.ds-primary:hover{transform:none}}"
+    },
+    {
+      "name": "Sound Tool",
+      "kind": "button",
+      "refersTo": "button-tool",
+      "description": "Compact icon-and-label control; narrow layouts hide the label.",
+      "html": "<button class=\"ds-tool\" aria-label=\"Turn sound on\" aria-pressed=\"false\"><svg viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path d=\"M4 9h4l5-4v14l-5-4H4zm13-2q6 5 0 10m-1-7q2 2 0 4\"/></svg><span>Sound off</span></button>",
+      "css": ".ds-tool{display:inline-flex;align-items:center;gap:7px;border:0;background:#123e4be0;color:var(--cream,#fff9e9);border-radius:8px;min-height:38px;padding:8px 13px;font:850 14px Nunito,sans-serif;cursor:pointer}.ds-tool svg{width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}.ds-tool:hover{background:#24626b}.ds-tool:focus-visible{outline:3px solid var(--yellow,#ffdc57);outline-offset:5px}@media(max-width:760px){.ds-tool span{display:none}}"
+    },
+    {
+      "name": "Text Action",
+      "kind": "button",
+      "refersTo": "button-text",
+      "description": "Secondary demo action; also used for restart and exit.",
+      "html": "<button class=\"ds-text\">Watch a run ↗</button>",
+      "css": ".ds-text{display:block;margin:15px 0 0;border:0;background:none;color:var(--cream,#fff9e9);font:900 14px Nunito,sans-serif;padding:6px 0;text-shadow:0 2px 7px #103b48;cursor:pointer;text-decoration:none}.ds-text:hover{text-decoration:underline;text-underline-offset:4px}.ds-text:focus-visible{outline:3px solid var(--yellow,#ffdc57);outline-offset:5px}"
+    },
+    {
+      "name": "Race Clock",
+      "kind": "custom",
+      "refersTo": "race-clock",
+      "description": "Tabular timer on a navy plate; the gold threshold comes from the race configuration.",
+      "html": "<div class=\"ds-clock\"><span>0:16.05</span><small>GOLD · 1:35</small></div>",
+      "css": ".ds-clock{display:inline-block;background:#103b48cc;padding:7px 13px;border-radius:9px;color:var(--cream,#fff9e9);text-align:right}.ds-clock>span{display:block;font:400 37px/1.2 Bungee,sans-serif;font-variant-numeric:tabular-nums}.ds-clock small{display:block;color:var(--yellow,#ffdc57);font:950 11px Nunito,sans-serif;margin-top:5px}@media(max-width:760px){.ds-clock>span{font-size:26px}}"
+    },
+    {
+      "name": "Nina Caption",
+      "kind": "custom",
+      "refersTo": "nina-caption",
+      "description": "Short live commentary; runtime controls the fade and duration.",
+      "html": "<div class=\"ds-caption\" aria-live=\"polite\"><span>NINA</span><p>Close call. More cafecito.</p></div>",
+      "css": ".ds-caption{display:flex;align-items:baseline;gap:9px;width:max-content;max-width:100%;padding:9px 15px;background:#103b48dc;color:var(--cream,#fff9e9);border-radius:8px;transition:opacity .3s;font-family:Nunito,sans-serif}.ds-caption>span{font-size:10px;color:#ffa294;font-weight:1000;letter-spacing:.07em}.ds-caption p{margin:0;font-size:14px;line-height:1.4;font-weight:900}@media(prefers-reduced-motion:reduce){.ds-caption{transition:none}}"
+    },
+    {
+      "name": "Finish Panel",
+      "kind": "card",
+      "refersTo": "finish-panel",
+      "description": "Desktop result card beside the staged destination; this sample is the reviewed demo state.",
+      "html": "<section class=\"ds-finish\" aria-label=\"Race result\"><div class=\"ds-medal\">DEMO COMPLETE</div><h2>TABLE FOR TWO.</h2><p>That’s the route. Now let’s see your racing line.</p><div class=\"ds-time\">1:25.48</div><p class=\"ds-best\">Your turn. Take the wheel.</p><div class=\"ds-stats\"><span><strong>13</strong>jumps</span><span><strong>5</strong>close calls</span><span><strong>8</strong>bumps</span></div><button class=\"ds-primary\">One more run</button><a class=\"ds-text\" href=\"/\">Back to How We Met</a></section>",
+      "css": ".ds-finish{width:330px;max-width:calc(100vw - 32px);padding:26px;background:#103b48ed;border:1px solid #c9ede124;border-radius:14px;text-align:center;box-shadow:0 15px 60px #052a4438;color:var(--cream,#fff9e9);font-family:Nunito,sans-serif}.ds-finish h2{font:400 25px/1.2 Bungee,sans-serif;margin:0 0 13px}.ds-finish p{font-size:15px;line-height:1.5;margin:0 0 20px}.ds-medal{display:inline-block;color:var(--navy,#103b48);background:var(--yellow,#ffdc57);border-radius:22px;padding:8px 16px;font-size:12px;font-weight:1000;margin-bottom:18px}.ds-medal[data-medal=SILVER]{background:#d8e9e7}.ds-medal[data-medal=BRONZE]{background:#e6b389}.ds-time{font:400 43px Bungee,sans-serif;font-variant-numeric:tabular-nums;margin:3px 0}.ds-finish .ds-best{color:var(--yellow,#ffdc57);font-size:12px;font-weight:950;margin-bottom:12px}.ds-stats{display:flex;justify-content:center;gap:22px;font-size:11px;margin:14px 0 24px;color:#c7e4dd}.ds-stats strong{display:block;font-size:23px;color:var(--cream,#fff9e9)}.ds-finish .ds-text{margin:14px auto 0}.ds-primary{border:0;background:var(--yellow,#ffdc57);color:var(--navy,#103b48);padding:15px 28px;border-radius:9px;font:1000 18px Nunito,sans-serif;box-shadow:0 5px 15px #09384855;transition:transform .15s,background .15s;min-width:180px;cursor:pointer}.ds-primary:hover{background:#ffe993;transform:translateY(-2px)}.ds-primary:active{transform:translateY(2px)}.ds-primary:disabled{opacity:.55;cursor:wait}.ds-primary:focus-visible{outline:3px solid var(--yellow,#ffdc57);outline-offset:5px}@media(max-width:760px){.ds-primary{font-size:16px;min-width:160px;padding:13px 22px}}@media(prefers-reduced-motion:reduce){.ds-primary{transition:none}.ds-primary:hover{transform:none}}.ds-text{display:block;margin:15px 0 0;border:0;background:none;color:var(--cream,#fff9e9);font:900 14px Nunito,sans-serif;padding:6px 0;text-shadow:0 2px 7px #103b48;cursor:pointer;text-decoration:none}.ds-text:hover{text-decoration:underline;text-underline-offset:4px}.ds-text:focus-visible{outline:3px solid var(--yellow,#ffdc57);outline-offset:5px}@media(max-width:1000px){.ds-finish{width:295px}}@media(max-width:760px){.ds-finish{width:330px}}@media(max-height:740px){.ds-finish{padding:22px}.ds-stats{margin:10px 0 18px}}"
+    },
+    {
+      "name": "Cafecito Gauge",
+      "kind": "custom",
+      "refersTo": "cafecito-gauge",
+      "description": "Aqua arc shows fuel; runtime turns the fill pale cream while boosting.",
+      "html": "<div class=\"ds-boost\"><svg viewBox=\"0 0 190 120\" aria-hidden=\"true\"><path class=\"ds-track\" d=\"M22 98 A73 73 0 0 1 168 98\"/><path class=\"ds-fill\" d=\"M22 98 A73 73 0 0 1 168 98\" pathLength=\"100\"/><path class=\"ds-cup\" d=\"M68 69h29v14q0 15-15 15t-14-15zm29 3h5q14 0 0 13h-5M71 105h26M77 64q-6-6 0-12m10 12q-6-6 0-12\"/></svg><div><strong>CAFECITO</strong><kbd>Shift</kbd></div></div>",
+      "css": ".ds-boost{position:relative;width:190px;height:135px;filter:drop-shadow(0 2px 2px #143e49);color:var(--cream,#fff9e9);font-family:Nunito,sans-serif}.ds-boost svg{width:190px;height:120px;fill:none}.ds-track{stroke:#103b48;stroke-width:18}.ds-fill{stroke:var(--aqua,#59f1e3);stroke-width:12;stroke-dasharray:100;stroke-dashoffset:45;stroke-linecap:butt}.ds-cup{stroke:var(--cream,#fff9e9);stroke-width:3.5;stroke-linecap:round;stroke-linejoin:round}.ds-boost>div{position:absolute;bottom:0;width:100%;display:flex;justify-content:center;align-items:center;gap:9px;font-size:14px;font-style:italic}.ds-boost strong{font-weight:1000}.ds-boost kbd{font:900 11px Nunito,sans-serif;background:var(--cream,#fff9e9);color:var(--navy,#103b48);border-radius:3px;padding:2px 5px}"
+    },
+    {
+      "name": "Florida Chapter Link",
+      "kind": "card",
+      "refersTo": "chapter-link",
+      "description": "Homepage-only entry into Florida, preserving Quicksand and the existing chapter palette.",
+      "html": "<a class=\"ds-chapter\" href=\"/florida/\"><div><h2>Next stop: Florida</h2><p>You, Nina, an airboat, and the Intracoastal.</p></div><span>Play the 3D race →</span></a>",
+      "css": ".ds-chapter{display:flex;align-items:center;justify-content:space-between;gap:24px;margin:26px 0;padding:24px 28px;background:#174e58;border-radius:14px;text-decoration:none;color:#fff7df;box-shadow:0 7px 24px #08081133;font-family:Quicksand,system-ui,sans-serif}.ds-chapter h2{font-size:24px;font-weight:700;margin:0 0 7px}.ds-chapter p{margin:0;font-size:15px;line-height:1.5}.ds-chapter>span{color:#ffdf64;font-weight:700;white-space:nowrap;font-size:16px}.ds-chapter:hover{background:#1c626a}.ds-chapter:focus-visible{outline:3px solid #ffdf64;outline-offset:5px}@media(max-width:600px){.ds-chapter{align-items:flex-start;flex-direction:column;gap:15px;padding:22px}}"
+    }
+  ],
+  "narrative": {
+    "northStar": "A Florida Postcard in Motion",
+    "overview": "Florida is a playful miniature waterfront with a detailed cream, coral, and teal airboat, blocky characters, layered planting, yachts, balconies, and reflective turquoise water. Broad curves and soft material highlights now coexist with the characters’ visible facets. Sparse arcade instruments leave the course and couple primary.\n\nThis record captures the built Florida V2 world and its homepage link. The user pinned the original generated concept as the visual target; it remains a reference, not runtime imagery or proof of equivalent fidelity. Toronto retains its pixel art, Press Start 2P, Quicksand, and existing palette.",
+    "keyCharacteristics": [
+      "Shaped hull, visible teak, separate upholstered seats, and an exposed fan and engine.",
+      "Dense moorings, planted banks, villas, condos, branching channels, and active boat traffic.",
+      "Cream and navy instruments, yellow actions, and an aqua Cafecito gauge.",
+      "Close couple framing at entry and finish, with bridge and Fisheries visible on desktop."
+    ],
+    "rules": [
+      {
+        "name": "The Chapter Boundary Rule",
+        "body": "Extend these tokens within Florida; retain Toronto’s visual system and the homepage link’s Quicksand.",
+        "section": "overview"
+      },
+      {
+        "name": "The Moving Background Rule",
+        "body": "Keep the clock and sector label on their navy plates so the animated world cannot erase them.",
+        "section": "colors"
+      },
+      {
+        "name": "The Instrument Type Rule",
+        "body": "Use Bungee for short race titles and numbers; use Nunito for sentences, controls, and captions.",
+        "section": "typography"
+      }
+    ],
+    "dos": [
+      "Do preserve the couple, readable hazards, curved course, and desktop arrival landmarks.",
+      "Do extend the built shaped geometry and material detail when adding Florida scenery.",
+      "Do keep the user-approved FLORIDA eyebrow and original concept reference.",
+      "Do pair color-coded states with text or recognizable geometry.",
+      "Do preserve keyboard focus, pause behavior, and the explicit phone-controls notice."
+    ],
+    "donts": [
+      "Don’t apply Florida’s fonts, palette, or 3D art rules to Toronto.",
+      "Don’t substitute the concept image for the playable world or a runtime screenshot.",
+      "Don’t describe code-authored models or native-canvas materials as externally generated assets.",
+      "Don’t describe responsive layout as touch steering or reduced motion as a static scene.",
+      "Don’t expand the closed three-fix review into a full design or 60 FPS certification."
+    ]
+  }
+}
