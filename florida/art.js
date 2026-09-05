@@ -346,6 +346,9 @@ export function fisheries() {
   for (let z=-8;z<6;z+=3) box(g,.2,2.7,2.3,0x396974,-7.6,4.4,z);
   box(g, 23, .35, 4, C.cream, 0, 4.2, 9.7);
   for (let x=-10;x<=10;x+=4) pipe(g,[x,1.25,11.2],[x,4.2,11.2],.14,C.cream);
+  // Layered awning ribs, dock caps and roof seams catch the warm waterfront light.
+  for(let x=-10;x<=10;x+=1.1){box(g,.065,.075,3.7,0x829b87,x,4.42,9.65);pipe(g,[x,6.75,8],[x,8.9,-1.5],.032,0xe89b72,4)}
+  for(let x=-12;x<=12;x+=2){box(g,.3,.14,.3,C.cream,x,2.57,14);pipe(g,[x,1.1,14],[x,1.95,14],.12,0x8b6a43,6)}
   const sign = textSign('15th Street Fisheries', 21, 3.15, { font: '900 72px Nunito' }); sign.position.set(0,6.15,8.74); g.add(sign);
   box(g, 6.6, 2.4, 5.8, C.cream, 1, 9.15, -2);
   for (const x of [-1.25,1.25,3.75]) box(g,1.9,1.4,.1,0x366876,x,9.35,1);
@@ -373,6 +376,13 @@ export function bridge(width = 130) {
     box(g,6.6,3.8,6.5,C.cream,side*27,20.2,0);
     for(const x of [-2.1,0,2.1])box(g,1.65,2,.12,0x497783,side*27+x,20.8,3.32);
     roof(g,8.6,8.5,side*27,22.25,0,0xc29368);
+    for(const z of [-4.05,4.05]){
+      for(const dx of [-2.75,2.75])box(g,.38,10.1,.2,0xe0d7ba,side*27+dx,12,z);
+      for(const y of [7.2,10.2,13.2,16.2])box(g,6.1,.10,.14,0xc8c7ac,side*27,y,z+.06);
+      box(g,7.6,.26,.4,0xf4e9cb,side*27,17.2,z);
+    }
+    box(g,7.6,.23,7.5,0xe1d6b8,side*27,18.9,0);
+
     for(let x=34;x<width/2;x+=3)for(const z of [-6.2,6.2])pipe(g,[side*x,deckY+.6,z],[side*x,deckY+1.65,z],.055,C.cream);
     for(const z of [-6.2,6.2])pipe(g,[side*31,deckY+1.65,z],[side*width/2,deckY+1.65,z],.06,C.cream);
   }

@@ -91,14 +91,14 @@ export function makeWater(scene){
  for(const [cells,amplitude]of [[7,.45],[17,.55],[37,.28],[73,.16]]){const grid=Float32Array.from({length:cells*cells},random);for(let y=0;y<size;y++)for(let x=0;x<size;x++){const u=x/size*cells,v=y/size*cells,ix=Math.floor(u),iy=Math.floor(v),a=smooth(u-ix),b=smooth(v-iy),sample=(xx,yy)=>grid[(yy%cells)*cells+xx%cells],top=T.MathUtils.lerp(sample(ix,iy),sample(ix+1,iy),a),bottom=T.MathUtils.lerp(sample(ix,iy+1),sample(ix+1,iy+1),a);heights[y*size+x]+=T.MathUtils.lerp(top,bottom,b)*amplitude}}
  for(let y=0;y<size;y++)for(let x=0;x<size;x++){const h=(xx,yy)=>heights[((yy+size)%size)*size+(xx+size)%size],dx=(h(x+1,y)-h(x-1,y))*5,dy=(h(x,y+1)-h(x,y-1))*5,n=new T.Vector3(dx,dy,1).normalize(),k=(y*size+x)*4;data[k]=(n.x*.5+.5)*255;data[k+1]=(n.y*.5+.5)*255;data[k+2]=(n.z*.5+.5)*255;data[k+3]=Math.min(255,heights[y*size+x]/1.44*255)}
  const normal=new T.DataTexture(data,size,size);normal.wrapS=normal.wrapT=T.RepeatWrapping;normal.magFilter=T.LinearFilter;normal.minFilter=T.LinearMipmapLinearFilter;normal.generateMipmaps=true;normal.needsUpdate=true;
- const water=new Water(new T.PlaneGeometry(14000,14000),{textureWidth:512,textureHeight:512,waterNormals:normal,sunDirection:SUN,sunColor:0xfff1d4,waterColor:0x008c94,distortionScale:1.05,fog:true});water.material.fragmentShader=water.material.fragmentShader.replace('sunColor * diffuseLight * 0.3','waterColor * diffuseLight * 0.12').replace('max( 0.0, dot( surfaceNormal, eyeDirection ) ) * waterColor','(0.55 + 0.45 * max( 0.0, dot( surfaceNormal, eyeDirection ) )) * waterColor').replace('reflectionSample + specularLight, reflectance','reflectionSample * 0.82 + specularLight, reflectance * 0.62');const reflect=water.onBeforeRender;water.onBeforeRender=function(...args){if(!args[1].overrideMaterial)reflect.apply(this,args)};water.material.fragmentShader=water.material.fragmentShader.replace('vec3 outgoingLight = albedo;',`
+ const water=new Water(new T.PlaneGeometry(14000,14000),{textureWidth:512,textureHeight:512,waterNormals:normal,sunDirection:SUN,sunColor:0xfff1d4,waterColor:0x008c94,distortionScale:.72,fog:true});water.material.fragmentShader=water.material.fragmentShader.replace('sunColor * diffuseLight * 0.3','waterColor * diffuseLight * 0.12').replace('max( 0.0, dot( surfaceNormal, eyeDirection ) ) * waterColor','(0.55 + 0.45 * max( 0.0, dot( surfaceNormal, eyeDirection ) )) * waterColor').replace('reflectionSample + specularLight, reflectance','reflectionSample * 0.82 + specularLight, reflectance * 0.72');const reflect=water.onBeforeRender;water.onBeforeRender=function(...args){if(!args[1].overrideMaterial)reflect.apply(this,args)};water.material.fragmentShader=water.material.fragmentShader.replace('vec3 outgoingLight = albedo;',`
   vec2 waveUV=worldPosition.xz*.052+vec2(time*.018,time*.007);
   vec4 waveDetail=texture2D(normalSampler,waveUV);
   float body=texture2D(normalSampler,worldPosition.xz*.009+vec2(time*.004,-time*.003)).a;
   float crest=smoothstep(.52,.66,waveDetail.a)*smoothstep(.49,.64,waveDetail.g);
   float distanceFade=1.0-smoothstep(90.0,320.0,distance);
-  vec3 outgoingLight=albedo*mix(.78,1.18,smoothstep(.28,.70,body));
-  outgoingLight+=vec3(.20,.57,.58)*crest*distanceFade*.8;
- `);water.rotation.x=-Math.PI/2;water.position.y=.025;water.material.uniforms.size.value=9.8;scene.add(water);
+  vec3 outgoingLight=albedo*mix(.94,1.06,smoothstep(.28,.70,body));
+  outgoingLight+=vec3(.20,.57,.58)*crest*distanceFade*.10;
+ `);water.rotation.x=-Math.PI/2;water.position.y=.025;water.material.uniforms.size.value=7.6;scene.add(water);
  return{mesh:water,update(s,t){water.material.uniforms.time.value=t*.65}};
 }

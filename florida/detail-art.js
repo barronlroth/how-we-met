@@ -60,14 +60,17 @@ export function lushPalm(seed=0){
  const g=new T.Group(),lean=Math.sin(seed)*1.3;
  // Flat bark bands keep the same silhouette without ten 448-triangle tori.
  for(let i=0;i<10;i++){pipe(g,[lean*(i/10)**2,i*.85,0],[lean*((i+1)/10)**2,(i+1)*.85,0],.2-i*.009,0x9c8b63,9);put(g,new T.CylinderGeometry(.214-i*.009,.214-i*.009,.036,9,1,true),0x7e7258,lean*(i/10)**2,i*.85,0)}
+ // Feathered leaflets leave daylight through the crown, instead of solid ribbons.
  for(let f=0;f<11;f++){
-  const angle=f*Math.PI*2/11+seed,verts=[],inds=[],len=4.3+(f%3)*.45;
-  for(let j=0;j<=10;j++){const t=j/10,r=t*len,h=8.5+Math.sin(t*2.7)*1.9-t*t*2.3,w=Math.sin(t*Math.PI)*.43;
-   for(const side of [-1,1])verts.push(lean+Math.cos(angle)*r+Math.sin(angle)*w*side,h,Math.sin(angle)*r-Math.cos(angle)*w*side);
-   if(j<10){const k=j*2;inds.push(k,k+1,k+2,k+1,k+3,k+2)}
-   if(j>1&&j<9)for(const side of [-1,1]){const a=angle+side*.08;pipe(g,[lean+Math.cos(angle)*r,h,Math.sin(angle)*r],[lean+Math.cos(a)*(r+.33)+Math.sin(angle)*w*side,h-.13,Math.sin(a)*(r+.33)-Math.cos(angle)*w*side],.014,0x729245,3)}
+  const angle=f*Math.PI*2/11+seed,len=4.3+(f%3)*.45,verts=[],inds=[];
+  const at=(t,side=0)=>{const r=t*len,h=8.5+Math.sin(t*2.7)*1.9-t*t*2.3;return new T.Vector3(lean+Math.cos(angle)*r+Math.sin(angle)*side,h,Math.sin(angle)*r-Math.cos(angle)*side)};
+  const spine=Array.from({length:7},(_,i)=>at(i/6));
+  put(g,new T.TubeGeometry(new T.CatmullRomCurve3(spine),8,.025,3,false),0x7d9845);
+  for(let j=1;j<12;j++)for(const side of [-1,1]){
+   const t=j/13,w=Math.sin(t*Math.PI)**.65*.72,a=at(t),b=at(Math.min(.99,t+.13),side*w),c=at(Math.min(.99,t+.17),side*w*.96),d=at(t+.045);
+   b.y-=.19;c.y-=.24;const k=verts.length/3;for(const p of [a,b,c,d])verts.push(p.x,p.y,p.z);inds.push(k,k+1,k+2,k,k+2,k+3);
   }
-  const geo=new T.BufferGeometry();geo.setAttribute('position',new T.Float32BufferAttribute(verts,3));geo.setIndex(inds);geo.computeVertexNormals();put(g,geo,mat([0x456c35,0x5d8237,0x809c44][f%3],{side:T.DoubleSide,roughness:.75}));
+  const geo=new T.BufferGeometry();geo.setAttribute('position',new T.Float32BufferAttribute(verts,3));geo.setIndex(inds);geo.computeVertexNormals();put(g,geo,mat([0x4d7638,0x6d8c3f,0x8d9e4b][f%3],{side:T.DoubleSide,roughness:.85}));
  }
  for(let i=0;i<4;i++)ball(g,lean+Math.sin(i*2)*.3,8.1,Math.cos(i*2)*.3,.16,.2,.16,0x817442,1);
  return bake(g);

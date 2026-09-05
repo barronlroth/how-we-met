@@ -9,3 +9,17 @@ Signature interaction: carve a heading through sweeping bends; brake and steer t
 First viewport: the couple's detailed cream/coral/teal airboat above reflective water, rich planted waterfront, and a recognizable destination. Sparse arcade type and controls leave the 3D world primary. Racing HUD has rank, timer, curved coffee meter and the actual course map. Finish keeps the destination visible. Reduced motion suppresses decorative vibration and speed streaks; pause/focus behavior remains usable. Toronto is unchanged.
 
 The scene-art rebuild replaces the first V2 boat and houses with `premium-art.js` and a coherent material set in `materials.js`: shaped hull, visible teak, individually upholstered seats, reduced fan cage, recessed balconies, several villa and yacht profiles. Foliage, stucco, roof and cloth detail is generated deterministically in native canvas code. Water normals use a seeded, periodic multiscale height field. Screen-space contact shading is restricted to nearby geometry for performance.
+
+## Direction contract
+
+THESIS: An animated Florida postcard, anchored by recognizable, expressive versions of Barron and Nina aboard a crafted airboat.
+
+OWN-WORLD: Cream hull, coral tubing, teal mechanics, golden teak, warm skin, dark curls and highlighted brown hair; the approved concept remains the art target.
+
+STORY: Race through an inhabited waterfront toward dinner at Fisheries.
+
+FIRST VIEWPORT: Preserve the playable scene and sparse title/actions; sharpen the foreground couple, boat materials and water, with the bridge and restaurant readable behind.
+
+FORM: Refine the established 3D world, code-led; user-selected rounded animated-film characters, supplied likeness photos, and a 5% performance-loss target. No new concept tournament.
+
+FINISH: unreviewed and undocumented is unfinished; this build ends with the finish review, the verdict, DESIGN.md, and every shipping raster carrying its provenance

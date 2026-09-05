@@ -7,7 +7,8 @@
     "build": "node scripts/build.mjs",
     "test": "node --test tests/*.test.mjs",
     "preview": "python3 -m http.server 4179 --bind 127.0.0.1 --directory dist",
-    "blender:smoke": "./scripts/blender-headless.sh --python scripts/blender-smoke.py"
+    "blender:smoke": "./scripts/blender-headless.sh --python scripts/blender-smoke.py",
+    "blender:hero": "./scripts/blender-headless.sh --python scripts/build-florida-hero.py"
   },
   "dependencies": {
     "three": "0.185.1"

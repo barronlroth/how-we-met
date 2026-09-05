@@ -31,7 +31,7 @@ The user subsequently approved desktop first, racing as the core activity, Cafec
 
 ## Brand Commitments
 
-Keep the game personal to Barron and Nina. Florida should be cute, playful, and visibly 3D, with blocky or low-poly characters and recognizable Fort Lauderdale landmarks. The user expressly wants this chapter to exceed the simple Toronto prototype in ambition.
+Keep the game personal to Barron and Nina. Florida should be cute, playful, and visibly 3D, with rounded animated-film characters informed by supplied likeness photos, alongside recognizable Fort Lauderdale landmarks. The user expressly wants this chapter to exceed the simple Toronto prototype in ambition.
 
 ## Evidence on Hand
 

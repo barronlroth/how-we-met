@@ -5,7 +5,8 @@ import {SSAOPass} from 'three/addons/postprocessing/SSAOPass.js';
 import {OutputPass} from 'three/addons/postprocessing/OutputPass.js';
 import {floater,gator,pickup,ramp,boatWake,C} from './art.js';
 import {prepareMaterials,raceBoat,waterTaxi} from './detail-art.js';
-import {loadArtMaterials,craftedAirboat} from './premium-art.js';
+import {loadArtMaterials} from './premium-art.js';
+import {loadHeroArt,heroAirboat} from './hero-art.js';
 import {makeWorld,makeWater,makeSky,SUN} from './world.js';
 import {makeEffects} from './effects.js';
 import {createRace,stepRace,pilotInput,horn,objectX,pointAt,frameAt,angleDelta,sector,COURSE_LENGTH,MEDAL_TIMES,formatTime,loadBest,saveBest,ISLANDS} from './core.js';
@@ -113,10 +114,10 @@ function frame(now){
  perfTime+=realDt;perfFrames++;if(perfTime>.5){if(!$('performance').hidden)$('performance').textContent=`${Math.round(perfFrames/perfTime)} fps · ${renderer.info.render.calls} draws · ${Math.round(renderer.info.render.triangles/1000)}k triangles\n${innerWidth}×${innerHeight} · DPR ${renderer.getPixelRatio()} · excludes first 5 race seconds\n${frameProfile.summary()}\nMulti-draw ${renderer.extensions.has('WEBGL_multi_draw')}`;perfTime=0;perfFrames=0}
 }
 async function boot(){
- await document.fonts.ready;await prepareMaterials();await loadArtMaterials();renderer=new T.WebGLRenderer({canvas:$('world'),antialias:true,powerPreference:'high-performance'});const benchmarkDpr=Number(new URLSearchParams(location.search).get('benchmarkDpr'));renderer.setPixelRatio([1,1.25].includes(benchmarkDpr)?benchmarkDpr:Math.min(devicePixelRatio,1.25));renderer.outputColorSpace=T.SRGBColorSpace;renderer.toneMapping=T.ACESFilmicToneMapping;renderer.toneMappingExposure=1.0;renderer.shadowMap.enabled=true;renderer.shadowMap.autoUpdate=false;renderer.shadowMap.type=T.PCFShadowMap;renderer.info.autoReset=false;
+ await document.fonts.ready;await prepareMaterials();await Promise.all([loadArtMaterials(),loadHeroArt()]);renderer=new T.WebGLRenderer({canvas:$('world'),antialias:true,powerPreference:'high-performance'});const benchmarkDpr=Number(new URLSearchParams(location.search).get('benchmarkDpr'));renderer.setPixelRatio([1,1.25].includes(benchmarkDpr)?benchmarkDpr:Math.min(devicePixelRatio,1.25));renderer.outputColorSpace=T.SRGBColorSpace;renderer.toneMapping=T.ACESFilmicToneMapping;renderer.toneMappingExposure=1.0;renderer.shadowMap.enabled=true;renderer.shadowMap.autoUpdate=false;renderer.shadowMap.type=T.PCFShadowMap;renderer.info.autoReset=false;
  scene=new T.Scene();scene.fog=new T.Fog(0xb6d5dc,520,1700);camera=new T.PerspectiveCamera(63,innerWidth/innerHeight,.15,6000);resize();scene.add(new T.HemisphereLight(0xd8edfa,0x647653,.55));
  sunshine=new T.DirectionalLight(0xfff0d3,4.3);sunshine.castShadow=true;sunshine.shadow.mapSize.set(2048,2048);Object.assign(sunshine.shadow.camera,{left:-100,right:100,top:100,bottom:-100,near:1,far:280});sunshine.shadow.normalBias=.045;sunshine.shadow.bias=-.00008;sunshine.shadow.radius=2;scene.add(sunshine,sunshine.target);
- makeSky(scene,renderer);water=makeWater(scene);scenery=makeWorld(scene,{multiDraw:renderer.extensions.has('WEBGL_multi_draw')});boat=craftedAirboat();scene.add(boat);effects=makeEffects(scene);
+ makeSky(scene,renderer);water=makeWater(scene);scenery=makeWorld(scene,{multiDraw:renderer.extensions.has('WEBGL_multi_draw')});boat=heroAirboat();scene.add(boat);effects=makeEffects(scene);
  (boat.userData.hull||boat.children[0]).traverse(o=>{if(o.isMesh){o.material=o.material.clone();hullMaterials.push({material:o.material,roughness:o.material.roughness,metalness:o.material.metalness})}});
  const models={floater:[floater(0),floater(1),floater(2)],gator:gator(),ramp:ramp(),wake:boatWake(),coffee:pickup('coffee'),flamingo:pickup('flamingo'),sunscreen:pickup('sunscreen'),taxi:waterTaxi()};
  for(const [i,o]of race.objects.entries()){const m=(o.type==='floater'?models.floater[i%3]:models[o.type])?.clone(true);if(m){scene.add(m);entities.set(o.id,m)}}
