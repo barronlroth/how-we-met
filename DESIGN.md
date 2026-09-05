@@ -27,7 +27,7 @@ This record captures the built Florida V2 world and its homepage link. The user 
 
 **The Chapter Boundary Rule.** Extend these tokens within Florida; retain Toronto’s visual system and the homepage link’s Quicksand.
 
-Recorded September 4, 2026 from [CSS](florida/style.css), [markup](florida/index.html), [runtime](florida/main.js), [scene art](florida/premium-art.js), [materials](florida/materials.js), [world](florida/world.js), and [effects](florida/effects.js). Direction: [waterfront V2](docs/concepts/florida-waterfront-v2.direction.md). Captures: `.impeccable/review/{desktop,user-989,racing,finish,mobile,concept-size}.png`. The review closed the water/light, wake, and entry-composition fixes with **ship at that fix-list scope only**. Active gameplay was measured at approximately 33 FPS at 1440 × 900; this is not a 60 FPS claim.
+Recorded September 4, 2026 from [CSS](florida/style.css), [markup](florida/index.html), [runtime](florida/main.js), [scene art](florida/premium-art.js), [materials](florida/materials.js), [world](florida/world.js), and [effects](florida/effects.js). Direction: [waterfront V2](docs/concepts/florida-waterfront-v2.direction.md). Captures: `.impeccable/review/{desktop,user-989,racing,finish,mobile,concept-size}.png`. The review closed the water/light, wake, and entry-composition fixes with **ship at that fix-list scope only**. That visual-review build measured approximately 33 FPS at 1440 × 900. The later rendering performance pass keeps the art and gameplay, batches shoreline geometry, and culls it per pass; current measurements and resolution settings are in [Florida validation](docs/florida-v2-validation.md). This remains a device-specific result, not a universal 60 FPS claim.
 
 ## Colors
 

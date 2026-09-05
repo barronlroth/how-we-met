@@ -1,5 +1,6 @@
 import * as T from 'three';
 import {Water} from 'three/addons/objects/Water.js';
+import {batchScenery} from './scenery-batches.js';
 import {waterfrontVilla,sportYacht,canopyTree} from './premium-art.js';
 import {C,mat,box,ball,pipe,bake,mansion,buoy,fisheries,bridge,textSign} from './art.js';
 import {superyacht,lushPalm,broadleaf,shrub,condo,marinaPier,pavilion,parasol} from './detail-art.js';
@@ -19,10 +20,10 @@ function terrain(scene){
  // Shape uses x/-z so the winding remains correct after rotation.
  const ground=new T.Mesh(new T.ShapeGeometry(shape),mat(0x73935b,{roughness:1}));ground.rotation.x=-Math.PI/2;ground.position.y=.4;ground.receiveShadow=true;scene.add(ground);
 }
-export function makeWorld(scene){
- terrain(scene);const chunks=[],landmarks=[];let currentDistance=0;
+export function makeWorld(scene,{multiDraw=false}={}){
+ terrain(scene);const chunks=[],landmarks=[];
  const palms=[0,1,2].map(lushPalm),trees=[0,1].map(canopyTree),bushes=[0,1,2].map(shrub),homes=[0,1,2,3,4,5].map(waterfrontVilla),towers=[0,1,2,3].map(condo),boats=[sportYacht(0),sportYacht(1),superyacht(.82)],pier=marinaPier(23),umbrella=parasol();
- const decorative=new T.Group();
+ const decorative=new T.Group();decorative.name='landmarks';
  for(let i=-2;i<Math.ceil(COURSE_LENGTH/100)+6;i++){
   const s=i*100,g=new T.Group(),fixed=new T.Group();
   for(const side of [-1,1]){
@@ -50,8 +51,9 @@ export function makeWorld(scene){
    }
    if(marina&&!arrival){for(const off of [-20,25])place(g,umbrella,s+off,side*(halfWidth(s+off)+4),.5,0,.8)}
   }
-  g.add(bake(fixed));const chunk=instance(g);chunk.userData.s=s;scene.add(chunk);chunks.push(chunk);
+  g.add(bake(fixed));const chunk=instance(g);chunk.userData.s=s;chunks.push(chunk);
  }
+ const batches=batchScenery(chunks,{multiDraw});batches.root.name='shoreline';scene.add(batches.root);
  for(let s=20,i=0;s<COURSE_LENGTH;s+=42,i++)for(const side of [-1,1]){const b=buoy(side<0?0xe96e40:0x58ac69,i%4===0);place(decorative,b,s,side*(halfWidth(s)-3),.05)}
  for(const [i,s]of CHECKPOINTS.entries()){
   const g=new T.Group(),w=Math.min(20,halfWidth(s)-7);for(const side of [-1,1]){pipe(g,[side*w,0,0],[side*w,7,0],.08,C.cream);const marker=buoy(side<0?C.coral:0x59a975,true);marker.position.set(side*w,0,0);g.add(marker)}
@@ -73,7 +75,7 @@ export function makeWorld(scene){
  // A layered skyline closes the horizon beyond the route.
  for(let i=0;i<35;i++){const s=COURSE_LENGTH*(i/34),side=i%2?1:-1;place(decorative,towers[i%4],s,side*(220+(i%5)*32),.4,0,1.1+(i%4)*.28)}
  scene.add(decorative);
- return{update(s){currentDistance=s;for(const c of chunks)c.visible=Math.abs(c.userData.s-s)<670;for(const l of landmarks)l.visible=s>COURSE_LENGTH-850},setAO(enabled){for(const c of chunks)c.visible=Math.abs(c.userData.s-currentDistance)<(enabled?95:670);decorative.visible=!enabled},landmarks};
+ return{update(s,camera){batches.update(s,camera);for(const l of landmarks)l.visible=s>COURSE_LENGTH-850},setAO(enabled){batches.setAO(enabled);decorative.visible=!enabled},landmarks};
 }
 export function makeSky(scene,renderer){
  const sky=new T.Mesh(new T.SphereGeometry(5200,24,14),new T.ShaderMaterial({side:T.BackSide,depthWrite:false,uniforms:{top:{value:new T.Color(0x007fc4)},horizon:{value:new T.Color(0x6bc5de)}},vertexShader:`varying vec3 direction;void main(){direction=position;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);}`,fragmentShader:`uniform vec3 top;uniform vec3 horizon;varying vec3 direction;void main(){float h=pow(max(0.0,normalize(direction).y),0.16);gl_FragColor=vec4(mix(horizon,top,h),1.0);\n#include <tonemapping_fragment>

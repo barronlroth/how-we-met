@@ -23,3 +23,4 @@
 .small-button{display:inline-flex;align-items:center;gap:7px}.small-button svg{width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
 
 @media(max-width:600px){.title-lockup{top:9%}.subtitle{font-size:12px}}
+#performance{left:8px;bottom:8px;max-width:calc(100vw - 16px);white-space:pre-wrap;line-height:1.5}

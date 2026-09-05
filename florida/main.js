@@ -11,6 +11,7 @@ import {makeEffects} from './effects.js';
 import {createRace,stepRace,pilotInput,horn,objectX,pointAt,frameAt,angleDelta,sector,COURSE_LENGTH,MEDAL_TIMES,formatTime,loadBest,saveBest,ISLANDS} from './core.js';
 import {TRACK,routeBounds} from './course.js';
 import {GameAudio} from './audio.js';
+import {createFrameProfile} from './performance.js';
 const $=id=>document.getElementById(id),reducedMotion=matchMedia('(prefers-reduced-motion: reduce)').matches;
 let storage;try{storage=localStorage}catch{storage={getItem:()=>null,setItem:()=>{}}}
 let race=createRace(),best=loadBest(storage),renderer,composer,scene,camera,boat,scenery,water,effects,sunshine;
@@ -18,13 +19,15 @@ let countIn=0,pausedFrom='racing',lastTime=0,time=0,captionUntil=0,deflate=0,sha
 const audio=new GameAudio(),pressed=new Set(),entities=new Map(),rivalModels=[],hornRings=[],hullMaterials=[];
 const desiredCamera=new T.Vector3(),lookAt=new T.Vector3(),smoothLook=new T.Vector3();
 let smoothedHeading=0,fps=60,perfFrames=0,perfTime=0;
+const frameProfile=createFrameProfile();
+
 const mapPoint=p=>({x:10+(p.x-routeBounds.minX)/(routeBounds.maxX-routeBounds.minX)*80,y:170-(routeBounds.maxZ-p.z)/(routeBounds.maxZ-routeBounds.minZ)*160});
 function setCaption(text,duration=3.5){if(!text)return;$('nina-line').textContent=text;$('nina').style.opacity='1';captionUntil=time+duration}
 function pulse(color){if(reducedMotion)return;$('flash').style.borderColor=color;$('flash').style.opacity='.42';setTimeout(()=>$('flash').style.opacity='0',130)}
 function showError(error){console.error(error);$('start').hidden=true;$('hud').hidden=true;$('error').hidden=false;document.body.classList.remove('racing')}
 $('sound').addEventListener('click',async()=>{try{await audio.enable(!audio.enabled);$('sound').querySelector('span').textContent=audio.enabled?'Sound on':'Sound off';$('sound').setAttribute('aria-pressed',String(audio.enabled));$('sound').setAttribute('aria-label',audio.enabled?'Mute sound':'Turn sound on')}catch{$('sound').querySelector('span').textContent='Unavailable'}});
 function resetRace(demo=false){
- if(!renderer)return;race=createRace();race.demo=demo;race.status='countdown';pressed.clear();deflate=0;shake=0;countIn=3;cameraSnap=true;effects.reset();
+ if(!renderer)return;race=createRace();race.demo=demo;race.status='countdown';pressed.clear();deflate=0;shake=0;countIn=3;cameraSnap=true;effects.reset();frameProfile.reset();
  for(const id of ['start','paused','finish'])$(id).hidden=true;for(const id of ['hud','pause','countdown'])$(id).hidden=false;
  $('demo-note').hidden=!demo;$('countdown').textContent='3';document.body.classList.add('racing');setCaption('A little racing before dinner. What could go wrong?',5);$('world').focus({preventScroll:true});
 }
@@ -32,7 +35,7 @@ $('start-race').addEventListener('click',()=>resetRace());$('replay').addEventLi
 function pauseRace(){
  if(!['racing','countdown','paused'].includes(race.status))return;pressed.clear();
  if(race.status==='paused'){race.status=pausedFrom;$('paused').hidden=true;document.body.classList.add('racing');$('countdown').hidden=race.status!=='countdown';(lastFocus?.isConnected?lastFocus:$('world')).focus({preventScroll:true})}
- else{pausedFrom=race.status;race.status='paused';$('paused').hidden=false;$('countdown').hidden=true;document.body.classList.remove('racing');lastFocus=document.activeElement;$('resume').focus({preventScroll:true})}
+ else{pausedFrom=race.status;race.status='paused';audio.update(0,false);$('paused').hidden=false;$('countdown').hidden=true;document.body.classList.remove('racing');lastFocus=document.activeElement;$('resume').focus({preventScroll:true})}
 }
 $('pause').addEventListener('click',pauseRace);$('resume').addEventListener('click',pauseRace);
 window.addEventListener('keydown',event=>{
@@ -81,7 +84,7 @@ function renderEntities(s){
  race.rivals.forEach((v,i)=>{const m=rivalModels[i],p=pointAt(v.s,v.x);m.visible=race.status!=='ready'&&race.status!=='finished'&&Math.abs(v.s-s)<650;m.position.set(p.x,Math.sin(time*3+i)*.04,p.z);m.rotation.set(0,-v.heading,Math.sin(time*3+i)*.015)});
 }
 function frame(now){
- requestAnimationFrame(frame);const realDt=Math.max(.0001,(now-lastTime)/1000),dt=Math.min(.065,realDt);lastTime=now;time+=dt;fps+=(1/realDt-fps)*.035;
+ requestAnimationFrame(frame);if(document.hidden){lastTime=now;return}const realDt=Math.max(.0001,(now-lastTime)/1000),dt=Math.min(.065,realDt);lastTime=now;time+=dt;fps+=(1/realDt-fps)*.035;
  if(race.status==='countdown'){countIn-=dt;$('countdown').textContent=Math.ceil(countIn)>0?Math.ceil(countIn):'GO!';if(countIn<=0){race.status='racing';audio.tone(784,.2,'sine',.15);setCaption('Find your line. Let’s catch them.',3)}}
  else if(race.status==='racing'){
   if(countIn>-.6){countIn-=dt;if(countIn<=-.6)$('countdown').hidden=true}
@@ -102,17 +105,18 @@ function frame(now){
  const follow=1-Math.exp(-dt*8);if(cameraSnap){camera.position.copy(desiredCamera);smoothLook.copy(lookAt);cameraSnap=false}else{camera.position.lerp(desiredCamera,follow);smoothLook.lerp(lookAt,follow)}
  if(!reducedMotion&&race.status==='racing'){const vibrate=race.boosting?.022:.009;camera.position.y+=Math.sin(time*52)*vibrate;if(shake>0){camera.position.x+=Math.sin(time*61)*shake;camera.position.y+=Math.cos(time*43)*shake;shake=Math.max(0,shake-dt)}}camera.lookAt(smoothLook);
  const fov=staged?63:race.boosting&&!reducedMotion?84:68;camera.fov=T.MathUtils.lerp(camera.fov,fov,1-Math.exp(-dt*5));camera.updateProjectionMatrix();
- scenery.update(s);water.update(s,time);renderEntities(s);effects.update(race,dt,time);
+ scenery.update(s,camera);water.update(s,time);renderEntities(s);effects.update(race,dt,time);
  sunshine.position.set(p.x+SUN.x*130,130*SUN.y,p.z+SUN.z*130);sunshine.target.position.set(p.x,0,p.z);sunshine.target.updateMatrixWorld();
  for(let i=0;i<hornRings.length;i++){const r=hornRings[i],progress=1-race.hornFlash+i*.18;r.visible=!staged&&race.hornFlash>0&&progress<1;r.position.set(p.x+fx*12,.28,p.z+fz*12);r.scale.setScalar(3+progress*38);r.material.opacity=Math.max(0,(1-progress)*.32)}
- audio.update(race.speed,race.status==='racing',race.boosting);renderer.info.reset();renderer.shadowMap.needsUpdate=true;composer.render();
- perfTime+=realDt;perfFrames++;if(perfTime>.5){$('performance').textContent=`${Math.round(perfFrames/perfTime)} fps · ${renderer.info.render.calls} draws · ${Math.round(renderer.info.render.triangles/1000)}k triangles`;perfTime=0;perfFrames=0}
+ audio.update(race.speed,race.status==='racing',race.boosting);renderer.info.reset();renderer.shadowMap.needsUpdate=true;const renderStart=performance.now();composer.render();
+ if(race.status==='racing'&&race.elapsed>5&&!document.hidden&&!$('performance').hidden)frameProfile.sample(sector(race.s),realDt*1000,performance.now()-renderStart,renderer.info.render.calls,renderer.info.render.triangles);
+ perfTime+=realDt;perfFrames++;if(perfTime>.5){if(!$('performance').hidden)$('performance').textContent=`${Math.round(perfFrames/perfTime)} fps · ${renderer.info.render.calls} draws · ${Math.round(renderer.info.render.triangles/1000)}k triangles\n${innerWidth}×${innerHeight} · DPR ${renderer.getPixelRatio()} · excludes first 5 race seconds\n${frameProfile.summary()}\nMulti-draw ${renderer.extensions.has('WEBGL_multi_draw')}`;perfTime=0;perfFrames=0}
 }
 async function boot(){
- await document.fonts.ready;await prepareMaterials();await loadArtMaterials();renderer=new T.WebGLRenderer({canvas:$('world'),antialias:true,powerPreference:'high-performance'});renderer.setPixelRatio(Math.min(devicePixelRatio,1.25));renderer.outputColorSpace=T.SRGBColorSpace;renderer.toneMapping=T.ACESFilmicToneMapping;renderer.toneMappingExposure=1.0;renderer.shadowMap.enabled=true;renderer.shadowMap.autoUpdate=false;renderer.shadowMap.type=T.PCFShadowMap;renderer.info.autoReset=false;
+ await document.fonts.ready;await prepareMaterials();await loadArtMaterials();renderer=new T.WebGLRenderer({canvas:$('world'),antialias:true,powerPreference:'high-performance'});const benchmarkDpr=Number(new URLSearchParams(location.search).get('benchmarkDpr'));renderer.setPixelRatio([1,1.25].includes(benchmarkDpr)?benchmarkDpr:Math.min(devicePixelRatio,1.25));renderer.outputColorSpace=T.SRGBColorSpace;renderer.toneMapping=T.ACESFilmicToneMapping;renderer.toneMappingExposure=1.0;renderer.shadowMap.enabled=true;renderer.shadowMap.autoUpdate=false;renderer.shadowMap.type=T.PCFShadowMap;renderer.info.autoReset=false;
  scene=new T.Scene();scene.fog=new T.Fog(0xb6d5dc,520,1700);camera=new T.PerspectiveCamera(63,innerWidth/innerHeight,.15,6000);resize();scene.add(new T.HemisphereLight(0xd8edfa,0x647653,.55));
  sunshine=new T.DirectionalLight(0xfff0d3,4.3);sunshine.castShadow=true;sunshine.shadow.mapSize.set(2048,2048);Object.assign(sunshine.shadow.camera,{left:-100,right:100,top:100,bottom:-100,near:1,far:280});sunshine.shadow.normalBias=.045;sunshine.shadow.bias=-.00008;sunshine.shadow.radius=2;scene.add(sunshine,sunshine.target);
- makeSky(scene,renderer);water=makeWater(scene);scenery=makeWorld(scene);boat=craftedAirboat();scene.add(boat);effects=makeEffects(scene);
+ makeSky(scene,renderer);water=makeWater(scene);scenery=makeWorld(scene,{multiDraw:renderer.extensions.has('WEBGL_multi_draw')});boat=craftedAirboat();scene.add(boat);effects=makeEffects(scene);
  (boat.userData.hull||boat.children[0]).traverse(o=>{if(o.isMesh){o.material=o.material.clone();hullMaterials.push({material:o.material,roughness:o.material.roughness,metalness:o.material.metalness})}});
  const models={floater:[floater(0),floater(1),floater(2)],gator:gator(),ramp:ramp(),wake:boatWake(),coffee:pickup('coffee'),flamingo:pickup('flamingo'),sunscreen:pickup('sunscreen'),taxi:waterTaxi()};
  for(const [i,o]of race.objects.entries()){const m=(o.type==='floater'?models.floater[i%3]:models[o.type])?.clone(true);if(m){scene.add(m);entities.set(o.id,m)}}
