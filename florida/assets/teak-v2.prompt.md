@@ -1,0 +1,4 @@
+# Teak deck texture
+Generated with the built-in image generation tool on 2026-09-04. Original generated asset, no external source photograph; shipped unedited as `teak-v2.png`.
+
+Prompt: Use case: photorealistic-natural. Asset type: seamless square base-color texture for teak boat decking and marina docks in a high fidelity stylized 3D Fort Lauderdale racing game. Generate a tightly framed orthographic top-down material scan of sun-warmed honey-blond teak wooden planks, long straight vertical grain, thin dark caulking seams, subtle weathering and fine pores, elegant yacht quality. Six long parallel planks across the image, each continues from top to bottom, no end joints. Even diffuse neutral illumination, no directional shadow, no perspective, no objects, no lettering, no border, no watermark. Tileable edges, natural restrained variation, high detail, 1024 by 1024.

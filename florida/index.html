@@ -1,52 +1,23 @@
 <!doctype html>
-<html lang="en">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <meta name="theme-color" content="#077e8c">
-  <meta name="description" content="Take Barron and Nina on an airboat race through Fort Lauderdale. A new chapter of How We Met.">
-  <title>Florida: Intracoastal Run · How We Met</title>
-  <link rel="stylesheet" href="./style.css">
-</head>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#12434c"><meta name="description" content="Race Barron and Nina through the canals and marinas of Fort Lauderdale. A 3D chapter of How We Met."><title>Florida: Intracoastal Run · How We Met</title><link rel="stylesheet" href="./style.css"></head>
 <body>
-  <main id="game" aria-label="Florida airboat racing game">
-    <canvas id="world" tabindex="0" aria-label="3D airboat race through Fort Lauderdale"></canvas>
-    <div id="shade"></div>
-    <header class="topbar">
-      <a class="home-link" href="../"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>How We Met</a>
-      <div class="tools">
-        <button id="sound" class="small-button" aria-pressed="false" aria-label="Turn sound on"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11 5L6 9H3v6h3l5 4zM16 8c3 2 3 6 0 8M19 5c5 4 5 10 0 14"/></svg><span>Sound off</span></button>
-        <button id="pause" class="small-button" hidden aria-label="Pause race"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14M16 5v14"/></svg><span>Pause</span></button>
-      </div>
-    </header>
-    <section id="start" class="start-panel" aria-labelledby="title">
-      <h1 id="title">INTRACOASTAL<br><span>RUN</span></h1>
-      <p class="place">Fort Lauderdale, Florida</p>
-      <p class="description">You, Nina, and a very questionable shortcut.<br>Race the airboat to the 17th Street bridge.</p>
-      <button id="start-race" class="primary" disabled>Launching the boat…</button>
-      <div class="key-guide"><span><kbd>A</kbd><kbd>D</kbd> steer</span><span><kbd>S</kbd> brake</span><span><kbd>Shift</kbd> boost</span><span><kbd>Space</kbd> horn</span></div>
-      <p class="help">The boat accelerates for you. Arrow keys work too.</p>
-      <p id="personal-best" class="best"></p>
-      <p class="phone-note">Made for a keyboard. Phone controls are coming later.</p>
-    </section>
-    <div id="hud" hidden>
-      <div class="race-heading"><h2 id="sector">THE ISLES</h2><span id="checkpoint">0 / 4 checkpoints</span></div>
-      <div class="race-clock"><span id="timer">0:00.00</span><span id="gold-target" class="gold-target"></span></div>
-      <div class="course-map" aria-label="Course progress"><svg viewBox="0 0 74 180" aria-hidden="true"><path id="map-route" d="M36 165 C-10 125 75 117 34 75 S52 36 35 15"/><circle id="map-dot" cx="36" cy="165" r="5"/><path class="flag" d="M35 14V3m0 0h12l-4 4 4 4H35"/></svg><span id="distance">3.6 km</span></div>
-      <div id="nina" class="nina-caption" aria-live="polite"><span>NINA</span><p id="nina-line">Let's take the scenic route. Fast.</p></div>
-      <div class="bottom-hud">
-        <div class="boost-control"><span class="boost-label"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8h13v7a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5zM17 9h2a3 3 0 0 1 0 6h-2M7 5V2m5 3V1M2 22h18"/></svg>CAFECITO <kbd>Shift</kbd></span><div class="boost-track"><div id="boost-fill"></div></div></div>
-        <div class="active-items"><span id="floatie-status" hidden>FLAMINGO · 1 HIT</span><span id="spf-status" hidden>SPF 1000 · 8s</span><span id="horn-status">HORN <kbd>Space</kbd></span></div>
-        <div class="speed"><span id="speed">0</span><span>MPH</span></div>
-      </div>
-    </div>
-    <div id="countdown" aria-live="assertive" hidden></div>
-    <div id="flash" aria-hidden="true"></div>
-    <section id="paused" class="center-panel" role="dialog" aria-modal="true" aria-labelledby="pause-title" hidden><h2 id="pause-title">TAKE A BREATHER.</h2><p>Nina's enjoying the view.</p><button id="resume" class="primary">Keep cruising</button><button id="restart-pause" class="text-button">Start over</button><p class="help">A / D steer · S brake · Shift boost · Space horn</p></section>
-    <section id="finish" class="finish-panel" role="dialog" aria-modal="true" aria-labelledby="finish-title" hidden><div id="medal" class="medal">GOLD</div><h2 id="finish-title">TABLE FOR TWO.</h2><p>You made it to the bridge.<br>Nina's already picking the appetizers.</p><div id="final-time">2:40.00</div><p id="finish-best"></p><div id="race-stats" class="race-stats"></div><button id="replay" class="primary">One more run</button><a class="text-button" href="../">Back to How We Met</a></section>
-    <section id="error" class="center-panel" role="alert" hidden><h2>The boat couldn't launch.</h2><p id="error-message">This chapter needs WebGL 2. Try Chrome or Safari with graphics acceleration enabled.</p><button class="primary" onclick="location.reload()">Try again</button><a class="text-button" href="../">Play Toronto</a></section>
-    <noscript><p class="noscript">This game needs JavaScript. <a href="../">Back to How We Met</a></p></noscript>
-  </main>
-  <script type="module" src="./game.js"></script>
-</body>
-</html>
+<main id="game" aria-label="Florida airboat racing game">
+ <canvas id="world" tabindex="0" aria-label="3D airboat race through Fort Lauderdale"></canvas><div id="shade"></div><div id="speed-lines" aria-hidden="true"></div><div id="flash" aria-hidden="true"></div>
+ <header class="topbar"><a class="home-link" href="../">‹ How We Met</a><div class="tools"><button id="sound" class="small-button" aria-label="Turn sound on" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4zm13-2q6 5 0 10m-1-7q2 2 0 4"/></svg><span>Sound off</span></button><button id="pause" class="small-button" aria-label="Pause race" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14M16 5v14"/></svg><span>Pause</span></button></div></header>
+ <section id="start" aria-labelledby="title"><div class="title-lockup"><p class="eyebrow">FLORIDA</p><h1 id="title">INTRACOASTAL <br>RUN</h1><p class="subtitle">A Barron & Nina adventure</p></div><div class="start-actions"><p>Four boats. One table for two.</p><button id="start-race" class="primary" disabled>Launching the boat…</button><button id="demo" class="text-button" disabled>Watch a run ↗</button><div class="key-guide"><span><kbd>A</kbd><kbd>D</kbd> steer</span><span><kbd>S</kbd> brake / drift</span><span><kbd>Shift</kbd> boost</span><span><kbd>Space</kbd> horn</span></div><p class="help">Auto throttle · Arrow keys work too</p><p id="personal-best" class="best"></p><p class="phone-note">Made for a keyboard. Phone controls come later.</p></div></section>
+ <div id="hud" hidden>
+  <div class="race-heading"><p class="eyebrow">FLORIDA</p><h2 id="sector">LAS OLAS ISLES</h2><span id="checkpoint">0 / 4 checkpoints</span></div>
+  <div class="race-clock"><span id="timer">0:00.00</span><span id="gold-target"></span></div>
+  <div id="demo-note" hidden>DEMO RUN <button id="take-wheel">Take the wheel ↵</button></div>
+  <div class="course-map" aria-label="Course progress"><svg viewBox="0 0 100 180" aria-hidden="true"><path id="map-route"/><path id="map-branches"/><circle id="map-dot" r="4"/><path id="map-flag"/></svg><span id="distance"></span></div>
+  <div id="nina" class="nina-caption" aria-live="polite"><span>NINA</span><p id="nina-line"></p></div>
+  <div class="bottom-hud"><div class="position"><strong id="position">4<span>/4</span></strong><span>POSITION</span></div><div class="active-items"><span id="floatie-status" hidden>FLAMINGO · 1 HIT</span><span id="spf-status" hidden></span><span id="horn-status">HORN <kbd>Space</kbd></span></div><div class="speed"><strong id="speed">0</strong><span>MPH</span></div></div>
+  <div id="combo" class="combo" hidden></div>
+  <div class="boost-control"><svg viewBox="0 0 190 120" aria-hidden="true"><path class="gauge-track" d="M22 98 A73 73 0 0 1 168 98"/><path id="boost-fill" d="M22 98 A73 73 0 0 1 168 98" pathLength="100"/><path class="cup" d="M68 69h29v14q0 15-15 15t-14-15zm29 3h5q14 0 0 13h-5M71 105h26M77 64q-6-6 0-12m10 12q-6-6 0-12"/></svg><div><strong>CAFECITO</strong><kbd>Shift</kbd></div></div>
+ </div>
+ <div id="countdown" aria-live="assertive" hidden></div>
+ <section id="paused" class="center-panel" role="dialog" aria-modal="true" aria-labelledby="pause-title" hidden><h2 id="pause-title">TAKE A BREATHER.</h2><p>Nina's enjoying the view.</p><button id="resume" class="primary">Keep cruising</button><button id="restart-pause" class="text-button">Start over</button><p class="help">A / D steer · S brake / drift<br>Shift boost · Space horn · Esc pause</p></section>
+ <section id="finish" class="finish-panel" role="dialog" aria-modal="true" aria-labelledby="finish-title" hidden><div id="medal" class="medal"></div><h2 id="finish-title">TABLE FOR TWO.</h2><p id="finish-copy">You made it. Nina's already picking the appetizers.</p><div id="final-time"></div><p id="finish-best"></p><div id="race-stats" class="race-stats"></div><button id="replay" class="primary">One more run</button><a class="text-button" href="../">Back to How We Met</a></section>
+ <section id="error" class="center-panel" role="alert" hidden><h2>The boat couldn't launch.</h2><p id="error-message">This chapter needs WebGL 2. Try a current desktop browser with graphics acceleration enabled.</p><button class="primary" onclick="location.reload()">Try again</button><a class="text-button" href="../">Play Toronto</a></section>
+ <output id="performance" hidden></output><noscript>This game needs JavaScript. <a href="../">Back to How We Met</a></noscript>
+</main><script type="module" src="./game.js"></script></body></html>

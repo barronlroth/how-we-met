@@ -44,3 +44,7 @@ Keep the game personal to Barron and Nina. Florida should be cute, playful, and 
 - Make steering, speed, and readable hazards enjoyable before adding more systems.
 - Express the couple and place through characters, landmarks, and small reactions.
 - Treat proposed mechanics and generated concepts as proposals until selected; do not present concept art as a running game.
+
+## September 4 waterfront rebuild
+
+The user rejected the first Florida build as too linear, visually weak, sparse beyond houses, and lacking speed. They explicitly made the original generated concept the visual target and requested research of the real Fort Lauderdale Intracoastal. The replacement has a curved four-kilometre course, two navigable island splits, three competitors, heading-based steering, drift rewards, slipstream, close-call combos, yacht collisions and crossing water taxis. The concept remains a target, not evidence of actual runtime fidelity. The course compresses and art-directs the place rather than reproducing a street map.

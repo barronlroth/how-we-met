@@ -1,5 +1,6 @@
 import * as T from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
+import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 
 // Original game art. Every scene object is real geometry, built in a shared
 // palette and baked by material so a richly dressed waterfront stays light.
@@ -7,14 +8,14 @@ export const C = { cream: 0xfff4d8, coral: 0xee7865, teal: 0x359d9d, navy: 0x173
 const materials = new Map();
 export function mat(color, options = {}) {
   const key = `${color}:${JSON.stringify(options)}`;
-  if (!materials.has(key)) materials.set(key, new T.MeshStandardMaterial({ color, flatShading: true, roughness: 0.8, ...options }));
+  if (!materials.has(key)) materials.set(key, new T.MeshStandardMaterial({ color, flatShading: false, roughness: 0.62, ...options }));
   return materials.get(key);
 }
 function put(g, geo, color, x = 0, y = 0, z = 0, options = {}) {
   const m = new T.Mesh(geo, typeof color === 'number' ? mat(color, options) : color);
   m.position.set(x, y, z); m.castShadow = true; m.receiveShadow = true; g.add(m); return m;
 }
-export const box = (g, w, h, d, color, x = 0, y = 0, z = 0) => put(g, new T.BoxGeometry(w, h, d), color, x, y, z);
+export const box = (g, w, h, d, color, x = 0, y = 0, z = 0) => put(g, Math.min(w,h,d)>.12&&Math.max(w,h,d)<10?new RoundedBoxGeometry(w,h,d,1,Math.min(.065,Math.min(w,h,d)*.18)):new T.BoxGeometry(w,h,d), color, x, y, z);
 export function ball(g, x, y, z, sx, sy, sz, color, detail = 1) { const m = put(g, new T.IcosahedronGeometry(1, detail), color, x, y, z); m.scale.set(sx, sy, sz); return m; }
 export function pipe(g, from, to, radius, color, sides = 7) {
   const a = new T.Vector3(...from), b = new T.Vector3(...to), d = b.clone().sub(a);
@@ -63,16 +64,17 @@ export function textSign(text, width, height, { color = '#143f4c', bg = '#fff8e2
 
 function head(g, nina, x, y, z) {
   const skin = nina ? C.skinNina : C.skin;
-  ball(g, x, y, z, .32, .38, .3, skin, 1);
+  ball(g, x, y, z, .30, .38, .29, skin, 2);
   ball(g, x, y + .23, z + .02, .34, .25, .31, nina ? C.blonde : C.hair, 1);
   box(g, .12, .13, .12, skin, x, y - .02, z - .31);
   for (const dx of [-.13, .13]) { box(g, .1, .065, .018, C.white, x + dx, y + .035, z - .277); box(g, .045, .065, .021, 0x263c38, x + dx, y + .032, z - .29); }
   box(g, .105, .025, .02, 0x9f5550, x, y - .16, z - .29);
   for (const dx of [-.32, .32]) ball(g, x + dx, y - .015, z, .07, .1, .07, skin, 0);
   if (nina) {
-    for (let i = 0; i < 7; i++) {
-      const xx = x + (i - 3) * .098;
-      pipe(g, [xx, y + .25, z + .16], [xx + Math.sin(i) * .06, y - .65, z + .25], .11, i % 2 ? C.blonde : 0xc1904c, 6);
+    for (let i = 0; i < 17; i++) {
+      const xx = x + (i - 8) * .038;
+      const points=Array.from({length:7},(_,j)=>new T.Vector3(xx+Math.sin(j*1.4+i*.5)*.045,y+.24-j*.155,z+.17+Math.sin(j*.6)*.15));
+      put(g,new T.TubeGeometry(new T.CatmullRomCurve3(points),14,.044+(i%3)*.012,5,false),i%3?0xb47a39:0xdbad67);
     }
     ball(g, x - .27, y + .025, z + .02, .12, .4, .22, C.blonde);
   } else {
@@ -123,7 +125,7 @@ export function airboat() {
   const root = new T.Group(), fixed = new T.Group();
   const shape = new T.Shape();
   shape.moveTo(-1.38, -2.65); shape.lineTo(1.38, -2.65); shape.lineTo(1.45, 1.9); shape.quadraticCurveTo(1.3, 2.9, .52, 3.13); shape.lineTo(-.52, 3.13); shape.quadraticCurveTo(-1.3, 2.9, -1.45, 1.9); shape.closePath();
-  const hull = new T.ExtrudeGeometry(shape, { depth: .52, bevelEnabled: true, bevelSize: .12, bevelThickness: .13, bevelSegments: 1, steps: 1 }); hull.rotateX(-Math.PI / 2);
+  const hull = new T.ExtrudeGeometry(shape, { depth: .52, bevelEnabled: true, bevelSize: .12, bevelThickness: .13, bevelSegments: 3, steps: 1 }); hull.rotateX(-Math.PI / 2);
   put(fixed, hull, C.cream, 0, .1, 0);
   box(fixed, 2.52, .14, 4.85, C.wood, 0, .64, -.05);
   for (let z = -2.28; z < 2.4; z += .35) box(fixed, 2.46, .018, .023, 0xaa845d, 0, .72, z);

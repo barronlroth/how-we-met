@@ -9,6 +9,11 @@ export class GameAudio {
       this.engine=this.ctx.createOscillator();this.engine.type='sawtooth';this.engine.frequency.value=55;
       const filter=this.ctx.createBiquadFilter();filter.type='lowpass';filter.frequency.value=210;this.engineGain=this.ctx.createGain();this.engineGain.gain.value=0;
       this.engine.connect(filter);filter.connect(this.engineGain);this.engineGain.connect(this.master);this.engine.start();
+      const noiseBuffer=this.ctx.createBuffer(1,this.ctx.sampleRate*2,this.ctx.sampleRate),samples=noiseBuffer.getChannelData(0);
+      for(let i=0;i<samples.length;i++)samples[i]=(Math.random()*2-1)*.5;
+      this.wind=this.ctx.createBufferSource();this.wind.buffer=noiseBuffer;this.wind.loop=true;
+      this.windFilter=this.ctx.createBiquadFilter();this.windFilter.type='lowpass';this.windFilter.frequency.value=1000;this.windGain=this.ctx.createGain();this.windGain.gain.value=0;
+      this.wind.connect(this.windFilter);this.windFilter.connect(this.windGain);this.windGain.connect(this.master);this.wind.start();
       this.nextNote=this.ctx.currentTime;
     }
     if(this.ctx){await this.ctx.resume();this.master.gain.setTargetAtTime(enabled?.42:0,this.ctx.currentTime,.08)}
@@ -30,9 +35,10 @@ export class GameAudio {
     if(type==='jump')this.tone(180,.4,'sine',.15,0,600);
     if(type==='finish')[523,659,784,1046].forEach((f,i)=>this.tone(f,.55,'triangle',.17,i*.12));
   }
-  update(speed,racing){
+  update(speed,racing,boosting=false){
     if(!this.ctx)return;const now=this.ctx.currentTime;
-    this.engine.frequency.setTargetAtTime(38+speed*2.4,now,.15);this.engineGain.gain.setTargetAtTime(racing?.03:0,now,.12);
+    this.engine.frequency.setTargetAtTime(45+speed*2.5+(boosting?20:0),now,.09);this.engineGain.gain.setTargetAtTime(racing?.045:0,now,.12);
+    this.windGain?.gain.setTargetAtTime(racing?Math.min(.11,speed*.0016)+(boosting?.03:0):0,now,.15);this.windFilter?.frequency.setTargetAtTime(500+speed*32,now,.15);
     if(!this.enabled||!racing){this.nextNote=now;return}
     if(now>=this.nextNote){
       const melody=[76,0,79,83,81,0,79,76,74,0,76,79,76,0,72,0,72,0,76,79,81,79,76,0,74,0,79,81,79,0,74,0];
