@@ -7,12 +7,14 @@ import bpy
 import json
 import math
 import random
+import sys
+from types import SimpleNamespace
 from pathlib import Path
 from mathutils import Vector
 
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / 'florida/assets/models'
-WORK = ROOT / 'artifacts/florida-hero'
+WORK = ROOT / 'artifacts/florida-characters-v4'
 OUT.mkdir(parents=True, exist_ok=True)
 WORK.mkdir(parents=True, exist_ok=True)
 bpy.ops.wm.read_factory_settings(use_empty=True)
@@ -34,13 +36,31 @@ def material(name, color, rough=.5, metal=0):
 M = {k:material(k,*v) for k,v in {
     'cream':('f5edd6',.38), 'coral':('e67c62',.34,.12), 'teal':('397f7e',.35,.25),
     'chrome':('c2ccbf',.28,.75), 'rubber':('273b3b',.8), 'teak':('bf8b52',.6),
-    'teakLight':('d4a66d',.6), 'seam':('71543b',.8), 'canvas':('d4ddcc',.9),
-    'skinB':('e5b18c',.78), 'skinN':('e7b68f',.78), 'lipsB':('bf796b',.72),
-    'lipsN':('bf735e',.62), 'hairB':('35281f',.7), 'curlLight':('59402d',.7),
-    'hairN':('77502f',.68), 'hairGold':('a38255',.65), 'eyes':('688578',.4),
+    'linen':('e8dcc1',.9), 'seam':('71543b',.8), 'canvas':('d4ddcc',.9),
+    'skinB':('e4a16e',.64), 'skinN':('de9d6c',.64), 'lipsB':('bf796b',.72),
+    'lipsN':('bf735e',.62), 'hairB':('24170e',.48), 'curlLight':('452818',.52),
+    'hairN':('b58a48',.48), 'hairGold':('e6c582',.48), 'eyes':('718e4c',.3),
     'ink':('263632',.65), 'white':('fff7e4',.5), 'shirt':('7c8b69',.92),
-    'shirtLight':('a9b28c',.9), 'shorts':('427e83',.8), 'gold':('d9ae61',.35,.65),
+    'ninaShirt':('df795c',.9), 'shorts':('427e83',.8), 'gold':('d9ae61',.35,.65),
 }.items()}
+
+# Generated, purpose-painted facial albedo. One compact shared atlas is embedded in the GLB.
+face_image=bpy.data.images.load(str(ROOT/'art/characters/couple-face-atlas-v4.png'))
+face_image.scale(1024,512)
+face_image.file_format='JPEG';face_image.filepath_raw=str(WORK/'couple-face-atlas-v4.jpg');face_image.save()
+face_image=bpy.data.images.load(str(WORK/'couple-face-atlas-v4.jpg'))
+for name,rough in [('faceB',.78),('faceN',.78),('eyeB',.28),('eyeN',.28)]:
+    m=material(name,'ffffff',rough);M[name]=m
+    tex=m.node_tree.nodes.new('ShaderNodeTexImage');tex.image=face_image
+    m.node_tree.links.new(tex.outputs['Color'],m.node_tree.nodes['Principled BSDF'].inputs['Base Color'])
+# Per-character exposed skin is sampled from non-blushed facial paint regions.
+skin_palette=json.loads((ROOT/'art/characters/skin-palette-v4.json').read_text())
+for key in ('skinB','skinN'):
+    rgba=tuple(srgb(c/255) for c in skin_palette[key]['srgb'])+(1,)
+    M[key].diffuse_color=rgba
+    shader=M[key].node_tree.nodes['Principled BSDF']
+    shader.inputs['Base Color'].default_value=rgba
+    shader.inputs['Roughness'].default_value=.78
 
 def group(name,parent=None,p=(0,0,0)):
     o=bpy.data.objects.new(name,None);bpy.context.collection.objects.link(o)
@@ -65,7 +85,7 @@ def box(name,p,size,mat,parent,bevel=.04):
         bpy.ops.object.modifier_apply(modifier=mod.name)
     return finish(o,name,mat,parent)
 def path(name,points,radius,mat,parent,closed=False,radii=None):
-    curve=bpy.data.curves.new(name,'CURVE');curve.dimensions='3D';curve.resolution_u=2
+    curve=bpy.data.curves.new(name,'CURVE');curve.dimensions='3D';curve.resolution_u=3 if mat in ('skinB','skinN') else 1
     curve.bevel_depth=radius;curve.bevel_resolution=1;curve.use_fill_caps=True
     s=curve.splines.new('BEZIER');s.bezier_points.add(len(points)-1)
     for i,(b,p) in enumerate(zip(s.bezier_points,points)):
@@ -88,104 +108,11 @@ def mesh(name,verts,faces,mat,parent,smooth=True):
     o=bpy.data.objects.new(name,data);bpy.context.collection.objects.link(o)
     return finish(o,name,mat,parent,smooth)
 
-def face(parent,nina):
-    skin='skinN' if nina else 'skinB';hair='hairN' if nina else 'hairB';lip='lipsN' if nina else 'lipsB'
-    head=group('NinaHead' if nina else 'BarronHead',parent)
-    ell('Soft jaw and cheeks',(0,1.52,0),(.265,.34,.235),skin,head,32,20)
-    ell('Neck',(0,1.205,.025),(.12,.18,.12),skin,parent)
-    for side in (-1,1):
-        ell('Ear',(side*.262,1.51,.018),(.035,.068,.037),skin,head)
-        x=side*.111
-        ell('Almond eye',(x,1.575,-.211),(.069,.028,.009),'white',head)
-        ell('Green iris',(x+side*.004,1.575,-.221),(.022,.024,.004),'eyes',head)
-        ell('Pupil',(x+side*.004,1.575,-.226),(.009,.015,.003),'ink',head,16,8)
-        ell('Eye catchlight',(x-.008,1.585,-.23),(.004,.005,.002),'white',head,12,8)
-        path('Upper eyelid',[(x-.063,1.576,-.211),(x,1.602,-.223),(x+.063,1.578,-.211)],.007,hair,head)
-        path('Expressive brow',[(x-.074,1.663,-.209),(x,1.681,-.224),(x+.069,1.658,-.209)],.011 if nina else .014,hair,head,radii=[.55,1,.4])
-        if nina:
-            ring('Gold hoop',(side*.289,1.465,.016),.054,.008,'gold',head)
-        else:ell('Silver stud',(side*.299,1.48,.013),(.013,.014,.012),'chrome',head,12,8)
-    ell('Nose bridge',(0,1.535,-.22),(.027,.057,.025),skin,head)
-    ell('Nose tip',(0,1.491,-.248),(.033,.026,.025),skin,head)
-    smile=.125 if nina else .101
-    path('Upper smile',[(-smile,1.411,-.213),(0,1.393,-.215),(smile,1.419,-.214)],.016,lip,head,radii=[.5,1,.45])
-    path('Lower smile',[(-smile,1.411,-.213),(0,1.348 if nina else 1.372,-.215),(smile,1.419,-.214)],.014,lip,head,radii=[.4,1,.4])
-    if nina:
-        verts=[]
-        for i in range(17):
-            u=i/16*2-1;x=u*smile
-            verts.extend([(x,1.398+.016*u*u,-.218+.015*u*u),(x,1.368+.045*u*u,-.219+.015*u*u)])
-        mesh('Bright natural smile',verts,[(i*2,i*2+1,i*2+3,i*2+2) for i in range(16)],'white',head)
-    else:
-        path('Jaw stubble',[(-.182,1.425,-.14),(-.115,1.293,-.144),(0,1.25,-.154),(.115,1.293,-.144),(.182,1.425,-.14)],.011,'curlLight',head,radii=[.2,.6,1,.6,.2])
-    if nina:
-        vertices=[]
-        for row in range(11):
-            for col in range(32):
-                a=col/32*math.tau;theta=row/10*(1.0 if math.sin(a)<-.25 else 1.83)
-                vertices.append((math.cos(a)*math.sin(theta)*.274,1.54+math.cos(theta)*.346,.015+math.sin(a)*math.sin(theta)*.252))
-        mesh('Fitted parted scalp',vertices,[(r*32+c,r*32+(c+1)%32,(r+1)*32+(c+1)%32,(r+1)*32+c) for r in range(10) for c in range(32)],'hairN',head)
-
-        for i in range(19):
-            a=(i/18)*math.pi*1.78+.11;x=math.cos(a)*.25;z=math.sin(a)*.215+.035
-            # Open face at the front; long ribbons follow the back and shoulders.
-            if z<-.125:continue
-            points=[(x*.6,1.83,z*.65),(x,1.66,z),(x*1.05+math.sin(i)*.04,1.44,z+.06),(x*1.15-math.sin(i)*.035,1.18,z+.13),(x*1.06+math.sin(i)*.05,.88+(i%3)*.05,z+.2)]
-            path('Flowing hair lock',points,.052,'hairGold' if i%4==0 else 'hairN',head,radii=[.7,1,1,.85,.15])
-            if i%2==0:path('Sunlit hair ribbon',[(p[0]+.008,p[1],p[2]-.019) for p in points],.009,'hairGold',head,radii=[.3,.8,1,.7,.05])
-        for side in (-1,1):
-            path('Face framing wave',[(side*.025,1.823,-.123),(side*.17,1.76,-.184),(side*.26,1.54,-.153),(side*.3,1.28,-.07),(side*.24,1.09,.025)],.036,'hairGold',head,radii=[.6,1,1,.85,.2])
-    else:
-        ell('Short hair base',(0,1.718,.052),(.266,.185,.218),'hairB',head,24,14)
-        for i in range(32):
-            a=i*2.399;r=.23*math.sqrt((i+.5)/32);x=math.cos(a)*r;z=math.sin(a)*r
-            y=1.82+.057*(1-r/.24)+random.uniform(-.015,.016)
-            lock=ell('Sculpted curl',(x,y,z),(.072,.044,.061),'curlLight' if i%7==0 else 'hairB',head,12,8)
-            lock.rotation_euler.y=random.uniform(-.6,.6)
-        for side in (-1,1):path('Tapered temple',[(side*.234,1.75,-.025),(side*.259,1.64,-.034),(side*.249,1.535,-.013)],.033,'hairB',head,radii=[1,.8,.15])
-    # Turn faces slightly toward each other while seated in the forward-facing boat.
-    head.rotation_euler.z=.15 if nina else -.12
-    return head
-
+sys.path.insert(0, str(ROOT / 'scripts'))
+from florida_characters import make_person
+character_art=SimpleNamespace(M=M,group=group,mesh=mesh,ell=ell,box=box,path=path,ring=ring)
 def person(nina,parent,p):
-    root=group('Nina' if nina else 'Barron',parent,p);skin='skinN' if nina else 'skinB'
-    if nina:
-        ell('Torso',(0,.85,.005),(.245,.36,.15),skin,root,24,16)
-        ell('Waist',(0,.55,.02),(.205,.18,.16),skin,root)
-        ell('Bikini bottoms',(0,.43,0),(.28,.15,.215),'coral',root)
-        for side in (-1,1):
-            ell('Bikini top',(side*.12,1.02,-.128),(.135,.105,.07),'coral',root)
-            path('Bikini strap',[(side*.17,1.06,-.16),(side*.22,1.23,-.01),(side*.17,1.03,.14)],.018,'coral',root)
-        path('Back bikini tie',[(-.23,1.0,.12),(0,.97,.16),(.23,1.0,.12)],.023,'coral',root)
-    else:
-        box('Linen shirt',(0,.89,.01),(.64,.66,.36),'shirt',root,.105)
-        mesh('Open shirt neckline',[(-.085,1.23,-.186),(.085,1.23,-.186),(0,1.035,-.195)],[(0,1,2)],skin,root,False)
-        for side in (-1,1):
-            box('Short linen sleeve',(side*.318,1.077,-.027),(.22,.245,.31),'shirt',root,.06)
-            collar=mesh('Camp collar',[(side*.07,1.25,-.194),(side*.21,1.19,-.21),(side*.18,.99,-.219),(side*.035,1.04,-.218)],[(0,1,2,3)],'shirtLight',root,False)
-            path('Shirt folded seam',[(side*.15,.65,-.179),(side*.19,.85,-.189),(side*.22,1.06,-.181)],.006,'shirtLight',root)
-            box('Tailored shorts',(side*.18,.43,-.09),(.33,.29,.44),'shorts',root,.09)
-        path('Gold chain',[(-.092,1.205,-.208),(0,1.142,-.216),(.092,1.205,-.208)],.006,'gold',root)
-        for y in (.72,.83,.94):ell('Shirt button',(.024,y,-.181),(.013,.013,.006),'cream',root,12,8)
-    for side in (-1,1):
-        x=side*.175
-        path('Seated leg',[(x,.43,-.08),(x,.36,-.47),(x,.3,-.61),(x,-.12,-.68)],.115 if nina else .135,skin,root,radii=[1.12,1,.86,.65])
-        box('Sandal sole',(x,-.19,-.75),(.22,.065,.38),'seam',root,.035)
-        ell('Foot',(x,-.135,-.75),(.094,.06,.16),skin,root)
-        path('Sandal strap',[(x-.09,-.13,-.82),(x,-.073,-.81),(x+.09,-.13,-.82)],.022,'cream' if nina else 'rubber',root)
-    face(root,nina)
-    # The pointing arm is an independent rigid node, preserving the race reactions.
-    arm=group('PointingArm' if nina else 'DrivingArm',root,(.285,1.095,0))
-    if nina:
-        path('Pointing arm',[(0,0,0),(.22,.04,-.17),(.37,.24,-.39)],.08,skin,arm,radii=[1,.9,.62])
-        ell('Pointing hand',(.385,.253,-.42),(.07,.053,.095),skin,arm)
-        path('Index finger',[(.392,.268,-.45),(.46,.321,-.58),(.49,.335,-.62)],.022,skin,arm,radii=[1,.8,.4])
-    else:
-        path('Steering arm',[(0,0,0),(.16,-.16,-.2),(.12,-.25,-.56)],.087,skin,arm,radii=[1.1,.95,.65])
-        ell('Hand at wheel',(.12,-.25,-.59),(.066,.06,.09),skin,arm)
-    path('Left arm',[(-.28,1.09,0),(-.39,.81,-.13),(-.31,.6,-.37 if nina else -.64)],.09,skin,root,radii=[1.1,.9,.67])
-    ell('Left hand',(-.31,.61,-.4 if nina else -.66),(.062,.054,.09),skin,root)
-    return root
+    return make_person(nina,parent,p,character_art)
 
 def hull_shape(parent):
     outline=[(-1.13,2.98),(-1.43,2.73),(-1.49,1.6),(-1.51,0),(-1.44,-2.25),(-1.21,-3.08),(-.65,-3.61),(0,-3.77),(.65,-3.61),(1.21,-3.08),(1.44,-2.25),(1.51,0),(1.49,1.6),(1.43,2.73),(1.13,2.98)]
@@ -275,28 +202,36 @@ def boat():
     return root
 
 hero=boat()
+# Recalculate closed-surface normals before export. Skin now uses a regular material;
+# facial identity is supplied by the purpose-painted UV atlas on the sculpted heads.
+for o in list(bpy.data.objects):
+    if o.type!='MESH':continue
+    import bmesh
+    bm=bmesh.new();bm.from_mesh(o.data)
+    if all(e.is_manifold for e in bm.edges):bmesh.ops.recalc_face_normals(bm,faces=list(bm.faces))
+    bm.to_mesh(o.data);bm.free()
 # Merge fixed geometry by shared material within each articulation node.
 # This keeps the authored details cheap to submit in Three.js.
 for parent in [o for o in list(bpy.data.objects) if o.type=='EMPTY']:
     buckets={}
     for o in list(parent.children):
-        if o.type=='MESH':buckets.setdefault(o.data.materials[0].name,[]).append(o)
+        if o.type=='MESH':buckets.setdefault(tuple(m.name for m in o.data.materials),[]).append(o)
     for key,objects in buckets.items():
         bpy.ops.object.select_all(action='DESELECT')
         for o in objects:o.select_set(True)
         bpy.context.view_layer.objects.active=objects[0]
         if len(objects)>1:bpy.ops.object.join()
-        bpy.context.object.name=f'{parent.name}_{key}'
+        bpy.context.object.name=f'{parent.name}_{key[0]}'
 
 bpy.ops.object.select_all(action='SELECT')
-asset=OUT/'airboat-couple-v3.glb'
+asset=OUT/'airboat-couple-v4.glb'
 bpy.ops.export_scene.gltf(filepath=str(asset),export_format='GLB',use_selection=True,export_yup=True)
-bpy.ops.wm.save_as_mainfile(filepath=str(WORK/'airboat-couple-v3.blend'))
+bpy.ops.wm.save_as_mainfile(filepath=str(WORK/'airboat-couple-v4.blend'))
 meshes=[o for o in bpy.data.objects if o.type=='MESH']
 for o in meshes:o.data.calc_loop_triangles()
 report={'version':bpy.app.version_string,'asset_bytes':asset.stat().st_size,'mesh_objects':len(meshes),
         'triangles':sum(len(o.data.loop_triangles) for o in meshes),'materials':len(M),
-        'source':'Original authored geometry; user-supplied likeness references; no embedded portraits'}
+        'source':'Original authored geometry and generated facial albedo atlas; no embedded reference portraits'}
 (WORK/'report.json').write_text(json.dumps(report,indent=2)+'\n')
 print('HERO_ASSET '+json.dumps(report))
 
@@ -314,3 +249,10 @@ camera.rotation_euler=(xyz((0,1.5,-.3))-camera.location).to_track_quat('-Z','Y')
 scene.render.filepath=str(WORK/'hero-front.png');bpy.ops.render.render(write_still=True)
 camera.location=xyz((4,4,8));camera.rotation_euler=(xyz((0,1.5,0))-camera.location).to_track_quat('-Z','Y').to_euler()
 scene.render.filepath=str(WORK/'hero-rear.png');bpy.ops.render.render(write_still=True)
+
+# Front portrait of the actual seated mesh, in the same authoring scene.
+camera.location=xyz((.45,3.4,-9))
+camera.rotation_euler=(xyz((.05,2.65,-1.6))-camera.location).to_track_quat('-Z','Y').to_euler()
+camera.data.ortho_scale=3.25
+scene.render.resolution_x=1200;scene.render.resolution_y=1000
+scene.render.filepath=str(WORK/'couple-close.png');bpy.ops.render.render(write_still=True)

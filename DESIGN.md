@@ -14,25 +14,25 @@ components: {"button-primary": {"backgroundColor": "{colors.yellow}", "textColor
 
 **Creative North Star: "A Florida Postcard in Motion"**
 
-Florida is a playful miniature waterfront with a detailed cream, coral, and teal airboat, rounded characters, layered planting, yachts, balconies, and reflective turquoise water. Smooth faces and limbs, short dark curls, and long highlighted brown hair give the couple the user-selected animated-film character. Sparse arcade instruments leave the course and couple primary.
+Florida is a playful miniature waterfront with a detailed cream, coral, and teal airboat, rounded characters, layered planting, yachts, balconies, and reflective turquoise water. Sculpted faces and limbs, painted facial expression, short dark curls, and broad golden blonde waves carry the selected animated-feature direction. Nina’s blonde hair follows the user’s correction and supersedes the brown hair in the selected illustration. Sparse arcade instruments leave the course and couple primary.
 
 This record captures the built Florida V2 world and its homepage link. The user pinned the original generated concept as the visual target; it remains a reference, not runtime imagery or proof of equivalent fidelity. Toronto retains its pixel art, Press Start 2P, Quicksand, and existing palette.
 
 **Key Characteristics:**
 
 - Shaped hull, modeled deck seams, separate upholstered seats, and an exposed fan and engine.
-- Rounded seated couple, expressive facial geometry, distinct hair silhouettes, and Nina’s pointing pose.
+- Sculpted seated couple, painted expressions with glossy eye surfaces, distinct curls and blonde waves, and Nina’s pointing pose.
 - Dense moorings, planted banks, villas, condos, branching channels, and active boat traffic.
 - Cream and navy instruments, yellow actions, and an aqua Cafecito gauge.
 - Close couple framing at entry and finish, with bridge and Fisheries visible on desktop.
 
 **The Chapter Boundary Rule.** Extend these tokens within Florida; retain Toronto’s visual system and the homepage link’s Quicksand.
 
-Refreshed for the rounded-character art pass from [CSS](florida/style.css), [markup](florida/index.html), [runtime](florida/main.js), [hero loader](florida/hero-art.js), [hero authoring source](scripts/build-florida-hero.py), [base art](florida/art.js), [waterfront detail](florida/detail-art.js), [villas and yachts](florida/premium-art.js), [materials](florida/materials.js), [world](florida/world.js), and [effects](florida/effects.js). Direction: [waterfront V2](docs/concepts/florida-waterfront-v2.direction.md). Current browser captures: `.impeccable/art-review/{desktop,user-989,mobile,racing,finish}.png`; separate authoring renders: `artifacts/florida-hero/{hero-front,hero-rear}.png`. The [art review](.impeccable/art-review/review.md) records the visual findings at this refinement scope. Browser captures establish runtime silhouettes and materials; the separately lit authoring renders show close facial construction. [Florida validation](docs/florida-v2-validation.md) records measured performance, resolution settings, and the comparison against the user’s 5% performance-loss target. These stills establish neither photorealistic likeness nor universal 60 FPS.
+Refreshed for the selected-character pass from [CSS](florida/style.css), [markup](florida/index.html), [runtime](florida/main.js), [hero loader](florida/hero-art.js), [character geometry](scripts/florida_characters.py), [hero assembly and materials](scripts/build-florida-hero.py), [base art](florida/art.js), [waterfront detail](florida/detail-art.js), [villas and yachts](florida/premium-art.js), [materials](florida/materials.js), [world](florida/world.js), and [effects](florida/effects.js). Direction: [waterfront V2](docs/concepts/florida-waterfront-v2.direction.md). Character authority: [selected couple concept](docs/concepts/florida-couple-approved-v4.png), with the blonde-hair correction in [PRODUCT.md](PRODUCT.md). Browser evidence for this pass lives in `.impeccable/characters-v4/{desktop,user-989,mobile,racing,finish}.png`; close authoring evidence lives in `artifacts/florida-characters-v4/{couple-close,hero-front,hero-rear}.png`. Browser views establish in-game appearance; separately lit authoring renders expose facial construction. [Florida validation](docs/florida-v2-validation.md) records the review status, asset counts, measured performance, resolution settings, and comparison against the user’s approximate 5% performance-loss target. Stills and individual benchmark runs establish neither concept-equivalent fidelity nor a universal frame rate.
 
 ## Colors
 
-The frontmatter owns reusable UI values; `scripts/build-florida-hero.py` owns the hero’s authored material colors, while `materials.js`, `art.js`, `detail-art.js`, and `world.js` own the surrounding scene colors. Sidecar tonal ramps are derived panel previews, not runtime tokens.
+The frontmatter owns reusable UI values; `scripts/build-florida-hero.py` owns the hero’s authored materials, with exposed skin colors taken from `art/characters/skin-palette-v4.json`, while `materials.js`, `art.js`, `detail-art.js`, and `world.js` own the surrounding scene colors. Sidecar tonal ramps are derived panel previews, not runtime tokens.
 
 - **Primary:** warm yellow identifies actions, focus, gold targets, best times, and race callouts. Aqua fills the curved Cafecito gauge; it turns pale cream during boost.
 - **Secondary:** coral marks the map position and impact frame. Pink distinguishes Flamingo protection; Nina’s speaker label is coral.
@@ -50,7 +50,7 @@ The desktop race clock is 37px, position 52px, speed 38px, result time 43px, res
 
 ## Layout
 
-A viewport-filling canvas sits behind fixed overlays. The desktop topbar is 20px from the top and 30px from each side. Entry separates the upper-left title (13% top, 4.5% left) from lower-left actions (6% bottom), leaving the large airboat and couple in the foreground. A light directional shade fades during racing. Entry and finish stage the boat near the destination; their camera composition is separate from the chase camera.
+A viewport-filling canvas sits behind fixed overlays. The desktop topbar is 20px from the top and 30px from each side. Entry separates the upper-left title (13% top, 4.5% left) from lower-left actions (6% bottom), leaving the large airboat and couple in the foreground. A light directional shade fades during racing. Entry and finish stage the boat near the destination and turn it toward their camera so the couple’s faces are visible; this staging is separate from the unchanged racing camera and driving behavior.
 
 During racing, sector/checkpoints occupy the upper left, clock the upper right, the actual course map the right edge, and rank, item states, speed, and Cafecito the bottom. Nina’s caption sits above the lower instruments. The map includes both island branches. The finish panel sits at 3% left with a 330px width, keeping the couple, bridge, and Fisheries visible beside it in the reviewed desktop capture.
 
@@ -58,7 +58,7 @@ At 1000px and below, title and result widths tighten; at 760px and below, edge i
 
 ## Elevation & Depth
 
-The world uses cast shadows, warm directional light, hemisphere fill, atmospheric fog, reflective Three.js water, and nearby screen-space contact shading. The hero’s authored PBR materials distinguish warm skin, hair, upholstery, rubber, metal, and painted hull. Its golden deck uses solid material colors with modeled caulking, staggered joints, and fasteners. Generated teak texture remains on yachts and docks. Generic scene materials use smooth shading with roughness 0.62; the hero and waterfront material sets vary by surface. Preserve these differences instead of restoring V1’s blanket flat shading.
+The world uses cast shadows, warm directional light, hemisphere fill, atmospheric fog, reflective Three.js water, and nearby screen-space contact shading. The hero’s authored PBR materials distinguish warm skin, hair, upholstery, rubber, metal, and painted hull. One compact facial atlas supplies albedo to the sculpted faces and shallow glossy eye lenses; exposed skin materials are sampled per character from non-blushed regions of the original atlas. A warm, shadow-free point light follows the staged camera only at entry and finish (intensity 90, range 24m); it is hidden during racing. Its golden deck uses solid material colors with modeled caulking, staggered joints, and fasteners. Generated teak texture remains on yachts and docks. Generic scene materials use smooth shading with roughness 0.62; the hero and waterfront material sets vary by surface. Preserve these differences instead of restoring V1’s blanket flat shading.
 
 Water combines seeded periodic normal detail, broad color variation, reflections, and localized crest highlights, with quieter white crests around the foreground boat. The wake is broken, fading foam with transparent edges and spray; it trails the boat’s actual heading. Dense planted yards, docks, balconies, and moored boats supply overlapping depth. Feathered palm leaflets leave daylight through their crowns. UI lift is limited to the primary action and modal panels; exact shadows are in the sidecar.
 
@@ -66,9 +66,13 @@ The camera eases into a 63° staged view, 68° race view, or 84° boosted view. 
 
 ## Shapes
 
-The airboat has a curved, beveled hull, thin rails, separate seats, and a detailed coral fan cage. The couple uses rounded heads and seated limbs, modeled eyes, brows and smiles, short sculpted curls for Barron, and separated flowing hair locks for Nina. Olive clothing and a coral bikini keep their silhouettes distinct. Architecture combines recessed balconies, pitched roofs, flat terraces, and repeated verticals; feathered palms and layered trees keep the waterfront’s miniature scale. UI uses small keycaps, rounded tools and actions, wider panel corners, and pill medals. Outline icons and the semicircular coffee gauge retain an arcade instrument character.
+The airboat has a curved, beveled hull, thin rails, separate seats, and a detailed coral fan cage. Each character has a continuous sculpted chin, jaw, cheeks, nose, and forehead, with shaped eye sockets and brow relief. The UV-mapped facial albedo carries brows, green or hazel eyes, smiles, and Nina’s visible teeth; separate shallow 3D eye lenses add gloss. The painted expressions are fixed, with no facial animation rig.
 
-**The Rounded Couple Rule.** Preserve smooth, dimensional faces and limbs with distinct hair silhouettes and readable poses when extending the couple’s art.
+Barron’s dark hair combines a connected scalp mass, overlapping curl volumes, and sculpted curl ridges. Nina’s golden blonde hair combines a continuous mantle, broad shoulder-level S-waves, curled ends, and lighter highlights. Barron wears the selected sage linen shirt, teal shorts, chain, and stud; Nina wears the coral crew-neck T-shirt, cream shorts, and hoops. Short sleeves slope along the upper arms and end in open cuffs. Rounded seated limbs and the articulated pointing arm preserve the driving and passenger poses.
+
+Architecture combines recessed balconies, pitched roofs, flat terraces, and repeated verticals; feathered palms and layered trees keep the waterfront’s miniature scale. UI uses small keycaps, rounded tools and actions, wider panel corners, and pill medals. Outline icons and the semicircular coffee gauge retain an arcade instrument character.
+
+**The Rounded Couple Rule.** Preserve dimensional heads and limbs, Barron’s dark curls, Nina’s golden blonde waves, the selected outfits, and readable seated poses when extending the couple’s art.
 
 ## Components
 
@@ -77,9 +81,9 @@ The airboat has a curved, beveled hull, thin rails, separate seats, and a detail
 - **Nina caption:** compact navy backing, a coral speaker label, and a polite live region; the runtime fades short comments.
 - **Dialogs:** pause and finish trap tab navigation; resume restores focus and finish focuses replay. Results show rank/medal, time, browser-local best, jumps, close calls, and bumps. Demo completion uses its own copy and does not save records. Thresholds remain in `MEDAL_TIMES` in `core.js`.
 - **Entry and fallback:** Start race and Watch a run share the entry scene; the demo offers Take the wheel. Preserve the keyboard notice and actionable graphics-failure panel. The homepage chapter link retains Quicksand and its original styling.
-- **Hero airboat and couple:** `hero-art.js` loads the authored `airboat-couple-v3.glb`, preserving separate hull, fan, Barron, Nina, and pointing-arm nodes for existing runtime animation and item states. The nameplate and Flamingo Floatie are added in code. Material merging follows those articulation boundaries.
+- **Hero airboat and couple:** `hero-art.js` loads the authored `airboat-couple-v4.glb`, preserving separate hull, fan, Barron, Nina, and pointing-arm nodes for existing runtime animation and item states. The nameplate and Flamingo Floatie are added in code. Material merging follows those articulation boundaries.
 
-[Asset provenance](florida/assets/README.md): the hero is original geometry and PBR materials authored by [Blender Python](scripts/build-florida-hero.py), exported as a [GLB](florida/assets/models/airboat-couple-v3.glb), and loaded by Three.js. Headless Blender is the authoring tool; runtime rendering remains Three.js. Supplied likeness photos inform appearance but are not embedded. The GLB contains no textures or portrait images. Surrounding models remain code-authored. [Generated teak](florida/assets/teak-v2.png) is used on yachts and docks, with its [exact prompt](florida/assets/teak-v2.prompt.md); the new hero deck uses authored solid materials and modeled seams. Stucco, roof, foliage, and cloth detail are deterministic native-canvas textures; wake foam is also native canvas. Water normals are procedural. Real reference photos are not shipped. The explicitly pinned [original concept](docs/concepts/florida-intracoastal-run-v1.png) remains a visual target. Audio is synthesized; self-hosted fonts include [Bungee](florida/assets/Bungee-OFL.txt) and [Nunito](florida/assets/Nunito-OFL.txt) licenses.
+[Asset provenance](florida/assets/README.md): the hero combines original geometry authored in [the character module](scripts/florida_characters.py), [Blender assembly and materials](scripts/build-florida-hero.py), and [newly generated facial albedo](art/characters/couple-face-atlas-v4.png), with its [exact generation prompt](art/characters/couple-face-atlas-v4.prompt.md). The [GLB](florida/assets/models/airboat-couple-v4.glb) embeds one shared 1024×512 JPEG atlas used by the faces and eye surfaces. The paint is game art, not a supplied photograph or a crop of the approved concept. The [skin sampling record](art/characters/skin-palette-v4.json) identifies per-character non-blushed sample regions used to match exposed skin. Headless Blender authors the asset; Three.js renders it in the browser. Supplied likeness photos inform appearance but are not embedded. Surrounding models remain code-authored. [Generated teak](florida/assets/teak-v2.png) is used on yachts and docks, with its [exact prompt](florida/assets/teak-v2.prompt.md); the new hero deck uses authored solid materials and modeled seams. Stucco, roof, foliage, and cloth detail are deterministic native-canvas textures; wake foam is also native canvas. Water normals are procedural. Real reference photos are not shipped. The explicitly pinned [original concept](docs/concepts/florida-intracoastal-run-v1.png) remains a visual target. Audio is synthesized; self-hosted fonts include [Bungee](florida/assets/Bungee-OFL.txt) and [Nunito](florida/assets/Nunito-OFL.txt) licenses.
 
 ## Do's and Don'ts
 
@@ -87,7 +91,7 @@ The airboat has a curved, beveled hull, thin rails, separate seats, and a detail
 
 - Do preserve the couple, readable hazards, curved course, and desktop arrival landmarks.
 - Do extend the built shaped geometry and material detail when adding Florida scenery.
-- Do preserve the rounded couple, distinct hair silhouettes, and readable pointing pose.
+- Do preserve the sculpted couple, Barron’s dark curls, Nina’s golden blonde waves, selected outfits, and readable pointing pose.
 - Do keep the user-approved FLORIDA eyebrow and original concept reference.
 - Do pair color-coded states with text or recognizable geometry.
 - Do preserve keyboard focus, pause behavior, and the explicit phone-controls notice.
@@ -96,6 +100,6 @@ The airboat has a curved, beveled hull, thin rails, separate seats, and a detail
 
 - Don’t apply Florida’s fonts, palette, or 3D art rules to Toronto.
 - Don’t substitute the concept image for the playable world or a runtime screenshot.
-- Don’t describe Blender-authored geometry or native-canvas materials as image-generated assets.
+- Don’t confuse the generated facial albedo with Blender-authored geometry, native-canvas materials, supplied portraits, or a concept-image crop.
 - Don’t describe responsive layout as touch steering or reduced motion as a static scene.
-- Don’t turn art-review stills into claims of concept equality, photorealistic likeness, or universal 60 FPS.
+- Don’t turn authoring renders, browser stills, or individual benchmarks into claims of concept equality, photorealistic likeness, or universal 60 FPS.

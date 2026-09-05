@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-09-05T06:03:46.877937+00:00",
+  "generatedAt": "2026-09-05T18:23:02.335193+00:00",
   "title": "Design System: How We Met — Florida V2",
   "extensions": {
     "colorMeta": {
@@ -387,7 +387,7 @@
       "name": "Finish Panel",
       "kind": "card",
       "refersTo": "finish-panel",
-      "description": "Desktop result card beside the staged destination; this sample is the reviewed demo state.",
+      "description": "Desktop result card beside the staged destination; sample content illustrates the demo result layout.",
       "html": "<section class=\"ds-finish\" aria-label=\"Race result\"><div class=\"ds-medal\">DEMO COMPLETE</div><h2>TABLE FOR TWO.</h2><p>That’s the route. Now let’s see your racing line.</p><div class=\"ds-time\">1:28.11</div><p class=\"ds-best\">Your turn. Take the wheel.</p><div class=\"ds-stats\"><span><strong>13</strong>jumps</span><span><strong>6</strong>close calls</span><span><strong>12</strong>bumps</span></div><button class=\"ds-primary\">One more run</button><a class=\"ds-text\" href=\"/\">Back to How We Met</a></section>",
       "css": ".ds-finish{width:330px;max-width:calc(100vw - 32px);padding:26px;background:#103b48ed;border:1px solid #c9ede124;border-radius:14px;text-align:center;box-shadow:0 15px 60px #052a4438;color:var(--cream,#fff9e9);font-family:Nunito,sans-serif}.ds-finish h2{font:400 25px/1.2 Bungee,sans-serif;margin:0 0 13px}.ds-finish p{font-size:15px;line-height:1.5;margin:0 0 20px}.ds-medal{display:inline-block;color:var(--navy,#103b48);background:var(--yellow,#ffdc57);border-radius:22px;padding:8px 16px;font-size:12px;font-weight:1000;margin-bottom:18px}.ds-medal[data-medal=SILVER]{background:#d8e9e7}.ds-medal[data-medal=BRONZE]{background:#e6b389}.ds-time{font:400 43px Bungee,sans-serif;font-variant-numeric:tabular-nums;margin:3px 0}.ds-finish .ds-best{color:var(--yellow,#ffdc57);font-size:12px;font-weight:950;margin-bottom:12px}.ds-stats{display:flex;justify-content:center;gap:22px;font-size:11px;margin:14px 0 24px;color:#c7e4dd}.ds-stats strong{display:block;font-size:23px;color:var(--cream,#fff9e9)}.ds-finish .ds-text{margin:14px auto 0}.ds-primary{border:0;background:var(--yellow,#ffdc57);color:var(--navy,#103b48);padding:15px 28px;border-radius:9px;font:1000 18px Nunito,sans-serif;box-shadow:0 5px 15px #09384855;transition:transform .15s,background .15s;min-width:180px;cursor:pointer}.ds-primary:hover{background:#ffe993;transform:translateY(-2px)}.ds-primary:active{transform:translateY(2px)}.ds-primary:disabled{opacity:.55;cursor:wait}.ds-primary:focus-visible{outline:3px solid var(--yellow,#ffdc57);outline-offset:5px}@media(max-width:760px){.ds-primary{font-size:16px;min-width:160px;padding:13px 22px}}@media(prefers-reduced-motion:reduce){.ds-primary{transition:none}.ds-primary:hover{transform:none}}.ds-text{display:block;margin:15px 0 0;border:0;background:none;color:var(--cream,#fff9e9);font:900 14px Nunito,sans-serif;padding:6px 0;text-shadow:0 2px 7px #103b48;cursor:pointer;text-decoration:none}.ds-text:hover{text-decoration:underline;text-underline-offset:4px}.ds-text:focus-visible{outline:3px solid var(--yellow,#ffdc57);outline-offset:5px}@media(max-width:1000px){.ds-finish{width:295px}}@media(max-width:760px){.ds-finish{width:330px}}@media(max-height:740px){.ds-finish{padding:22px}.ds-stats{margin:10px 0 18px}}"
     },
@@ -410,10 +410,10 @@
   ],
   "narrative": {
     "northStar": "A Florida Postcard in Motion",
-    "overview": "Florida is a playful miniature waterfront with a detailed cream, coral, and teal airboat, rounded characters, layered planting, yachts, balconies, and reflective turquoise water. Smooth faces and limbs, short dark curls, and long highlighted brown hair give the couple the user-selected animated-film character. Sparse arcade instruments leave the course and couple primary.\n\nThis record captures the built Florida V2 world and its homepage link. The user pinned the original generated concept as the visual target; it remains a reference, not runtime imagery or proof of equivalent fidelity. Toronto retains its pixel art, Press Start 2P, Quicksand, and existing palette.",
+    "overview": "Florida is a playful miniature waterfront with a detailed cream, coral, and teal airboat, rounded characters, layered planting, yachts, balconies, and reflective turquoise water. Sculpted faces and limbs, painted facial expression, short dark curls, and broad golden blonde waves carry the selected animated-feature direction. Nina’s blonde hair follows the user’s correction and supersedes the brown hair in the selected illustration. Sparse arcade instruments leave the course and couple primary.\n\nThis record captures the built Florida V2 world and its homepage link. The user pinned the original generated concept as the visual target; it remains a reference, not runtime imagery or proof of equivalent fidelity. Toronto retains its pixel art, Press Start 2P, Quicksand, and existing palette.",
     "keyCharacteristics": [
       "Shaped hull, modeled deck seams, separate upholstered seats, and an exposed fan and engine.",
-      "Rounded seated couple, expressive facial geometry, distinct hair silhouettes, and Nina’s pointing pose.",
+      "Sculpted seated couple, painted expressions with glossy eye surfaces, distinct curls and blonde waves, and Nina’s pointing pose.",
       "Dense moorings, planted banks, villas, condos, branching channels, and active boat traffic.",
       "Cream and navy instruments, yellow actions, and an aqua Cafecito gauge.",
       "Close couple framing at entry and finish, with bridge and Fisheries visible on desktop."
@@ -436,14 +436,14 @@
       },
       {
         "name": "The Rounded Couple Rule",
-        "body": "Preserve smooth, dimensional faces and limbs with distinct hair silhouettes and readable poses when extending the couple’s art.",
+        "body": "Preserve dimensional heads and limbs, Barron’s dark curls, Nina’s golden blonde waves, the selected outfits, and readable seated poses when extending the couple’s art.",
         "section": "shapes"
       }
     ],
     "dos": [
       "Do preserve the couple, readable hazards, curved course, and desktop arrival landmarks.",
       "Do extend the built shaped geometry and material detail when adding Florida scenery.",
-      "Do preserve the rounded couple, distinct hair silhouettes, and readable pointing pose.",
+      "Do preserve the sculpted couple, Barron’s dark curls, Nina’s golden blonde waves, selected outfits, and readable pointing pose.",
       "Do keep the user-approved FLORIDA eyebrow and original concept reference.",
       "Do pair color-coded states with text or recognizable geometry.",
       "Do preserve keyboard focus, pause behavior, and the explicit phone-controls notice."
@@ -451,9 +451,9 @@
     "donts": [
       "Don’t apply Florida’s fonts, palette, or 3D art rules to Toronto.",
       "Don’t substitute the concept image for the playable world or a runtime screenshot.",
-      "Don’t describe Blender-authored geometry or native-canvas materials as image-generated assets.",
+      "Don’t confuse the generated facial albedo with Blender-authored geometry, native-canvas materials, supplied portraits, or a concept-image crop.",
       "Don’t describe responsive layout as touch steering or reduced motion as a static scene.",
-      "Don’t turn art-review stills into claims of concept equality, photorealistic likeness, or universal 60 FPS."
+      "Don’t turn authoring renders, browser stills, or individual benchmarks into claims of concept equality, photorealistic likeness, or universal 60 FPS."
     ]
   }
 }

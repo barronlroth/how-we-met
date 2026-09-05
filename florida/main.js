@@ -15,7 +15,7 @@ import {GameAudio} from './audio.js';
 import {createFrameProfile} from './performance.js';
 const $=id=>document.getElementById(id),reducedMotion=matchMedia('(prefers-reduced-motion: reduce)').matches;
 let storage;try{storage=localStorage}catch{storage={getItem:()=>null,setItem:()=>{}}}
-let race=createRace(),best=loadBest(storage),renderer,composer,scene,camera,boat,scenery,water,effects,sunshine;
+let race=createRace(),best=loadBest(storage),renderer,composer,scene,camera,boat,scenery,water,effects,sunshine,portraitFill;
 let countIn=0,pausedFrom='racing',lastTime=0,time=0,captionUntil=0,deflate=0,shake=0,cameraSnap=true,lastFocus=null,currentSpf=false;
 const audio=new GameAudio(),pressed=new Set(),entities=new Map(),rivalModels=[],hornRings=[],hullMaterials=[];
 const desiredCamera=new T.Vector3(),lookAt=new T.Vector3(),smoothLook=new T.Vector3();
@@ -94,7 +94,7 @@ function frame(now){
  }
  updateHud();const ready=race.status==='ready',finished=race.status==='finished',staged=ready||finished,s=staged?COURSE_LENGTH-200:race.s,x=staged?4:race.x,p=pointAt(s,x),heading=staged?p.heading:race.heading;
  const bob=reducedMotion?0:Math.sin(time*3)*.025+Math.sin(time*7)*race.speed*.00065;
- boat.position.set(p.x,(staged?0:race.y)+bob,p.z);boat.rotation.y=-heading;boat.rotation.z=reducedMotion||staged?0:T.MathUtils.lerp(boat.rotation.z,-race.turn*.19,1-Math.exp(-dt*8));boat.rotation.x=reducedMotion||staged?0:T.MathUtils.lerp(boat.rotation.x,race.y>0?-race.vy*.018:-Math.min(.065,race.speed*.001)+Math.sin(time*8)*.004,1-Math.exp(-dt*8));
+ boat.position.set(p.x,(staged?0:race.y)+bob,p.z);boat.rotation.y=-heading+(staged?Math.PI+.18:0);boat.rotation.z=reducedMotion||staged?0:T.MathUtils.lerp(boat.rotation.z,-race.turn*.19,1-Math.exp(-dt*8));boat.rotation.x=reducedMotion||staged?0:T.MathUtils.lerp(boat.rotation.x,race.y>0?-race.vy*.018:-Math.min(.065,race.speed*.001)+Math.sin(time*8)*.004,1-Math.exp(-dt*8));
  boat.userData.fan.rotation.z+=dt*(staged?5:14+race.speed*1.9);boat.userData.nina.rotation.z=reducedMotion?0:-race.turn*.13+Math.sin(time*1.7)*.012;boat.userData.nina.userData.arm.rotation.x=race.y>1?-.65:Math.sin(time*1.5)*.045;
  deflate=Math.max(0,deflate-dt*.9);const f=boat.userData.floatie;f.visible=!staged&&(race.flamingo||deflate>0);f.scale.set(1,race.flamingo?1:deflate*.9+.04,1);f.position.y=.6;
  const spf=race.sunscreen>0;if(spf!==currentSpf){currentSpf=spf;for(const e of hullMaterials){e.material.roughness=spf?.13:e.roughness;e.material.metalness=spf?.22:e.metalness;e.material.emissive?.setHex(spf?0x14281e:0)}}
@@ -102,6 +102,7 @@ function frame(now){
  const compact=innerWidth<1100,phone=innerWidth<600;
  const fx=Math.sin(smoothedHeading),fz=-Math.cos(smoothedHeading),nx=Math.cos(smoothedHeading),nz=Math.sin(smoothedHeading),back=staged?(phone?14:compact?12.5:8.5):race.boosting?8.2:9.4,height=staged?(phone?11:compact?9:7.2):race.boosting?5.4:6.4,side=staged?(phone?3:compact?.6:3.8):3.8;
  desiredCamera.set(p.x-fx*back+nx*side,height+(staged?0:race.y*.58),p.z-fz*back+nz*side);lookAt.set(p.x+fx*(staged?(phone?7:12):16)+nx*(staged?(phone?-.8:compact?3.5:0):1.6),(staged?(phone?-2:compact?-1:-1.6):.4)+race.y*.35,p.z+fz*(staged?(phone?7:12):16)+nz*(staged?(phone?-.8:compact?3.5:0):1.6));
+ portraitFill.visible=staged;portraitFill.position.copy(desiredCamera);
  if(staged){camera.setViewOffset(innerWidth,innerHeight,-innerWidth*(phone?.03:compact?.18:finished?.15:.14),innerHeight*(phone?.16:0),innerWidth,innerHeight)}else camera.clearViewOffset();
  const follow=1-Math.exp(-dt*8);if(cameraSnap){camera.position.copy(desiredCamera);smoothLook.copy(lookAt);cameraSnap=false}else{camera.position.lerp(desiredCamera,follow);smoothLook.lerp(lookAt,follow)}
  if(!reducedMotion&&race.status==='racing'){const vibrate=race.boosting?.022:.009;camera.position.y+=Math.sin(time*52)*vibrate;if(shake>0){camera.position.x+=Math.sin(time*61)*shake;camera.position.y+=Math.cos(time*43)*shake;shake=Math.max(0,shake-dt)}}camera.lookAt(smoothLook);
@@ -117,6 +118,7 @@ async function boot(){
  await document.fonts.ready;await prepareMaterials();await Promise.all([loadArtMaterials(),loadHeroArt()]);renderer=new T.WebGLRenderer({canvas:$('world'),antialias:true,powerPreference:'high-performance'});const benchmarkDpr=Number(new URLSearchParams(location.search).get('benchmarkDpr'));renderer.setPixelRatio([1,1.25].includes(benchmarkDpr)?benchmarkDpr:Math.min(devicePixelRatio,1.25));renderer.outputColorSpace=T.SRGBColorSpace;renderer.toneMapping=T.ACESFilmicToneMapping;renderer.toneMappingExposure=1.0;renderer.shadowMap.enabled=true;renderer.shadowMap.autoUpdate=false;renderer.shadowMap.type=T.PCFShadowMap;renderer.info.autoReset=false;
  scene=new T.Scene();scene.fog=new T.Fog(0xb6d5dc,520,1700);camera=new T.PerspectiveCamera(63,innerWidth/innerHeight,.15,6000);resize();scene.add(new T.HemisphereLight(0xd8edfa,0x647653,.55));
  sunshine=new T.DirectionalLight(0xfff0d3,4.3);sunshine.castShadow=true;sunshine.shadow.mapSize.set(2048,2048);Object.assign(sunshine.shadow.camera,{left:-100,right:100,top:100,bottom:-100,near:1,far:280});sunshine.shadow.normalBias=.045;sunshine.shadow.bias=-.00008;sunshine.shadow.radius=2;scene.add(sunshine,sunshine.target);
+ portraitFill=new T.PointLight(0xffe3c8,90,24,2);portraitFill.visible=false;scene.add(portraitFill);
  makeSky(scene,renderer);water=makeWater(scene);scenery=makeWorld(scene,{multiDraw:renderer.extensions.has('WEBGL_multi_draw')});boat=heroAirboat();scene.add(boat);effects=makeEffects(scene);
  (boat.userData.hull||boat.children[0]).traverse(o=>{if(o.isMesh){o.material=o.material.clone();hullMaterials.push({material:o.material,roughness:o.material.roughness,metalness:o.material.metalness})}});
  const models={floater:[floater(0),floater(1),floater(2)],gator:gator(),ramp:ramp(),wake:boatWake(),coffee:pickup('coffee'),flamingo:pickup('flamingo'),sunscreen:pickup('sunscreen'),taxi:waterTaxi()};

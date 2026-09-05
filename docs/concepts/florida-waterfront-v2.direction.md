@@ -14,7 +14,7 @@ The scene-art rebuild replaces the first V2 boat and houses with `premium-art.js
 
 THESIS: An animated Florida postcard, anchored by recognizable, expressive versions of Barron and Nina aboard a crafted airboat.
 
-OWN-WORLD: Cream hull, coral tubing, teal mechanics, golden teak, warm skin, dark curls and highlighted brown hair; the approved concept remains the art target.
+OWN-WORLD: Cream hull, coral tubing, teal mechanics, golden teak, warm skin, dark curls and golden blonde hair; the approved concept remains the art target.
 
 STORY: Race through an inhabited waterfront toward dinner at Fisheries.
 
@@ -23,3 +23,21 @@ FIRST VIEWPORT: Preserve the playable scene and sparse title/actions; sharpen th
 FORM: Refine the established 3D world, code-led; user-selected rounded animated-film characters, supplied likeness photos, and a 5% performance-loss target. No new concept tournament.
 
 FINISH: unreviewed and undocumented is unfinished; this build ends with the finish review, the verdict, DESIGN.md, and every shipping raster carrying its provenance
+
+## Approved character direction — September 5, 2026
+
+The user rejected the first Blender characters, reviewed five generated styles and selected `florida-couple-approved-v4.png`: the final animated-feature interpretation of their supplied portraits. This is the explicit character reference; the broader waterfront remains the established world.
+
+THESIS: An expressive adult animated-film couple, recognizably specific to Barron and Nina, aboard the existing detailed airboat.
+
+OWN-WORLD: Sculpted dark spiral curls, broad highlighted waves with a center part, large green/hazel eyes with modeled lids, warm dimensional cheeks and jaws, asymmetrical smiles and Nina's visible teeth. Barron wears a sage linen shirt, teal shorts, chain and stud; Nina wears the selected coral crew-neck T-shirt, cream linen shorts and hoops.
+
+FIRST VIEWPORT: Turn the staged airboat toward the existing entry/finish camera so faces are visible, retaining the bridge and Fisheries backdrop. Preserve the driving camera, physics, course and controls during racing.
+
+FORM: Author genuine 3D geometry and glTF materials in Blender; the reference is not a billboard or replacement background; a separately generated diffuse facial atlas is UV-mapped onto full sculpted heads. Preserve the fan and pointing-arm articulation. Keep the model near its existing geometry/material budget and measure a matched full-route comparison against the previous character asset at 1440×900, DPR 1.25; target no more than roughly 5% average FPS loss and disclose section variation.
+
+FIDELITY: The concept controls proportions, facial appeal, hair form and clothing. Review close authoring renders plus real browser entry/race/finish images; a studio render alone cannot establish the game's likeness or fidelity.
+
+Character reconstruction: separate head profiles, continuous sculpted cheeks/nose/chin, purpose-painted facial albedo with green/hazel eyes and individual teeth, glossy eye surfaces, overlapping curl masses, a broad continuous wavy hair mantle, and seated tailored clothing. The generated facial texture is newly painted game art, not either supplied photograph or a crop of the reference concept. Source and exact prompt are in `art/characters/`; one 1024×512 JPEG atlas is embedded in the GLB.
+
+User correction during this pass: Nina is blonde. This supersedes the brown hair in the selected concept. Use warm golden blonde masses, lighter highlights, broad shoulder-level waves and curled ends; retain the selected facial identity and outfit.

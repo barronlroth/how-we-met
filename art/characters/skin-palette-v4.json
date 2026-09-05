@@ -1,0 +1,30 @@
+{
+  "source": "couple-face-atlas-v4.png",
+  "method": "Mean RGB of non-blushed outer cheek regions, sampled from the original atlas.",
+  "skinB": {
+    "sample_box_px": [
+      66,
+      443,
+      106,
+      523
+    ],
+    "srgb": [
+      226,
+      125,
+      61
+    ]
+  },
+  "skinN": {
+    "sample_box_px": [
+      1667,
+      443,
+      1703,
+      523
+    ],
+    "srgb": [
+      214,
+      114,
+      54
+    ]
+  }
+}

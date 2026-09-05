@@ -23,7 +23,7 @@ Confirmed in the September 4, 2026 design conversation:
 - The driving reference is the enjoyable classic watercraft arcade racer the user remembers as Wave Runner; Wave Race is an adjacent reference to confirm, not a settled identification.
 - Dodge alligators and comic Florida men floating in tubes.
 - Include power-ups, ramps, waterfront mansions, and a finish at the 17th Street Causeway Bridge, with 15th Street Fisheries on the right on approach.
-- Nina rides at the front, points things out, and wears a bikini; Barron is a small blocky 3D version of himself at the controls.
+- Nina rides at the front and points things out; Barron drives. The September 5 selected animated-feature concept supersedes the earlier blocky/bikini direction: adult, rounded faces; Barron in a sage linen shirt and teal shorts; Nina in a coral crew-neck T-shirt and cream shorts. Preserve their distinctive curls/waves, green or hazel eyes, smiles, and jewelry. Character authority: `docs/concepts/florida-couple-approved-v4.png`.
 - Produce the art needed for the game as part of the work.
 - Three.js is the proposed rendering technology, suggested by the user.
 
@@ -48,3 +48,5 @@ Keep the game personal to Barron and Nina. Florida should be cute, playful, and 
 ## September 4 waterfront rebuild
 
 The user rejected the first Florida build as too linear, visually weak, sparse beyond houses, and lacking speed. They explicitly made the original generated concept the visual target and requested research of the real Fort Lauderdale Intracoastal. The replacement has a curved four-kilometre course, two navigable island splits, three competitors, heading-based steering, drift rewards, slipstream, close-call combos, yacht collisions and crossing water taxis. The concept remains a target, not evidence of actual runtime fidelity. The course compresses and art-directs the place rather than reproducing a street map.
+
+Character correction, September 5: Nina has blonde hair. Use golden blonde waves, superseding the brown hair in the selected illustration.
