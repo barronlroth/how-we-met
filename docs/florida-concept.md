@@ -1,6 +1,6 @@
 # Florida: Intracoastal Run
 
-Design brief, September 4, 2026. The user approved the direction and delegated implementation. Current implementation decisions are recorded in `florida-direction.md`.
+Design brief, September 4, 2026. The user approved the direction and delegated implementation. This historical brief predates the September 5 animated-feature character selection and mobile support. Current product decisions are in `../PRODUCT.md`; touch implementation and validation are in `florida-mobile-validation.md`.
 
 ## The experience
 

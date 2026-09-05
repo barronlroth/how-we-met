@@ -1,5 +1,7 @@
 # Florida V2 validation
 
+Mobile support was subsequently added on September 5. The keyboard-only/phone-fallback statements below describe earlier art passes; current controls and validation are in [mobile validation](florida-mobile-validation.md).
+
 The winding 4 km course, island choices, physical moorings, three rivals, drift reward, cafecito, protection, horn, jumps, pause/reset, and separate V2 local records pass 11 automated tests. The browser demo exercised the actual physics through all four checkpoints and finished in 1:25.48. Demo runs do not save best times.
 
 The V2 visual-review captures cover 1440×900, 1672×941, 989×903, 390×844, active racing and arrival. The finish reviewer scored the listed water/lighting, wake and entry-composition fixes resolved. This is not a claim of exact equality to the generated concept or a frame-pacing benchmark.

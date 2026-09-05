@@ -1,6 +1,6 @@
 # How We Met
 
-Two chapters of Barron and Nina's wedding game: the original pixel-art Toronto platformer and **Florida: Intracoastal Run**, a desktop 3D airboat race.
+Two chapters of Barron and Nina's wedding game: the original pixel-art Toronto platformer and **Florida: Intracoastal Run**, a 3D airboat race for desktop and touch screens.
 
 ## Florida
 
@@ -14,13 +14,15 @@ Run `npm ci`, `npm test`, and `npm run build`, then `npm run preview`. Open `htt
 - Three rival boats race the route. Slipstream behind them to refill cafecito; close-call chains and ramps also reward boost. Two island splits offer routes on either side.
 - “Watch a run” demonstrates the real driving physics without writing a best time.
 - Best times stay in this browser; there is no shared Florida leaderboard or account service.
-- Phone controls are not included in this version. A current desktop browser with WebGL 2 is required. Sound is opt-in.
+- On a phone, steer with the left thumb pad and pull down to brake/drift. Hold Cafecito to boost; tap Horn to clear hazards. Separate Drift and Horn buttons sit on the right. Portrait and landscape are supported.
+- Entry and pause settings let you choose Keyboard/Touch controls and Smooth/Detailed graphics. Coarse input defaults to Touch and Smooth; explicit choices persist in this browser. Rotation or switching away pauses the race.
+- A current browser with WebGL 2 is required. Sound is opt-in. Physical-phone performance has not yet been measured.
 
-`florida/core.js` owns the tested race rules, while `course.js` owns the curved route and physical mooring layout. `art.js` and `detail-art.js` provide model helpers, `premium-art.js` builds varied waterfront assets, `hero-art.js` loads the Blender-authored airboat and couple, `materials.js` authors their surface textures, `world.js` places the waterfront and reflected water, `scenery-batches.js` combines shoreline draws and culls objects per rendering pass, `effects.js` draws foam and spray, `audio.js` synthesizes sound, and `main.js` runs the rendered game and UI. F2 toggles local frame-rate, frame-pacing, draw-count, and per-sector diagnostics; it records only while visible. For reproducible comparisons, use the same viewport and append `?benchmarkDpr=1.25` (or `1`) to fix render pixel density. The normal game still uses device density capped at 1.25. `scripts/build.mjs` preserves the Toronto files and bundles Three.js plus Florida into `dist/`. Vercel serves that output on the existing project, `how-we-met-six.vercel.app`.
+`florida/controls.js` owns independent touch-pointer state and keyboard merging, `graphics.js` defines rendering profiles, and `florida/core.js` owns the tested race rules, while `course.js` owns the curved route and physical mooring layout. `art.js` and `detail-art.js` provide model helpers, `premium-art.js` builds varied waterfront assets, `hero-art.js` loads the Blender-authored airboat and couple, `materials.js` authors their surface textures, `world.js` places the waterfront and reflected water, `scenery-batches.js` combines shoreline draws and culls objects per rendering pass, `effects.js` draws foam and spray, `audio.js` synthesizes sound, and `main.js` runs the rendered game and UI. F2 toggles local frame-rate, frame-pacing, draw-count, and per-sector diagnostics; it records only while visible. For reproducible comparisons, use the same viewport and append `?benchmarkDpr=1.25` (or `1`) to fix render pixel density. Detailed graphics caps device density at 1.25; Smooth caps it at 1, halves anti-aliasing samples and shadow-map resolution, and skips ambient occlusion. `scripts/build.mjs` preserves the Toronto files and bundles Three.js plus Florida into `dist/`. Vercel serves that output on the existing project, `how-we-met-six.vercel.app`.
 
 To publish an update, run the tests and build, commit the source, and run `vercel --prod` from this repository linked to the existing `how-we-met` project. The live Florida chapter is at `https://how-we-met-six.vercel.app/florida/`.
 
-The measured rendering changes and hardware-specific limits are recorded in [Florida validation](docs/florida-v2-validation.md). For future model work, see [the Blender setup and export workflow](docs/blender-workflow.md). Blender is optional and is not a browser dependency. `npm run blender:hero` regenerates the player GLB from its authored Python source; normal web builds consume the checked-in GLB and do not need Blender.
+Mobile input behavior, viewport checks and hardware limits are recorded in [mobile validation](docs/florida-mobile-validation.md); previous art and rendering work is recorded in [Florida validation](docs/florida-v2-validation.md). For future model work, see [the Blender setup and export workflow](docs/blender-workflow.md). Blender is optional and is not a browser dependency. `npm run blender:hero` regenerates the player GLB from its authored Python source; normal web builds consume the checked-in GLB and do not need Blender.
 
 ## Original Toronto prototype
 

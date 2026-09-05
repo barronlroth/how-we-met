@@ -27,7 +27,7 @@ Confirmed in the September 4, 2026 design conversation:
 - Produce the art needed for the game as part of the work.
 - Three.js is the proposed rendering technology, suggested by the user.
 
-The user subsequently approved desktop first, racing as the core activity, Cafecito Boost, Flamingo Floatie, SPF 1000, and an optional air horn. They delegated the implementation approach and authorized publishing on the existing How We Met site. Phone controls and a separate dodge action are later work. The first implementation is an automatically accelerating, point-to-point race with keyboard steering/braking, medals, and a best time stored in the current browser.
+The user subsequently approved desktop first, racing as the core activity, Cafecito Boost, Flamingo Floatie, SPF 1000, and an optional air horn. They delegated the implementation approach and authorized publishing on the existing How We Met site. The user subsequently requested mobile support on September 5; a separate dodge action remains later work. The first implementation is an automatically accelerating, point-to-point race with keyboard or touch steering/braking, medals, and a best time stored in the current browser.
 
 ## Brand Commitments
 
@@ -50,3 +50,10 @@ Keep the game personal to Barron and Nina. Florida should be cute, playful, and 
 The user rejected the first Florida build as too linear, visually weak, sparse beyond houses, and lacking speed. They explicitly made the original generated concept the visual target and requested research of the real Fort Lauderdale Intracoastal. The replacement has a curved four-kilometre course, two navigable island splits, three competitors, heading-based steering, drift rewards, slipstream, close-call combos, yacht collisions and crossing water taxis. The concept remains a target, not evidence of actual runtime fidelity. The course compresses and art-directs the place rather than reproducing a street map.
 
 Character correction, September 5: Nina has blonde hair. Use golden blonde waves, superseding the brown hair in the selected illustration.
+
+
+## September 5 mobile support
+
+The user requested: “build mobile support now please.” Florida supports touch driving in portrait and landscape, with a left analog steering pad, pull-down braking/drift, and right Cafecito, Drift, and Horn controls. Multiple pointers can be held independently. Coarse input defaults to touch controls and Smooth graphics; players can select Keyboard/Touch and Smooth/Detailed on entry or pause, with browser-local preferences. Keyboard input continues to work in touch mode. Explicit control preferences take priority over automatic detection.
+
+Preserve the selected blonde-haired couple and waterfront assets in both quality modes. Smooth caps DPR at 1, uses two-sample anti-aliasing and 1024px shadows, and skips screen-space ambient occlusion. Detailed preserves the prior 1.25 DPR cap, four samples, 2048px shadows, and ambient occlusion. Rotation, app backgrounding, and lost focus clear input and pause active races. No orientation lock or device-motion permission is required. Phone hardware performance remains a separate validation step from desktop browser viewport tests.
