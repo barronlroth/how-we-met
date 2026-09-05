@@ -1,6 +1,6 @@
 # Blender for the Florida game
 
-Recommended setup: install the macOS Blender application, then run project-owned Python scripts with Blender in background mode. MCP is optional. Blender is an asset-authoring tool; Three.js still renders the exported game assets in the browser. Blender itself is not a guest dependency.
+This Mac has Blender 5.2.1 LTS (Apple Silicon) installed in `/Applications/Blender.app`, with the `blender` command on PATH. Project-owned Python scripts run it in background mode. MCP is optional. Blender is an asset-authoring tool; Three.js still renders the exported game assets in the browser. Blender itself is not a guest dependency.
 
 ## Local headless workflow
 
@@ -14,7 +14,21 @@ Recommended setup: install the macOS Blender application, then run project-owned
 3. Author and retain `.blend` source files outside the public asset directory. Use Blender Python to build/refine models, bake surface detail, export GLB, and produce review renders. Only browser assets belong in `florida/assets/`.
 4. Compare the exported model in the actual Three.js lighting and run the same F2 demo benchmark before accepting it. A Blender render is not evidence of browser fidelity or performance.
 
-No Blender installation or MCP configuration was performed during the performance pass. The app/executable was absent on this Mac at the time of the check.
+## Verified local setup
+
+Installed with `brew install --cask blender` from Homebrew's checksum-verified official Blender download. The app measured 907 MiB on disk; the 330 MiB installer cache was removed after successful verification. No MCP server, GUI session, or persistent Blender service is needed for this headless workflow.
+
+From the project root:
+
+```sh
+npm run blender:smoke
+./scripts/blender-headless.sh --python /absolute/path/to/asset-script.py
+```
+
+The wrapper uses isolated factory settings and exits with code 1 on Python failure; set `BLENDER_BIN` for another Blender executable. A script should explicitly choose its renderer/device and output paths. The smoke check uses Cycles on CPU for reliable background execution.
+
+Verification completed: a 256×256 PNG render, saved `.blend`, 14,624-byte GLB export, clean-scene reimport, and import with the project's Three.js GLTFLoader (one mesh, 188 triangles). The wrapper's nonzero Python-error exit was also exercised. Outputs and a JSON report live in ignored `artifacts/blender-smoke/`, outside the published game assets. These tests validate the toolchain; game-asset visuals and FPS still need a separate in-game check after replacement.
+
 
 ## Optional interactive MCP workflow
 

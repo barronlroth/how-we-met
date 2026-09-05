@@ -5,3 +5,5 @@ dist/
 .impeccable/
 
 node_modules
+
+artifacts/
