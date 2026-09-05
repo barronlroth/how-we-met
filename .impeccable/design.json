@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-09-05T18:23:02.335193+00:00",
+  "generatedAt": "2026-09-05T19:26:26.189730+00:00",
   "title": "Design System: How We Met — Florida V2",
   "extensions": {
     "colorMeta": {
@@ -269,6 +269,22 @@
       "chapter-title": {
         "displayName": "Homepage Chapter Title",
         "purpose": "Quicksand; preserves the Toronto page typography."
+      },
+      "touch-label": {
+        "displayName": "Touch Label",
+        "purpose": "Written touch steering, drift, horn, and boost guidance, never below 11px."
+      },
+      "settings-label": {
+        "displayName": "Settings Label",
+        "purpose": "Repeated Controls and Graphics labels on entry and pause."
+      },
+      "settings-value": {
+        "displayName": "Settings Value",
+        "purpose": "Native selected values on entry and pause."
+      },
+      "touch-guide": {
+        "displayName": "Touch Guide",
+        "purpose": "Entry and pause instructions; smallest portrait and short landscape entry use 12px."
       }
     },
     "shadows": [
@@ -286,6 +302,11 @@
         "name": "homepage-chapter",
         "value": "0 7px 24px #08081133",
         "purpose": "Homepage chapter link only."
+      },
+      {
+        "name": "steering-knob",
+        "value": "0 3px 10px #082f4755",
+        "purpose": "Small downward separation beneath the movable cream steering knob."
       }
     ],
     "motion": [
@@ -339,6 +360,18 @@
       {
         "name": "Camera phone (strictly below)",
         "value": "600px"
+      },
+      {
+        "name": "Florida smallest touch width",
+        "value": "360px"
+      },
+      {
+        "name": "Florida short touch landscape",
+        "value": "(orientation: landscape) and (max-height: 520px)"
+      },
+      {
+        "name": "Florida short portrait subtitle removal",
+        "value": "(max-width: 600px) and (max-height: 700px) and (orientation: portrait)"
       }
     ]
   },
@@ -355,17 +388,17 @@
       "name": "Sound Tool",
       "kind": "button",
       "refersTo": "button-tool",
-      "description": "Compact icon-and-label control; narrow layouts hide the label.",
+      "description": "Navy icon-and-label control with a 44px minimum hit area; narrow layouts hide the visible label.",
       "html": "<button class=\"ds-tool\" aria-label=\"Turn sound on\" aria-pressed=\"false\"><svg viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path d=\"M4 9h4l5-4v14l-5-4H4zm13-2q6 5 0 10m-1-7q2 2 0 4\"/></svg><span>Sound off</span></button>",
-      "css": ".ds-tool{display:inline-flex;align-items:center;gap:7px;border:0;background:#123e4be0;color:var(--cream,#fff9e9);border-radius:8px;min-height:38px;padding:8px 13px;font:850 14px Nunito,sans-serif;cursor:pointer}.ds-tool svg{width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}.ds-tool:hover{background:#24626b}.ds-tool:focus-visible{outline:3px solid var(--yellow,#ffdc57);outline-offset:5px}@media(max-width:760px){.ds-tool span{display:none}}"
+      "css": ".ds-tool{display:inline-flex;align-items:center;gap:7px;border:0;background:#123e4be0;color:var(--cream,#fff9e9);border-radius:8px;min-height:44px;min-width:44px;justify-content:center;padding:8px 13px;font:850 14px Nunito,sans-serif;cursor:pointer}.ds-tool svg{width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}.ds-tool:hover{background:#24626b}.ds-tool:focus-visible{outline:3px solid var(--yellow,#ffdc57);outline-offset:5px}@media(max-width:760px){.ds-tool span{display:none}}"
     },
     {
       "name": "Text Action",
       "kind": "button",
       "refersTo": "button-text",
-      "description": "Secondary demo action; also used for restart and exit.",
+      "description": "Secondary demo, restart, and exit actions retain a 44px minimum hit height on entry and dialogs.",
       "html": "<button class=\"ds-text\">Watch a run ↗</button>",
-      "css": ".ds-text{display:block;margin:15px 0 0;border:0;background:none;color:var(--cream,#fff9e9);font:900 14px Nunito,sans-serif;padding:6px 0;text-shadow:0 2px 7px #103b48;cursor:pointer;text-decoration:none}.ds-text:hover{text-decoration:underline;text-underline-offset:4px}.ds-text:focus-visible{outline:3px solid var(--yellow,#ffdc57);outline-offset:5px}"
+      "css": ".ds-text{display:block;min-height:44px;margin:15px 0 0;border:0;background:none;color:var(--cream,#fff9e9);font:900 14px Nunito,sans-serif;padding:6px 0;text-shadow:0 2px 7px #103b48;cursor:pointer;text-decoration:none}.ds-text:hover{text-decoration:underline;text-underline-offset:4px}.ds-text:focus-visible{outline:3px solid var(--yellow,#ffdc57);outline-offset:5px}"
     },
     {
       "name": "Race Clock",
@@ -379,23 +412,23 @@
       "name": "Nina Caption",
       "kind": "custom",
       "refersTo": "nina-caption",
-      "description": "Short live commentary; runtime controls the fade and duration.",
+      "description": "Short live commentary; touch uses 12px sentences and an 11px speaker label, with 11px sentences in short landscape.",
       "html": "<div class=\"ds-caption\" aria-live=\"polite\"><span>NINA</span><p>Close call. More cafecito.</p></div>",
-      "css": ".ds-caption{display:flex;align-items:baseline;gap:9px;width:max-content;max-width:100%;padding:9px 15px;background:#103b48dc;color:var(--cream,#fff9e9);border-radius:8px;transition:opacity .3s;font-family:Nunito,sans-serif}.ds-caption>span{font-size:10px;color:#ffa294;font-weight:1000;letter-spacing:.07em}.ds-caption p{margin:0;font-size:14px;line-height:1.4;font-weight:900}@media(prefers-reduced-motion:reduce){.ds-caption{transition:none}}"
+      "css": ".ds-caption{display:flex;align-items:baseline;gap:9px;width:max-content;max-width:100%;padding:9px 15px;background:#103b48dc;color:var(--cream,#fff9e9);border-radius:8px;transition:opacity .3s;font-family:Nunito,sans-serif}.ds-caption>span{font-size:10px;color:#ffa294;font-weight:1000;letter-spacing:.07em}.ds-caption p{margin:0;font-size:14px;line-height:1.4;font-weight:900}@media(prefers-reduced-motion:reduce){.ds-caption{transition:none}}.ds-caption.ds-touch{padding:7px 10px;max-width:calc(100% - 32px)}.ds-caption.ds-touch>span{font-size:11px}.ds-caption.ds-touch p{font-size:12px}@media(orientation:landscape) and (max-height:520px){.ds-caption.ds-touch{align-items:flex-start;gap:6px}.ds-caption.ds-touch p{font-size:11px}.ds-caption.ds-touch>span{display:none}}"
     },
     {
       "name": "Finish Panel",
       "kind": "card",
       "refersTo": "finish-panel",
-      "description": "Desktop result card beside the staged destination; sample content illustrates the demo result layout.",
+      "description": "Result card beside the staged desktop destination; touch short landscape compacts content and dialogs scroll within the dynamic viewport.",
       "html": "<section class=\"ds-finish\" aria-label=\"Race result\"><div class=\"ds-medal\">DEMO COMPLETE</div><h2>TABLE FOR TWO.</h2><p>That’s the route. Now let’s see your racing line.</p><div class=\"ds-time\">1:28.11</div><p class=\"ds-best\">Your turn. Take the wheel.</p><div class=\"ds-stats\"><span><strong>13</strong>jumps</span><span><strong>6</strong>close calls</span><span><strong>12</strong>bumps</span></div><button class=\"ds-primary\">One more run</button><a class=\"ds-text\" href=\"/\">Back to How We Met</a></section>",
-      "css": ".ds-finish{width:330px;max-width:calc(100vw - 32px);padding:26px;background:#103b48ed;border:1px solid #c9ede124;border-radius:14px;text-align:center;box-shadow:0 15px 60px #052a4438;color:var(--cream,#fff9e9);font-family:Nunito,sans-serif}.ds-finish h2{font:400 25px/1.2 Bungee,sans-serif;margin:0 0 13px}.ds-finish p{font-size:15px;line-height:1.5;margin:0 0 20px}.ds-medal{display:inline-block;color:var(--navy,#103b48);background:var(--yellow,#ffdc57);border-radius:22px;padding:8px 16px;font-size:12px;font-weight:1000;margin-bottom:18px}.ds-medal[data-medal=SILVER]{background:#d8e9e7}.ds-medal[data-medal=BRONZE]{background:#e6b389}.ds-time{font:400 43px Bungee,sans-serif;font-variant-numeric:tabular-nums;margin:3px 0}.ds-finish .ds-best{color:var(--yellow,#ffdc57);font-size:12px;font-weight:950;margin-bottom:12px}.ds-stats{display:flex;justify-content:center;gap:22px;font-size:11px;margin:14px 0 24px;color:#c7e4dd}.ds-stats strong{display:block;font-size:23px;color:var(--cream,#fff9e9)}.ds-finish .ds-text{margin:14px auto 0}.ds-primary{border:0;background:var(--yellow,#ffdc57);color:var(--navy,#103b48);padding:15px 28px;border-radius:9px;font:1000 18px Nunito,sans-serif;box-shadow:0 5px 15px #09384855;transition:transform .15s,background .15s;min-width:180px;cursor:pointer}.ds-primary:hover{background:#ffe993;transform:translateY(-2px)}.ds-primary:active{transform:translateY(2px)}.ds-primary:disabled{opacity:.55;cursor:wait}.ds-primary:focus-visible{outline:3px solid var(--yellow,#ffdc57);outline-offset:5px}@media(max-width:760px){.ds-primary{font-size:16px;min-width:160px;padding:13px 22px}}@media(prefers-reduced-motion:reduce){.ds-primary{transition:none}.ds-primary:hover{transform:none}}.ds-text{display:block;margin:15px 0 0;border:0;background:none;color:var(--cream,#fff9e9);font:900 14px Nunito,sans-serif;padding:6px 0;text-shadow:0 2px 7px #103b48;cursor:pointer;text-decoration:none}.ds-text:hover{text-decoration:underline;text-underline-offset:4px}.ds-text:focus-visible{outline:3px solid var(--yellow,#ffdc57);outline-offset:5px}@media(max-width:1000px){.ds-finish{width:295px}}@media(max-width:760px){.ds-finish{width:330px}}@media(max-height:740px){.ds-finish{padding:22px}.ds-stats{margin:10px 0 18px}}"
+      "css": ".ds-finish{width:330px;max-width:calc(100vw - 32px);padding:26px;background:#103b48ed;border:1px solid #c9ede124;border-radius:14px;text-align:center;box-shadow:0 15px 60px #052a4438;color:var(--cream,#fff9e9);font-family:Nunito,sans-serif}.ds-finish h2{font:400 25px/1.2 Bungee,sans-serif;margin:0 0 13px}.ds-finish p{font-size:15px;line-height:1.5;margin:0 0 20px}.ds-medal{display:inline-block;color:var(--navy,#103b48);background:var(--yellow,#ffdc57);border-radius:22px;padding:8px 16px;font-size:12px;font-weight:1000;margin-bottom:18px}.ds-medal[data-medal=SILVER]{background:#d8e9e7}.ds-medal[data-medal=BRONZE]{background:#e6b389}.ds-time{font:400 43px Bungee,sans-serif;font-variant-numeric:tabular-nums;margin:3px 0}.ds-finish .ds-best{color:var(--yellow,#ffdc57);font-size:12px;font-weight:950;margin-bottom:12px}.ds-stats{display:flex;justify-content:center;gap:22px;font-size:11px;margin:14px 0 24px;color:#c7e4dd}.ds-stats strong{display:block;font-size:23px;color:var(--cream,#fff9e9)}.ds-finish .ds-text{margin:14px auto 0}.ds-primary{border:0;background:var(--yellow,#ffdc57);color:var(--navy,#103b48);padding:15px 28px;border-radius:9px;font:1000 18px Nunito,sans-serif;box-shadow:0 5px 15px #09384855;transition:transform .15s,background .15s;min-width:180px;cursor:pointer}.ds-primary:hover{background:#ffe993;transform:translateY(-2px)}.ds-primary:active{transform:translateY(2px)}.ds-primary:disabled{opacity:.55;cursor:wait}.ds-primary:focus-visible{outline:3px solid var(--yellow,#ffdc57);outline-offset:5px}@media(max-width:760px){.ds-primary{font-size:16px;min-width:160px;padding:13px 22px}}@media(prefers-reduced-motion:reduce){.ds-primary{transition:none}.ds-primary:hover{transform:none}}.ds-text{display:block;margin:15px 0 0;border:0;background:none;color:var(--cream,#fff9e9);font:900 14px Nunito,sans-serif;padding:6px 0;text-shadow:0 2px 7px #103b48;cursor:pointer;text-decoration:none}.ds-text:hover{text-decoration:underline;text-underline-offset:4px}.ds-text:focus-visible{outline:3px solid var(--yellow,#ffdc57);outline-offset:5px}@media(max-width:1000px){.ds-finish{width:295px}}@media(max-width:760px){.ds-finish{width:330px}}@media(max-height:740px){.ds-finish{padding:22px}.ds-stats{margin:10px 0 18px}}.ds-finish{max-height:calc(100dvh - max(16px,env(safe-area-inset-top,0px)) - max(16px,env(safe-area-inset-bottom,0px)));overflow-y:auto;overscroll-behavior:contain;scrollbar-color:var(--aqua,#59f1e3) var(--navy,#103b48);scrollbar-width:thin}.ds-finish .ds-text{min-height:44px}@media(orientation:landscape) and (max-height:520px){.ds-finish.ds-touch{width:340px;padding:14px 22px}.ds-finish.ds-touch h2{font-size:22px;margin-bottom:4px}.ds-finish.ds-touch .ds-medal{padding:6px 14px;margin-bottom:4px}.ds-finish.ds-touch p{font-size:13px;line-height:1.3;margin-bottom:6px}.ds-finish.ds-touch .ds-time{font-size:32px;line-height:1.1}.ds-finish.ds-touch .ds-stats{margin:8px 0}.ds-finish.ds-touch .ds-stats strong{display:inline;font-size:16px;margin-right:4px}.ds-finish.ds-touch .ds-primary{min-height:44px;padding:10px 22px;font-size:16px}.ds-finish.ds-touch .ds-text{margin-top:5px}}"
     },
     {
       "name": "Cafecito Gauge",
       "kind": "custom",
       "refersTo": "cafecito-gauge",
-      "description": "Aqua arc shows fuel; runtime turns the fill pale cream while boosting.",
+      "description": "Keyboard-mode fuel instrument. Aqua arc turns pale cream while boosting; touch mode puts fuel inside the Cafecito action.",
       "html": "<div class=\"ds-boost\"><svg viewBox=\"0 0 190 120\" aria-hidden=\"true\"><path class=\"ds-track\" d=\"M22 98 A73 73 0 0 1 168 98\"/><path class=\"ds-fill\" d=\"M22 98 A73 73 0 0 1 168 98\" pathLength=\"100\"/><path class=\"ds-cup\" d=\"M68 69h29v14q0 15-15 15t-14-15zm29 3h5q14 0 0 13h-5M71 105h26M77 64q-6-6 0-12m10 12q-6-6 0-12\"/></svg><div><strong>CAFECITO</strong><kbd>Shift</kbd></div></div>",
       "css": ".ds-boost{position:relative;width:190px;height:135px;filter:drop-shadow(0 2px 2px #143e49);color:var(--cream,#fff9e9);font-family:Nunito,sans-serif}.ds-boost svg{width:190px;height:120px;fill:none}.ds-track{stroke:#103b48;stroke-width:18}.ds-fill{stroke:var(--aqua,#59f1e3);stroke-width:12;stroke-dasharray:100;stroke-dashoffset:45;stroke-linecap:butt}.ds-cup{stroke:var(--cream,#fff9e9);stroke-width:3.5;stroke-linecap:round;stroke-linejoin:round}.ds-boost>div{position:absolute;bottom:0;width:100%;display:flex;justify-content:center;align-items:center;gap:9px;font-size:14px;font-style:italic}.ds-boost strong{font-weight:1000}.ds-boost kbd{font:900 11px Nunito,sans-serif;background:var(--cream,#fff9e9);color:var(--navy,#103b48);border-radius:3px;padding:2px 5px}"
     },
@@ -406,17 +439,34 @@
       "description": "Homepage-only entry into Florida, preserving Quicksand and the existing chapter palette.",
       "html": "<a class=\"ds-chapter\" href=\"/florida/\"><div><h2>Next stop: Florida</h2><p>You, Nina, an airboat, and the Intracoastal.</p></div><span>Play the 3D race →</span></a>",
       "css": ".ds-chapter{display:flex;align-items:center;justify-content:space-between;gap:24px;margin:26px 0;padding:24px 28px;background:#174e58;border-radius:14px;text-decoration:none;color:#fff7df;box-shadow:0 7px 24px #08081133;font-family:Quicksand,system-ui,sans-serif}.ds-chapter h2{font-size:24px;font-weight:700;margin:0 0 7px}.ds-chapter p{margin:0;font-size:15px;line-height:1.5}.ds-chapter>span{color:#ffdf64;font-weight:700;white-space:nowrap;font-size:16px}.ds-chapter:hover{background:#1c626a}.ds-chapter:focus-visible{outline:3px solid #ffdf64;outline-offset:5px}@media(max-width:600px){.ds-chapter{align-items:flex-start;flex-direction:column;gap:15px;padding:22px}}"
+    },
+    {
+      "name": "Controls and Graphics Settings",
+      "kind": "input",
+      "refersTo": "settings-select",
+      "description": "Repeated native entry/pause fields. Editing keys remain native; the pause dialog traps Tab. Application code persists and applies selections.",
+      "html": "<div class=\"ds-game-settings\"><label>Controls<select aria-label=\"Controls\"><option value=\"keyboard\">Keyboard</option><option value=\"touch\">Touch</option></select></label><label>Graphics<select aria-label=\"Graphics\"><option value=\"smooth\">Smooth</option><option value=\"detailed\">Detailed</option></select></label></div>",
+      "css": ".ds-game-settings{display:flex;gap:12px;margin-top:14px}.ds-game-settings label{display:flex;flex-direction:column;gap:4px;font-size:11px;font-weight:950;text-shadow:0 1px 5px var(--navy,#103b48)}.ds-game-settings select{font:900 13px Nunito,sans-serif;background:#103b48ed;color:var(--cream,#fff9e9);border:1px solid #ffffff50;border-radius:6px;padding:8px 28px 8px 10px;min-height:44px;min-width:120px;cursor:pointer;color-scheme:dark}.ds-game-settings select:focus-visible{outline:3px solid var(--yellow,#ffdc57);outline-offset:3px}.ds-game-settings{justify-content:center}.ds-game-settings{font-family:Nunito,sans-serif;color:var(--cream,#fff9e9)}@media(max-width:600px){.ds-game-settings{gap:10px}.ds-game-settings select{min-width:112px}}@media(orientation:landscape) and (max-height:520px){.ds-game-settings{margin-top:8px}.ds-game-settings select{min-width:105px}}"
+    },
+    {
+      "name": "Touch Driving Actions",
+      "kind": "custom",
+      "refersTo": "touch-action",
+      "description": "Drift/Horn above Cafecito, with written cooldown/refill states and a fuel strip. Data-state attributes preview runtime held, cooling, boosting, and empty states; no input simulation is embedded.",
+      "html": "<div class=\"ds-touch-actions\">\n   <button class=\"ds-touch-action ds-touch-brake\" data-control=\"brake\" aria-label=\"Hold to brake; steer to drift\"><svg viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path d=\"M8 4v7m8-7v7M6 11h12v8H6zM3 6v3m18-3v3\"/></svg><span>DRIFT</span></button>\n   <button class=\"ds-touch-action ds-touch-horn\" data-control=\"horn\" aria-label=\"Sound the horn\"><svg viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path d=\"M3 10h6l6-5v14l-6-5H3zm6 4v6H6v-6m12-6 3-2m-3 6h4m-4 4 3 2\"/></svg><span>HORN</span></button>\n   <button class=\"ds-touch-action ds-touch-boost\" data-control=\"boost\" aria-label=\"Hold for cafecito boost\"><svg viewBox=\"0 0 32 32\" aria-hidden=\"true\"><path d=\"M5 11h17v9q0 7-8 7t-9-7zm17 1h3q8 0 0 8h-3M7 30h17M10 7q-3-3 0-6m7 6q-3-3 0-6\"/></svg><span><strong>CAFECITO</strong><small>HOLD TO BOOST</small></span><span class=\"ds-touch-fuel\" aria-hidden=\"true\"><span></span></span></button>\n  </div>",
+      "css": ".ds-touch-actions{width:164px;display:grid;grid-template-columns:1fr 1fr;gap:10px;font-family:Nunito,sans-serif}.ds-touch-action{position:relative;display:flex;align-items:center;justify-content:center;gap:6px;min-height:64px;border-radius:16px;background:#103b48ed;color:var(--cream,#fff9e9);font-size:11px;font-weight:1000;touch-action:none;overflow:hidden;padding:10px 8px}.ds-touch-action>svg{width:25px;height:25px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}.ds-touch-brake,.ds-touch-horn{flex-direction:column;gap:3px}.ds-touch-action[data-state=held]{background:var(--cream,#fff9e9);color:var(--navy,#103b48)}.ds-touch-action[data-state=cooling]{color:#d0e1df;background:#103b48cb}.ds-touch-boost{grid-column:1/-1;min-height:72px;padding-bottom:17px;background:var(--yellow,#ffdc57);color:var(--navy,#103b48);gap:10px}.ds-touch-boost>svg{width:28px;height:32px}.ds-touch-boost strong{font-size:15px;display:block}.ds-touch-boost small{font-size:11px;font-weight:1000;display:block;margin-top:2px}.ds-touch-boost[data-state=held],.ds-touch-boost[data-state=boosting]{background:var(--aqua,#59f1e3);color:var(--navy,#103b48)}.ds-touch-boost[data-state=empty]{background:#e6e6c8}.ds-touch-fuel{position:absolute;left:10px;right:10px;bottom:7px;height:5px;border-radius:3px;background:#103b4840;overflow:hidden}.ds-touch-fuel>span{display:block;width:100%;height:100%;background:var(--navy,#103b48);transform-origin:left;transform:scaleX(.55)}.ds-touch-action{font-family:Nunito,sans-serif;border:0;cursor:pointer}.ds-touch-action:focus-visible{outline:3px solid var(--yellow,#ffdc57);outline-offset:5px}.ds-touch-action:active{background:var(--cream,#fff9e9);color:var(--navy,#103b48)}.ds-touch-boost:active{background:var(--aqua,#59f1e3);color:var(--navy,#103b48)}@media(hover:hover){.ds-touch-action:hover{filter:brightness(1.08)}}@media(max-width:360px){.ds-touch-actions{width:144px}.ds-touch-boost strong{font-size:13px}}@media(orientation:landscape) and (max-height:520px){.ds-touch-actions{gap:8px;width:150px}.ds-touch-action{min-height:52px;padding:6px;flex-direction:row;gap:4px;border-radius:13px}.ds-touch-action>svg{width:21px;height:21px}.ds-touch-boost{min-height:60px;padding-bottom:15px}.ds-touch-boost strong{font-size:13px}}"
     }
   ],
   "narrative": {
     "northStar": "A Florida Postcard in Motion",
-    "overview": "Florida is a playful miniature waterfront with a detailed cream, coral, and teal airboat, rounded characters, layered planting, yachts, balconies, and reflective turquoise water. Sculpted faces and limbs, painted facial expression, short dark curls, and broad golden blonde waves carry the selected animated-feature direction. Nina’s blonde hair follows the user’s correction and supersedes the brown hair in the selected illustration. Sparse arcade instruments leave the course and couple primary.\n\nThis record captures the built Florida V2 world and its homepage link. The user pinned the original generated concept as the visual target; it remains a reference, not runtime imagery or proof of equivalent fidelity. Toronto retains its pixel art, Press Start 2P, Quicksand, and existing palette.",
+    "overview": "Florida is a playful miniature waterfront with a detailed cream, coral, and teal airboat, rounded characters, layered planting, yachts, balconies, and reflective turquoise water. Sculpted faces and limbs, painted facial expression, short dark curls, and broad golden blonde waves carry the selected animated-feature direction. Nina’s blonde hair follows the user’s correction and supersedes the brown hair in the selected illustration. Sparse arcade instruments leave the course and couple primary.\n\nThis record captures the built Florida V2 world, its keyboard and touch instruments, and its homepage link. The user pinned the original generated concept as the visual target; it remains a reference, not runtime imagery or proof of equivalent fidelity. Toronto retains its pixel art, Press Start 2P, Quicksand, and existing palette.",
     "keyCharacteristics": [
       "Shaped hull, modeled deck seams, separate upholstered seats, and an exposed fan and engine.",
       "Sculpted seated couple, painted expressions with glossy eye surfaces, distinct curls and blonde waves, and Nina’s pointing pose.",
       "Dense moorings, planted banks, villas, condos, branching channels, and active boat traffic.",
-      "Cream and navy instruments, yellow actions, and an aqua Cafecito gauge.",
-      "Close couple framing at entry and finish, with bridge and Fisheries visible on desktop."
+      "Cream and navy instruments, yellow actions, and aqua Cafecito feedback across keyboard and touch controls.",
+      "Close couple framing at entry and finish, with bridge and Fisheries visible on desktop.",
+      "Safe-area-aware thumb controls, a clear portrait chase view, and native entry/pause settings."
     ],
     "rules": [
       {
@@ -435,6 +485,11 @@
         "section": "typography"
       },
       {
+        "name": "The Clear Course Rule",
+        "body": "Place touch controls in the safe-area-adjusted lower corners and keep race information above or between them, preserving the forward route in portrait and landscape.",
+        "section": "layout"
+      },
+      {
         "name": "The Rounded Couple Rule",
         "body": "Preserve dimensional heads and limbs, Barron’s dark curls, Nina’s golden blonde waves, the selected outfits, and readable seated poses when extending the couple’s art.",
         "section": "shapes"
@@ -446,13 +501,16 @@
       "Do preserve the sculpted couple, Barron’s dark curls, Nina’s golden blonde waves, selected outfits, and readable pointing pose.",
       "Do keep the user-approved FLORIDA eyebrow and original concept reference.",
       "Do pair color-coded states with text or recognizable geometry.",
-      "Do preserve keyboard focus, pause behavior, and the explicit phone-controls notice."
+      "Do preserve keyboard focus, pause behavior, independent touch pointers, and the touch driving instructions.",
+      "Do retain at least 44px touch targets and 11px newly added touch labels, with written action and cooldown states.",
+      "Do let native settings own editing keys while keeping Tab inside dialogs and canvas driving shortcuts available."
     ],
     "donts": [
       "Don’t apply Florida’s fonts, palette, or 3D art rules to Toronto.",
       "Don’t substitute the concept image for the playable world or a runtime screenshot.",
       "Don’t confuse the generated facial albedo with Blender-authored geometry, native-canvas materials, supplied portraits, or a concept-image crop.",
-      "Don’t describe responsive layout as touch steering or reduced motion as a static scene.",
+      "Don’t describe desktop viewport checks as physical phone testing or reduced motion as a static scene.",
+      "Don’t let automatic touch detection override an explicit control choice or let held inputs survive pause, rotation, or leaving the app.",
       "Don’t turn authoring renders, browser stills, or individual benchmarks into claims of concept equality, photorealistic likeness, or universal 60 FPS."
     ]
   }
