@@ -8,7 +8,7 @@ Run `npm ci`, `npm test`, and `npm run build`, then `npm run preview`. Open `htt
 
 - A/D or left/right arrows steer; S or down arrow brakes; hold it while steering to drift and earn boost. The boat accelerates automatically.
 - Hold Shift to spend Cafecito Boost. Hold Space to fire the deck-mounted water blaster; steer the boat to aim. Escape or P pauses.
-- Water shots travel forward and splash on impact. A direct hit briefly sends a tube rider aside or makes a gator duck; missed shots do not clear nearby hazards.
+- Water shots travel forward and splash on impact. A direct hit briefly sends a tube rider aside, makes a gator duck, or slows a rival racer for 1.8 seconds so you can pass. Rivals get a short recovery window against repeated hits; missed shots do not clear nearby targets.
 - Flamingo Floatie absorbs one hit. SPF 1000 prevents slowdown from collisions for eight seconds.
 - Complete the 4 km course through all four checkpoints to the 17th Street Causeway Bridge. Fisheries sits on the right on the southbound approach.
 - Gold: 1:35 or faster. Silver: 2:00 or faster. Bronze: finish the course.

@@ -9,7 +9,7 @@ import {loadArtMaterials} from './premium-art.js';
 import {loadHeroArt,heroAirboat} from './hero-art.js';
 import {makeWorld,makeWater,makeSky,SUN} from './world.js';
 import {makeEffects,makeWaterCannon} from './effects.js';
-import {createRace,stepRace,pilotInput,fireWater,WATER_SHOT,objectX,pointAt,frameAt,angleDelta,sector,COURSE_LENGTH,MEDAL_TIMES,formatTime,loadBest,saveBest,ISLANDS} from './core.js';
+import {createRace,stepRace,pilotInput,fireWater,WATER_SHOT,RIVAL_SOAK,objectX,pointAt,frameAt,angleDelta,sector,COURSE_LENGTH,MEDAL_TIMES,formatTime,loadBest,saveBest,ISLANDS} from './core.js';
 import {TRACK,routeBounds} from './course.js';
 import {GameAudio} from './audio.js';
 import {createFrameProfile} from './performance.js';
@@ -124,7 +124,10 @@ function renderEntities(s){
   else if(o.type==='taxi'){mesh.rotation.y+=Math.cos(race.elapsed*.16+o.drift)>0?-Math.PI/2:Math.PI/2;mesh.position.y=Math.sin(time*1.2)*.04}
   else if(!['ramp','wake'].includes(o.type)){mesh.position.y=1.4+Math.sin(time*2+o.s)*.22;mesh.rotation.y=time*.7}
  }
- race.rivals.forEach((v,i)=>{const m=rivalModels[i],p=pointAt(v.s,v.x);m.visible=race.status!=='ready'&&race.status!=='finished'&&Math.abs(v.s-s)<650;m.position.set(p.x,Math.sin(time*3+i)*.04,p.z);m.rotation.set(0,-v.heading,Math.sin(time*3+i)*.015)});
+ race.rivals.forEach((v,i)=>{
+  const m=rivalModels[i],p=pointAt(v.s,v.x),soak=!reducedMotion&&v.soaked>0?Math.sin((RIVAL_SOAK.duration-v.soaked)*22)*.11*(v.soaked/RIVAL_SOAK.duration):0;
+  m.visible=race.status!=='ready'&&race.status!=='finished'&&Math.abs(v.s-s)<650;m.position.set(p.x,Math.sin(time*3+i)*.04,p.z);m.rotation.set(soak*.4,-v.heading,Math.sin(time*3+i)*.015+soak);
+ });
 }
 function frame(now){
  requestAnimationFrame(frame);if(document.hidden){lastTime=now;return}const realDt=Math.max(.0001,(now-lastTime)/1000),dt=Math.min(.065,realDt);lastTime=now;time+=dt;fps+=(1/realDt-fps)*.035;

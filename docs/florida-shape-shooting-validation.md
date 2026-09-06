@@ -48,3 +48,12 @@ That Safari candidate used an intermediate v5 export of 1,671,616 bytes and 64,8
 The fresh finish review accepted the three scored hair corrections—Nina’s crown coverage and volumetric locks, and Barron’s forelock shapes—with no material regressions found in that scoped review. This records resolution of those defects, not equality with the generated concept or a user approval of the final likeness.
 
 No physical mobile hardware was connected. Multiple touch pointers are covered by event-handler tests, not a physical multi-finger play session. Desktop Safari measurements, authoring renders, and the smaller final asset do not establish phone performance, universal 60 FPS, or the user’s approximate 5% performance-loss target for the exact final build.
+
+
+## Rival targeting follow-up
+
+After accepting the character look, the user requested water shots against competing boats. The projectile search now tests rivals at their moving course positions and selects the closest contact across rivals and other targets. A direct vulnerable rival hit reduces speed to 62% and holds the reduced target pace for 1.8 seconds. The same boat has 2.8 seconds of protection from additional slowdown; shots still collide and splash during that interval. Rivals remain in the race and recover their pace naturally. Pause freezes these timers; finish and restart clear them.
+
+Rival hits reuse the existing splash particles and rings, and briefly rock the existing rival mesh. Reduced motion disables the extra rocking. No new assets, meshes, materials, lights or shadow passes were added. The existing Space/SOAK controls are unchanged.
+
+Validation: all 45 tests pass, including eight focused rival tests covering moving targets, misses, closest-target blocking, immunity, recovery, later re-hits and lifecycle resets. The production build passes. The Mac remained locked, so this follow-up has simulation and build verification but no new live visual playtest or FPS measurement.

@@ -64,3 +64,8 @@ Preserve the selected blonde-haired couple and waterfront assets in both quality
 The user rejected the horn attack and requested something the boat can shoot. The current action is a deck-mounted water blaster: hold Space or the touch SOAK button and steer the boat to aim. Visible shots travel forward and splash on contact. A direct hit briefly displaces a tube rider or makes a gator duck; this replaces the horn's area effect. Racing, drift, Cafecito, and the existing protection pickups remain the core loop.
 
 The user separately rejected the character geometry: the face texture looked good, but the shapes distorted the result. Preserve the selected animated-feature art and facial atlas while correcting the actual head, face UV, body, hair, clothing, and hand geometry. Nina remains blonde. The correction targets the long lower faces, disproportionate heads and necks, rope-like hair, detached-looking sleeves, blocky shorts, and simple wrist ends. Compare the resulting meshes in front/three-quarter authoring renders and in the browser; good texture art alone does not satisfy this request.
+
+
+## Rival water-shot hits
+
+The user accepted the updated character look and requested that competing boats can also be shot. Direct water hits briefly slow and rock rival racers, creating an overtaking opportunity. Rivals keep racing, recover naturally, and have a short protection window so held fire cannot continuously stack slowdown. Existing Space/SOAK controls, characters, course, and power-ups are preserved.
