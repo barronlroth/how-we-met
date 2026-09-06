@@ -2,9 +2,10 @@ import * as T from 'three';
 import {Water} from 'three/addons/objects/Water.js';
 import {batchScenery} from './scenery-batches.js';
 import {waterfrontVilla,sportYacht,canopyTree} from './premium-art.js';
-import {C,mat,box,ball,pipe,bake,mansion,buoy,fisheries,bridge,textSign} from './art.js';
-import {superyacht,lushPalm,broadleaf,shrub,condo,marinaPier,pavilion,parasol} from './detail-art.js';
-import {pointAt,frameAt,halfWidth,curvature,COURSE_LENGTH,CHECKPOINTS,ISLANDS} from './course.js';
+import {C,mat,box,ball,pipe,bake,buoy,fisheries,bridge,textSign} from './art.js';
+import {superyacht,lushPalm,shrub,condo,marinaPier,pavilion,parasol} from './detail-art.js';
+import {waterfrontCrowd,promenadeFurniture,riverfrontBlock,riverBridge,sailboat,boatyard,marinaClub,mangrove,boardwalk,pelican,partyBar,partyPontoon,finishTerrace,beachSlipway} from './district-art.js';
+import {pointAt,halfWidth,curvature,districtAt,DISTRICTS,MOORINGS,COURSE_LENGTH,CHECKPOINTS,ISLANDS} from './course.js';
 export const SUN=new T.Vector3(.55,.79,-.33).normalize();
 const place=(g,template,s,x,y=0,rot=0,scale=1)=>{const p=pointAt(s,x),m=template.clone(true);m.position.set(p.x,y,p.z);m.rotation.y=-p.heading+rot;m.scale.multiplyScalar(scale);g.add(m);return m};
 function instance(group){
@@ -22,36 +23,91 @@ function terrain(scene){
 }
 export function makeWorld(scene,{multiDraw=false}={}){
  terrain(scene);const chunks=[],landmarks=[];
- const palms=[0,1,2].map(lushPalm),trees=[0,1].map(canopyTree),bushes=[0,1,2].map(shrub),homes=[0,1,2,3,4,5].map(waterfrontVilla),towers=[0,1,2,3].map(condo),boats=[sportYacht(0),sportYacht(1),superyacht(.82)],pier=marinaPier(23),umbrella=parasol();
+ const palms=[0,1,2].map(lushPalm),trees=[0,1].map(canopyTree),bushes=[0,1,2].map(shrub),homes=[0,1,2,3].map(waterfrontVilla),towers=[0,1,2,3].map(condo);
+ const boats={sport:sportYacht(1),super:superyacht(1),sail:sailboat(0)},pier=marinaPier(17),umbrella=parasol(),walkFurniture=promenadeFurniture(),cafes=[0,1,2].map(riverfrontBlock),yards=[0,1].map(boatyard),club=marinaClub(),roots=[0,1,2].map(mangrove),walk=boardwalk(),birds=[0,1].map(pelican),crowds=[0,1,2].map(waterfrontCrowd),bar=partyBar(),pontoons=[0,1,2].map(partyPontoon),terrace=finishTerrace(),slipway=beachSlipway();
  const decorative=new T.Group();decorative.name='landmarks';
+ // Each 100m region has a district composition. Reusable geometry is instanced,
+ // then the existing scenery backend culls regions for both camera and reflection.
  for(let i=-2;i<Math.ceil(COURSE_LENGTH/100)+6;i++){
-  const s=i*100,g=new T.Group(),fixed=new T.Group();
+  const s=i*100,g=new T.Group(),fixed=new T.Group(),district=districtAt(s).id;
   for(const side of [-1,1]){
-   const marina=s/COURSE_LENGTH>.31&&s/COURSE_LENGTH<.5,arrival=side===1&&s>COURSE_LENGTH-175&&s<COURSE_LENGTH+80;
-   for(let k=-50;k<50;k+=10){const a=pointAt(s+k,side*(halfWidth(s+k)+.35)),b=pointAt(s+k+10,side*(halfWidth(s+k+10)+.35));pipe(fixed,[a.x,.38,a.z],[b.x,.38,b.z],.42,0xcacbb3,6)}
-   for(const off of [-34,0,34]){
-    const at=s+off,w=halfWidth(at);
-    if(!arrival)place(g,homes[(Math.abs(i*3+off))%homes.length],at,side*(w+15+(Math.abs(i+off)%3)*3),.45,-side*Math.PI/2+Math.sin(i+off)*.06,marina?.85:1);
-    if(!arrival){place(g,pier,at+17,side*(w-1),0,Math.PI/2);place(g,boats[Math.abs(i)%3],at+14,side*(w-7.5),0,Math.sin(i+off)*.19+(Math.abs(i+off)%4===0?Math.PI:0))}
-    // Continuous planted yards and a second layer of neighborhood behind them.
-    for(let j=0;j<4;j++){
-     place(g,palms[(j+Math.abs(i))%3],at-12+j*8,side*(w+2.5+(j%3)*6),.42,Math.sin(i+j),.7+((j+Math.abs(i))%4)*.23);
-     place(g,bushes[(j+Math.abs(i))%3],at-13+j*8,side*(w+1.8),.5,0,.65);
-     place(g,trees[(j+Math.abs(i))%2],at-10+j*9,side*(w+28+j%2*17),.45,0,.62+(j%3)*.24);
+   const bank=at=>side*halfWidth(at),face=-side*Math.PI/2,arrival=side===1&&s>COURSE_LENGTH-175&&s<COURSE_LENGTH+80;
+   if(district!=='mangrove')for(let k=-50;k<50;k+=10){const a=pointAt(s+k,bank(s+k)+side*.35),b=pointAt(s+k+10,bank(s+k+10)+side*.35);pipe(fixed,[a.x,.38,a.z],[b.x,.38,b.z],.42,0xcacbb3,6)}
+   if(district==='downtown'){
+    for(const off of [-27,25]){
+     const at=s+off,w=halfWidth(at);
+     place(g,cafes[(Math.abs(i)+Number(side>0)+Number(off>0))%3],at,side*(w+17.5),.45,face);
+     place(g,walkFurniture,at,side*(w+4),.42,side===1?0:Math.PI);
+     place(g,palms[Math.abs(i)%3],at-18,side*(w+3.5),.4,0,.83);
+     place(g,trees[Math.abs(i)%2],at+18,side*(w+37),.4,0,.85);
     }
-    if(!arrival&&off!==0)place(g,homes[Math.abs(i+off)%6],at-5,side*(w+77),.4,side*Math.PI/2,.88);
-    for(let j=0;j<3;j++)place(g,trees[(Math.abs(i)+j)%2],at+j*9,side*(w+98+(j%2)*14),.4,0,1.05);
+    for(const off of [-29,24])place(g,towers[(Math.abs(i)+Number(off>0)+Number(side>0))%4],s+off,side*(halfWidth(s+off)+64),.4,face,1.15+(Math.abs(i+off)%3)*.28);
+    for(let k=-50;k<50;k+=20){const at=s+k,p=pointAt(at,side*(halfWidth(at)+43));const road=box(fixed,7,.035,20.4,0x8e9386,p.x,.46,p.z);road.rotation.y=-p.heading;const line=box(fixed,.12,.02,3,0xe4dcb4,p.x,.49,p.z);line.rotation.y=-p.heading}
+   }else if(district==='marina'){
+    const w=halfWidth(s);
+    // Working boatyard on one bank, sailing club and cafe on the other.
+    if((i+Number(side>0))%2===0)place(g,side<0?yards[Math.abs(i)%2]:club,s,side*(w+16),.45,face);
+    else{place(g,homes[Math.abs(i)%4],s-15,side*(w+18),.45,face,.93);place(g,terrace,s+21,side*(w+9),.4,face,.75)}
+    for(const off of [-42,-11,36]){place(g,palms[Math.abs(i+off)%3],s+off,side*(halfWidth(s+off)+3.4),.45,0,.95);place(g,bushes[Math.abs(i+off)%3],s+off-5,side*(halfWidth(s+off)+2.5),.45,0,1.4)}
+    for(const off of [-30,16]){place(g,trees[Math.abs(i)%2],s+off,side*(w+47),.4,0,1.15);place(g,boats.sail,s+off,side*(w+65),1.6,0,.65)}
+    if(i%3===0)place(g,towers[Math.abs(i)%4],s,side*(w+101),.4,face,.9);
+   }else if(district==='mangrove'){
+    // Irregular rooted banks and layered hammock forest replace the seawall.
+    for(let k=-48,j=0;k<50;k+=13,j++){
+     const at=s+k,w=halfWidth(at),scale=.92+((Math.abs(i)+j)%3)*.17;
+     place(g,roots[(Math.abs(i)+j)%3],at,side*(w+3+(j%2)*1.5),.25,Math.sin(i+j),scale);
+     place(g,trees[(Math.abs(i)+j)%2],at+4,side*(w+17+(j%3)*8),.4,j,1.1+(j%2)*.3);
+     place(g,bushes[(Math.abs(i)+j)%3],at,side*(w+.8),.3,j,1.45);
+     const p=pointAt(at,side*(w+.2));ball(fixed,p.x,.15,p.z,2.1,.4,3.8,0xa5a076,1);
+    }
+    if(side===1&&i%2===0)place(g,walk,s,side*(halfWidth(s)+10),0,0,1);
+    if(i%2===0)for(let j=0;j<3;j++)place(g,birds[j%2],s-25+j*12,side*(halfWidth(s)-7-j*2),8+j*.6,-.3,1.4);
+   }else if(district==='cove'){
+    const w=halfWidth(s);
+    // Open sandy banks, bright cabanas and social clusters leave the wide water
+    // clear enough to exploit boosts between the raft-ups in MOORINGS.
+    for(let k=-50;k<50;k+=20){const at=s+k,p=pointAt(at,side*(halfWidth(at)+10));const sand=box(fixed,20,.12,21,0xe1cf9b,p.x,.48,p.z);sand.rotation.y=-p.heading}
+    if((i+Number(side>0))%3===0)place(g,bar,s,side*(w+8.2),.1,face,.94);
+    else for(const off of [-25,18]){place(g,umbrella,s+off,side*(halfWidth(s+off)+5),.55,0,1.4);place(g,crowds[(Math.abs(i)+Number(off>0))%3],s+off,side*(halfWidth(s+off)+2),.55,face);place(g,slipway,s+off+8,side*(halfWidth(s+off)+4),.1,side*Math.PI/2,.9);const beached=place(g,pontoons[Math.abs(i+off)%3],s+off+8,side*(halfWidth(s+off)+4),1.04,side*Math.PI/2,.9);beached.rotateX(-.06)}
+    for(const off of [-43,-11,33]){place(g,palms[Math.abs(i+off)%3],s+off,side*(halfWidth(s+off)+16),.4,Math.sin(i),1.3);place(g,bushes[Math.abs(i+off)%3],s+off,side*(halfWidth(s+off)+21),.5,0,1.8)}
+    if(i%2===0){place(g,homes[Math.abs(i)%4],s,side*(w+43),.4,face,1.45);place(g,trees[Math.abs(i)%2],s-32,side*(w+43),.4,0,1.5)}
+   }else{
+    for(const off of [-29,22]){
+     const at=s+off,w=halfWidth(at);
+     if(!arrival){place(g,homes[(Math.abs(i)+Number(off>0))%4],at,side*(w+19),.4,face,1.15);place(g,terrace,at+17,side*(w+9.8),.45,face,.6)}
+     place(g,walkFurniture,at,side*(w+3.8),.4,side===1?0:Math.PI);
+     for(let j=0;j<3;j++)place(g,palms[(Math.abs(i)+j)%3],at-15+j*14,side*(w+4+j%2*5),.42,0,1.15);
+    }
+    if(i%2===0)place(g,towers[(Math.abs(i)+Number(side>0))%4],s,side*(halfWidth(s)+75),.4,face,1.7);
    }
-   if(i%2===0)place(g,towers[Math.abs(i+side)%4],s+8,side*(halfWidth(s)+145),.4,-side*Math.PI/2,.9+(Math.abs(i)%3)*.13);
-   // A road, sidewalks, parked cars and planted setbacks make the banks a city.
-   for(let k=-50;k<50;k+=20){
-    const at=s+k,p=pointAt(at,side*(halfWidth(at)+55));const road=box(fixed,9,.03,20.4,0x8e9386,p.x,.45,p.z);road.rotation.y=-p.heading;
-    const line=box(fixed,.12,.02,3,0xdad6b4,p.x,.48,p.z);line.rotation.y=-p.heading;
-    if(k%40===-10){const car=new T.Group();box(car,1.75,.6,3.8,[0xd9dcca,0x467b80,0xc97d65][Math.abs(i)%3],0,.72,0);box(car,1.5,.55,2,0x3d5656,0,1.2,.05);place(g,bake(car),at,side*(halfWidth(at)+58),.1)}
-   }
-   if(marina&&!arrival){for(const off of [-20,25])place(g,umbrella,s+off,side*(halfWidth(s+off)+4),.5,0,.8)}
   }
-  g.add(bake(fixed));const chunk=instance(g);chunk.userData.s=s;chunks.push(chunk);
+  // Hull visuals and physics share the exact same mooring transforms.
+  for(const m of MOORINGS)if(m.s>=s-50&&m.s<s+50){
+   place(g,boats[m.model],m.s,m.x,0,m.yaw,m.scale);
+   const side=Math.sign(m.x);place(g,pier,m.s+(m.halfLength||12)*.65,side*(halfWidth(m.s)+1.5),0,Math.PI/2,.85);
+  }
+  g.add(bake(fixed));const chunk=instance(g);chunk.userData.s=s;chunk.userData.district=district;chunks.push(chunk);
+ }
+ // A small local bridge creates a shaded urban squeeze; the large finish
+ // crossing remains unique and much taller on the horizon.
+ const urbanS=COURSE_LENGTH*.112,urban=new T.Group();place(urban,riverBridge(halfWidth(urbanS)*2+26),urbanS,0);const urbanChunk=instance(urban);urbanChunk.userData.s=urbanS;chunks.push(urbanChunk);
+ for(const island of ISLANDS){
+  const vertices=[];for(let j=0;j<40;j++){const a=j*Math.PI/20,p=pointAt(island.s+Math.cos(a)*island.length/2,island.x+Math.sin(a)*island.width);vertices.push(new T.Vector2(p.x,-p.z))}
+  const g=new T.Group(),mesh=new T.Mesh(new T.ShapeGeometry(new T.Shape(vertices)),mat(island.district==='mangrove'?0x557140:0x89a366));mesh.rotation.x=-Math.PI/2;mesh.position.y=.55;mesh.receiveShadow=true;g.add(mesh);
+  if(island.district==='mangrove'){
+   for(let offset=-island.length*.4,j=0;offset<=island.length*.4;offset+=18,j++){
+    const r=island.width*Math.sqrt(1-(offset/(island.length/2))**2);
+    for(const side of [-1,1])place(g,roots[j%3],island.s+offset,island.x+side*Math.max(0,r-5),.45,j*.7,1.18);
+    place(g,trees[j%2],island.s+offset,island.x,.5,0,1.5);
+   }
+   const yellowMarker=buoy(C.gold,true);
+   for(let j=-4;j<=4;j++){
+    const offset=j*island.length/7.2,t=Math.min(1,Math.abs(offset)/(island.length/2)),radius=island.width*Math.sqrt(1-t*t),at=island.s+offset;
+    place(g,yellowMarker,at,Math.min(halfWidth(at)-4,island.x+radius+10),.1,0,.82);
+   }
+  }else{place(g,pavilion(),island.s,island.x,.5);for(let j=-3;j<=3;j++){place(g,palms[Math.abs(j)%3],island.s+j*18,island.x+(j%2?6:-5),.5,0,1.1);place(g,bushes[Math.abs(j)%3],island.s+j*20,island.x+3,.5,0,2)}}
+  for(const side of [-1,1]){const text=side<0?'‹ MAIN CHANNEL':island.district==='mangrove'?'MANGROVE CUT ›':'MARINA CUT ›';const sign=textSign(text,12,1.7,{bg:'#194946',color:'#fff2ba',font:'900 85px Nunito'});place(g,sign,island.s-island.length/2-20,island.x+side*19,4.2)}
+  const chunk=instance(g);chunk.userData.s=island.s;chunks.push(chunk);
  }
  const batches=batchScenery(chunks,{multiDraw});batches.root.name='shoreline';scene.add(batches.root);
  for(let s=20,i=0;s<COURSE_LENGTH;s+=42,i++)for(const side of [-1,1]){const b=buoy(side<0?0xe96e40:0x58ac69,i%4===0);place(decorative,b,s,side*(halfWidth(s)-3),.05)}
@@ -60,20 +116,15 @@ export function makeWorld(scene,{multiDraw=false}={}){
   pipe(g,[-w,7,0],[w,7,0],.025,C.cream);const sign=textSign(`CHECKPOINT ${i+1}`,13,1.5,{bg:'#153e49',color:'#fff9de',font:'900 80px Nunito'});sign.position.set(0,6.7,0);g.add(sign);place(decorative,bake(g),s,0);
  }
  for(let s=120;s<COURSE_LENGTH-150;s+=180){const bend=curvature(s+40);if(Math.abs(bend)<.0025)continue;const sign=textSign(bend>0?'› › ›':'‹ ‹ ‹',7,2,{bg:'#163e43',color:'#ffd75d',font:'900 155px Nunito',border:null});place(decorative,sign,s,Math.sign(bend)*(halfWidth(s)-2),3.3)}
- for(const island of ISLANDS){
-  const vertices=[];for(let j=0;j<40;j++){const a=j*Math.PI/20,p=pointAt(island.s+Math.cos(a)*island.length/2,island.x+Math.sin(a)*island.width);vertices.push(new T.Vector2(p.x,-p.z))}
-  const mesh=new T.Mesh(new T.ShapeGeometry(new T.Shape(vertices)),mat(0x698747));mesh.rotation.x=-Math.PI/2;mesh.position.y=.55;mesh.receiveShadow=true;scene.add(mesh);
-  const g=new T.Group();place(g,pavilion(),island.s,island.x,.1);for(let j=-3;j<=3;j++){place(g,palms[Math.abs(j)%3],island.s+j*17,island.x+(j%2?7:-6),.5,0,1);place(g,bushes[Math.abs(j)%3],island.s+j*20,island.x+4,.5,0,2)}
-  for(const side of [-1,1]){const sign=textSign(side<0?'‹ MAIN CHANNEL':'MARINA CUT ›',12,1.7,{bg:'#194946',color:'#fff2ba',font:'900 85px Nunito'});place(g,sign,island.s-island.length/2-16,island.x+side*19,4.2)}scene.add(instance(g));
- }
- const fish=new T.Group();fish.add(fisheries());for(const x of [-10,-5,0,5,10]){const u=umbrella.clone();u.position.set(x,1.15,14);u.scale.setScalar(.7);fish.add(u)}
- for(let i=0;i<16;i++){const x=(i%8)*2.8-10,z=12+Math.floor(i/8)*3;ball(fish,x,2.2,z,.2,.42,.16,[C.coral,C.teal,C.cream][i%3]);ball(fish,x,2.78,z,.17,.21,.17,C.skin,1)}
+ for(const d of DISTRICTS.slice(1)){const at=d.start*COURSE_LENGTH+18,sign=textSign(d.name,16,2,{bg:'#17464a',color:'#ffe9a6',font:'900 85px Nunito'});place(decorative,sign,at,-halfWidth(at)-2,5.3,-Math.PI/10)}
+ const fish=new T.Group();fish.add(fisheries());const deck=terrace.clone();deck.position.set(0,.6,17);deck.scale.setScalar(.8);fish.add(deck);
+ for(const x of [-10,-5,0,5,10]){const u=umbrella.clone();u.position.set(x,1.15,14);u.scale.setScalar(.7);fish.add(u)}
  const f=place(decorative,bake(fish),COURSE_LENGTH-55,halfWidth(COURSE_LENGTH-55)+1,0,-.3,1.25);landmarks.push(f);
  const bridgeGroup=new T.Group();bridgeGroup.add(bridge(190));
  for(const side of [-1,1]){const sh=new T.Shape();sh.moveTo(0,16);sh.lineTo(64,16);sh.lineTo(64,1);sh.quadraticCurveTo(32,22,0,1);sh.closePath();const m=new T.Mesh(new T.ExtrudeGeometry(sh,{depth:12,bevelEnabled:false}),mat(0xd5ddc6,{side:T.DoubleSide}));m.position.set(side*31,0,-6);m.scale.x=side;m.castShadow=true;m.receiveShadow=true;bridgeGroup.add(m)}
  const b=place(decorative,bridgeGroup,COURSE_LENGTH,0);landmarks.push(b);
- // A layered skyline closes the horizon beyond the route.
- for(let i=0;i<35;i++){const s=COURSE_LENGTH*(i/34),side=i%2?1:-1;place(decorative,towers[i%4],s,side*(220+(i%5)*32),.4,0,1.1+(i%4)*.28)}
+ // District-specific horizon: skyline at the city and finish, tree line at the cut.
+ for(let i=0;i<28;i++){const s=COURSE_LENGTH*(i/27),d=districtAt(s).id;if(d==='mangrove')continue;const side=i%2?1:-1;place(decorative,towers[i%4],s,side*(205+(i%4)*32),.4,0,d==='downtown'?1.6:1.0+(i%4)*.28)}
  scene.add(decorative);
  return{update(s,camera){batches.update(s,camera);for(const l of landmarks)l.visible=s>COURSE_LENGTH-850},setAO(enabled){batches.setAO(enabled);decorative.visible=!enabled},landmarks};
 }
@@ -100,5 +151,6 @@ export function makeWater(scene){
   vec3 outgoingLight=albedo*mix(.94,1.06,smoothstep(.28,.70,body));
   outgoingLight+=vec3(.20,.57,.58)*crest*distanceFade*.10;
  `);water.rotation.x=-Math.PI/2;water.position.y=.025;water.material.uniforms.size.value=7.6;scene.add(water);
- return{mesh:water,update(s,t){water.material.uniforms.time.value=t*.65}};
+ const districtWater={downtown:new T.Color(0x087f8c),marina:new T.Color(0x078f99),mangrove:new T.Color(0x277e6c),cove:new T.Color(0x0eafb2),bridge:new T.Color(0x078f9f)};
+ return{mesh:water,update(s,t){water.material.uniforms.time.value=t*.65;water.material.uniforms.waterColor.value.lerp(districtWater[districtAt(s).id],.025)}};
 }

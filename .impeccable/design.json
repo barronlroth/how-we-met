@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-09-06T00:44:40.618244Z",
+  "generatedAt": "2026-09-06T01:30:48.718085Z",
   "title": "Design System: How We Met — Florida V2",
   "extensions": {
     "colorMeta": {
@@ -412,7 +412,7 @@
       "name": "Nina Caption",
       "kind": "custom",
       "refersTo": "nina-caption",
-      "description": "Short live commentary; touch uses 12px sentences and an 11px speaker label, with 11px sentences in short landscape.",
+      "description": "Short live commentary with 25 fictional friend roasts rotating across replays. Checkpoint and collision callouts take priority; quiet intervals prevent queued bursts. Touch uses 12px sentences and an 11px speaker label, with 11px sentences in short landscape.",
       "html": "<div class=\"ds-caption\" aria-live=\"polite\"><span>NINA</span><p>Close call. More cafecito.</p></div>",
       "css": ".ds-caption{display:flex;align-items:baseline;gap:9px;width:max-content;max-width:100%;padding:9px 15px;background:#103b48dc;color:var(--cream,#fff9e9);border-radius:8px;transition:opacity .3s;font-family:Nunito,sans-serif}.ds-caption>span{font-size:10px;color:#ffa294;font-weight:1000;letter-spacing:.07em}.ds-caption p{margin:0;font-size:14px;line-height:1.4;font-weight:900}@media(prefers-reduced-motion:reduce){.ds-caption{transition:none}}.ds-caption.ds-touch{padding:7px 10px;max-width:calc(100% - 32px)}.ds-caption.ds-touch>span{font-size:11px}.ds-caption.ds-touch p{font-size:12px}@media(orientation:landscape) and (max-height:520px){.ds-caption.ds-touch{align-items:flex-start;gap:6px}.ds-caption.ds-touch p{font-size:11px}.ds-caption.ds-touch>span{display:none}}"
     },
@@ -459,14 +459,15 @@
   ],
   "narrative": {
     "northStar": "A Florida Postcard in Motion",
-    "overview": "Florida is a playful miniature waterfront with a detailed cream, coral, and teal airboat, rounded characters, layered planting, yachts, balconies, and reflective turquoise water. Smaller sculpted heads, broad cheek and jaw planes, painted facial expression, tapered limbs and hands, directional dark curls, and broad golden blonde waves carry the selected animated-feature direction. Nina’s blonde hair follows the user’s correction and supersedes the brown hair in the selected illustration. Sparse arcade instruments leave the course and couple primary.\n\nThis record captures the built Florida V2 world, its keyboard and touch instruments, and its homepage link. The user pinned the original generated concept as the visual target; it remains a reference, not runtime imagery or proof of equivalent fidelity. Toronto retains its pixel art, Press Start 2P, Quicksand, and existing palette.",
+    "overview": "Florida is a playful miniature waterfront with five distinct districts: the urban New River, a superyacht marina, a shaded mangrove cut, a broad party cove, and the bridge approach. Restaurants, working boatyards, rooted banks, rafted boats, and a crowded Fisheries terrace frame the detailed cream, coral, and teal airboat and rounded couple. The route compresses and rearranges Fort Lauderdale references for racing; it is not a literal geographic route. Smaller sculpted heads, broad cheek and jaw planes, painted facial expression, tapered limbs and hands, directional dark curls, and broad golden blonde waves carry the selected animated-feature direction. Nina’s blonde hair follows the user’s correction and supersedes the brown hair in the selected illustration. Sparse arcade instruments leave the course and couple primary.\n\nThis record captures the built Florida V2 world, its keyboard and touch instruments, and its homepage link. The user pinned the original generated concept as the visual target; it remains a reference, not runtime imagery or proof of equivalent fidelity. Toronto retains its pixel art, Press Start 2P, Quicksand, and existing palette.",
     "keyCharacteristics": [
       "Shaped hull, modeled deck seams, separate upholstered seats, and an exposed fan and engine.",
       "Proportioned seated couple, landmark-aligned painted faces and glossy almond eye surfaces, dark curls, blonde waves, and Nina’s pointing pose.",
-      "Dense moorings, planted banks, villas, condos, branching channels, and active boat traffic.",
+      "Five district compositions, changing channel widths and water colors, marina and mangrove branches, 67 physical moorings, and active crossing traffic.",
       "Cream and navy instruments, yellow actions, aqua Cafecito feedback, and visible cyan water shots across keyboard and touch controls.",
       "Close couple framing at entry and finish, with bridge and Fisheries visible on desktop.",
-      "Safe-area-aware thumb controls, a clear portrait chase view, and native entry/pause settings."
+      "Safe-area-aware thumb controls, a clear portrait chase view, and native entry/pause settings.",
+      "Brief fictional friend roasts from Nina in quieter racing moments, with checkpoint and collision callouts taking priority."
     ],
     "rules": [
       {
@@ -498,6 +499,7 @@
     "dos": [
       "Do preserve the couple, readable hazards, curved course, and desktop arrival landmarks.",
       "Do extend the built shaped geometry and material detail when adding Florida scenery.",
+      "Do preserve district-specific silhouettes, open racing lanes, shared hull transforms, and the marina-to-mangrove-to-cove contrast instead of repeating villas along every bank.",
       "Do preserve the approved facial atlas and correct its mapping and surrounding geometry when proportions distort the likeness; retain dark curls, blonde waves, selected outfits, and readable pointing pose.",
       "Do keep the user-approved FLORIDA eyebrow and original concept reference.",
       "Do pair color-coded states with text or recognizable geometry.",

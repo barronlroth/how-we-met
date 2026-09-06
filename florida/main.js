@@ -4,7 +4,7 @@ import {RenderPass} from 'three/addons/postprocessing/RenderPass.js';
 import {SSAOPass} from 'three/addons/postprocessing/SSAOPass.js';
 import {OutputPass} from 'three/addons/postprocessing/OutputPass.js';
 import {floater,gator,pickup,ramp,boatWake,C} from './art.js';
-import {prepareMaterials,raceBoat,waterTaxi} from './detail-art.js';
+import {prepareMaterials,raceBoat,waterTaxi,superyacht} from './detail-art.js';
 import {loadArtMaterials} from './premium-art.js';
 import {loadHeroArt,heroAirboat} from './hero-art.js';
 import {makeWorld,makeWater,makeSky,SUN} from './world.js';
@@ -15,10 +15,12 @@ import {GameAudio} from './audio.js';
 import {createFrameProfile} from './performance.js';
 import {bindTouchControls,drivingInput} from './controls.js';
 import {graphicsProfile} from './graphics.js';
+import {createNinaBanter,CHECKPOINT_LINES} from './nina-lines.js';
 const $=id=>document.getElementById(id),reducedMotion=matchMedia('(prefers-reduced-motion: reduce)').matches;
 let storage;try{storage=localStorage}catch{storage={getItem:()=>null,setItem:()=>{}}}
 let race=createRace(),best=loadBest(storage),renderer,composer,scene,camera,boat,scenery,water,effects,sunshine,portraitFill,ambientOcclusion;
 let countIn=0,pausedFrom='racing',lastTime=0,time=0,captionUntil=0,deflate=0,shake=0,cameraSnap=true,lastFocus=null,currentSpf=false;
+let captionPriority=0,banterRun=0,banter=createNinaBanter();
 const audio=new GameAudio(),pressed=new Set(),entities=new Map(),rivalModels=[],hullMaterials=[];
 const desiredCamera=new T.Vector3(),lookAt=new T.Vector3(),smoothLook=new T.Vector3();
 let smoothedHeading=0,fps=60,perfFrames=0,perfTime=0;
@@ -56,12 +58,13 @@ syncControls();
 
 
 const mapPoint=p=>({x:10+(p.x-routeBounds.minX)/(routeBounds.maxX-routeBounds.minX)*80,y:170-(routeBounds.maxZ-p.z)/(routeBounds.maxZ-routeBounds.minZ)*160});
-function setCaption(text,duration=3.5){if(!text)return;$('nina-line').textContent=text;$('nina').style.opacity='1';captionUntil=time+duration}
+function setCaption(text,duration=3.5,priority=2){if(!text||(time<captionUntil&&priority<captionPriority))return;$('nina-line').textContent=text;$('nina').style.opacity='1';captionUntil=time+duration;captionPriority=priority}
 function pulse(color){if(reducedMotion)return;$('flash').style.borderColor=color;$('flash').style.opacity='.42';setTimeout(()=>$('flash').style.opacity='0',130)}
 function showError(error){console.error(error);resetInput();$('touch-controls').hidden=true;$('paused').hidden=true;$('pause').hidden=true;$('start').hidden=true;$('hud').hidden=true;$('error').hidden=false;document.body.classList.remove('racing')}
 $('sound').addEventListener('click',async()=>{try{await audio.enable(!audio.enabled);$('sound').querySelector('span').textContent=audio.enabled?'Sound on':'Sound off';$('sound').setAttribute('aria-pressed',String(audio.enabled));$('sound').setAttribute('aria-label',audio.enabled?'Mute sound':'Turn sound on')}catch{$('sound').querySelector('span').textContent='Unavailable'}});
 function resetRace(demo=false){
  if(!renderer)return;race=createRace();race.demo=demo;document.body.classList.toggle('demo-mode',demo);race.status='countdown';resetInput();deflate=0;shake=0;countIn=3;cameraSnap=true;effects.reset();frameProfile.reset();
+ banter=createNinaBanter(banterRun++);captionUntil=0;captionPriority=0;
  for(const id of ['start','paused','finish'])$(id).hidden=true;for(const id of ['hud','pause','countdown'])$(id).hidden=false;
  $('demo-note').hidden=!demo;$('countdown').textContent='3';document.body.classList.add('racing');setCaption('A little racing before dinner. What could go wrong?',5);$('world').focus({preventScroll:true});syncControls();
 }
@@ -95,7 +98,7 @@ if(screen.orientation?.addEventListener)screen.orientation.addEventListener('cha
 function events(){
  for(const e of race.events){
   audio.effect(e.type);effects.event(e);
-  if(e.type==='checkpoint'){setCaption(['Now for the marina. Pick your line.','The water taxi does not have right of way. In this game.','One more big turn. Then dinner.','There’s the bridge. Fisheries on the right!'][race.checkpoint-1],4);pulse('#8ef0d3')}
+  if(e.type==='checkpoint'){setCaption(CHECKPOINT_LINES[race.checkpoint-1],4.5,3);pulse('#8ef0d3')}
   else if(e.type==='finish'){
    cameraSnap=true;effects.reset();$('hud').hidden=true;$('pause').hidden=true;$('finish').hidden=false;$('countdown').hidden=true;document.body.classList.remove('racing');
    const isBest=!race.demo&&(best===null||race.elapsed<best);if(!race.demo)best=saveBest(storage,race.elapsed);
@@ -103,7 +106,7 @@ function events(){
    $('final-time').textContent=formatTime(race.elapsed);$('finish-best').textContent=race.demo?'Your turn. Take the wheel.':isBest?'A new personal best.':`Your best: ${formatTime(best)}`;
    $('finish-copy').textContent=race.demo?'That’s the route. Now let’s see your racing line.':`Finished ${['','1st','2nd','3rd','4th'][race.rank]}. Nina’s already picking the appetizers.`;
    $('race-stats').replaceChildren(...[[race.jumps,'jumps'],[race.nearMisses,'close calls'],[race.hits,'bumps']].map(([n,label])=>{const el=document.createElement('span'),b=document.createElement('strong');b.textContent=n;el.append(b,label);return el}));resetInput();syncControls();$('replay').focus({preventScroll:true});
-  }else{if(e.text)setCaption(e.text);if(e.type==='bounce'){deflate=1;pulse('#ff9ab2')}if(e.type==='hit'){shake=.2;pulse('#ffae87')}if(e.type==='land')shake=.13}
+  }else{if(e.text)setCaption(e.text,3.5,['hit','bounce'].includes(e.type)?2:0);if(e.type==='bounce'){deflate=1;pulse('#ff9ab2')}if(e.type==='hit'){shake=.2;pulse('#ffae87')}if(e.type==='land')shake=.13}
  }race.events.length=0;
 }
 function updateHud(){
@@ -122,6 +125,7 @@ function renderEntities(s){
   if(o.type==='floater'){mesh.position.y=.08+Math.sin(time*1.8+o.drift)*.11;mesh.rotation.z=Math.sin(time*1.6+o.drift)*.065;mesh.rotation.y+=.25*Math.sin(time*.3+o.drift);if(o.scared){const hitAge=4-o.scared;mesh.rotation.y+=Math.sin(hitAge*3)*Math.min(1,o.scared)*.8;mesh.rotation.z+=Math.sin(hitAge*9)*Math.exp(-hitAge*2)*.3;mesh.position.y+=Math.sin(Math.min(1,hitAge)*Math.PI)*.45}}
   else if(o.type==='gator'){mesh.position.y=o.scared?-Math.min(1.5,o.scared):.035;mesh.rotation.y+=Math.PI/2+Math.sin(time*.7+o.drift)*.22}
   else if(o.type==='taxi'){mesh.rotation.y+=Math.cos(race.elapsed*.16+o.drift)>0?-Math.PI/2:Math.PI/2;mesh.position.y=Math.sin(time*1.2)*.04}
+  else if(o.type==='yacht'){mesh.rotation.y+=o.yaw||0;mesh.position.y=reducedMotion?0:Math.sin(time*.8)*.035}
   else if(!['ramp','wake'].includes(o.type)){mesh.position.y=1.4+Math.sin(time*2+o.s)*.22;mesh.rotation.y=time*.7}
  }
  race.rivals.forEach((v,i)=>{
@@ -137,6 +141,7 @@ function frame(now){
   const manual=drivingInput(pressed,touch.state);
   let left=dt;while(left>0){const step=Math.min(left,1/120);stepRace(race,race.demo?pilotInput(race):manual,step);left-=step}events();
  }
+ const aside=banter.next({status:race.status,elapsed:race.elapsed,captionBusy:captionPriority>=1&&time<captionUntil+1.5});if(aside)setCaption(aside.text,aside.duration,1);
  updateHud();const ready=race.status==='ready',finished=race.status==='finished',staged=ready||finished,s=staged?COURSE_LENGTH-200:race.s,x=staged?4:race.x,p=pointAt(s,x),heading=staged?p.heading:race.heading;
  const bob=reducedMotion?0:Math.sin(time*3)*.025+Math.sin(time*7)*race.speed*.00065;
  boat.position.set(p.x,(staged?0:race.y)+bob,p.z);boat.rotation.y=-heading+(staged?Math.PI+.18:0);boat.rotation.z=reducedMotion||staged?0:T.MathUtils.lerp(boat.rotation.z,-race.turn*.19,1-Math.exp(-dt*8));boat.rotation.x=reducedMotion||staged?0:T.MathUtils.lerp(boat.rotation.x,race.y>0?-race.vy*.018:-Math.min(.065,race.speed*.001)+Math.sin(time*8)*.004,1-Math.exp(-dt*8));
@@ -166,8 +171,8 @@ async function boot(){
  portraitFill=new T.PointLight(0xffe3c8,90,24,2);portraitFill.visible=false;scene.add(portraitFill);
  makeSky(scene,renderer);water=makeWater(scene);scenery=makeWorld(scene,{multiDraw:renderer.extensions.has('WEBGL_multi_draw')});boat=heroAirboat();scene.add(boat);boat.userData.waterCannon=makeWaterCannon(boat);effects=makeEffects(scene);
  (boat.userData.hull||boat.children[0]).traverse(o=>{if(o.isMesh){o.material=o.material.clone();hullMaterials.push({material:o.material,roughness:o.material.roughness,metalness:o.material.metalness})}});
- const models={floater:[floater(0),floater(1),floater(2)],gator:gator(),ramp:ramp(),wake:boatWake(),coffee:pickup('coffee'),flamingo:pickup('flamingo'),sunscreen:pickup('sunscreen'),taxi:waterTaxi()};
- for(const [i,o]of race.objects.entries()){const m=(o.type==='floater'?models.floater[i%3]:models[o.type])?.clone(true);if(m){scene.add(m);entities.set(o.id,m)}}
+ const models={floater:[floater(0),floater(1),floater(2)],gator:gator(),ramp:ramp(),wake:boatWake(),coffee:pickup('coffee'),flamingo:pickup('flamingo'),sunscreen:pickup('sunscreen'),taxi:waterTaxi(),yacht:superyacht(1)};
+ for(const [i,o]of race.objects.entries()){const m=(o.type==='floater'?models.floater[i%3]:models[o.type])?.clone(true);if(m){if(o.type==='yacht')m.scale.setScalar(o.scale);scene.add(m);entities.set(o.id,m)}}
  for(const color of [0xf27e54,0x539cb0,0xe1ba49]){const m=raceBoat(color);scene.add(m);rivalModels.push(m)}
  composer=new EffectComposer(renderer);composer.renderTarget1.samples=4;composer.renderTarget2.samples=4;composer.addPass(new RenderPass(scene,camera));const ao=ambientOcclusion=new SSAOPass(scene,camera,innerWidth,innerHeight,12);ao.kernelRadius=2.6;ao.minDistance=.000025;ao.maxDistance=.002;const setAOSize=ao.setSize.bind(ao);ao.setSize=(w,h)=>setAOSize(Math.round(w*.5),Math.round(h*.5));const drawAO=ao.render.bind(ao);ao.render=(...args)=>{scenery.setAO(true);try{drawAO(...args)}finally{scenery.setAO(false)}};composer.addPass(ao);composer.addPass(new OutputPass());applyGraphics();
  const gold=formatTime(MEDAL_TIMES.gold).slice(0,-3);$('gold-target').textContent=`GOLD · ${gold}`;$('personal-best').textContent=best===null?`Gold: ${gold}. Find the faster line.`:`Your best: ${formatTime(best)}`;

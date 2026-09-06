@@ -1,36 +1,61 @@
-import {clamp,angleDelta,frameAt,pointAt,curvature,halfWidth,islandAt,racingLine,COURSE_LENGTH,CHECKPOINTS,ISLANDS,MOORINGS,sector} from './course.js';
-export {clamp,angleDelta,frameAt,pointAt,curvature,halfWidth,islandAt,racingLine,COURSE_LENGTH,CHECKPOINTS,ISLANDS,MOORINGS,sector};
+import {clamp,angleDelta,frameAt,pointAt,curvature,halfWidth,islandAt,racingLine,COURSE_LENGTH,CHECKPOINTS,ISLANDS,MOORINGS,sector,DISTRICTS,districtAt} from './course.js';
+export {clamp,angleDelta,frameAt,pointAt,curvature,halfWidth,islandAt,racingLine,COURSE_LENGTH,CHECKPOINTS,ISLANDS,MOORINGS,sector,DISTRICTS,districtAt};
 export const MEDAL_TIMES=Object.freeze({gold:95,silver:120});
 export const medal=t=>t<=MEDAL_TIMES.gold?'GOLD':t<=MEDAL_TIMES.silver?'SILVER':'BRONZE';
 export const formatTime=s=>`${Math.floor(s/60)}:${(s%60).toFixed(2).padStart(5,'0')}`;
 const pickupTypes=['coffee','flamingo','sunscreen'];
-const waterTargetTypes=new Set(['gator','floater','taxi','mooring']),waterTargetFrames=new WeakMap();
+const waterTargetTypes=new Set(['gator','floater','taxi','mooring','yacht']),waterTargetFrames=new WeakMap();
 export const WATER_SHOT=Object.freeze({cooldown:.24,lifetime:1.3,speed:102,radius:.52,muzzleSide:1.2,muzzleForward:2.95,muzzleHeight:1.14});
 export const RIVAL_SOAK=Object.freeze({duration:1.8,immunity:2.8,speedMultiplier:.62,radius:2.5,height:2.5});
 export function courseObjects(){
- const objects=MOORINGS.map(m=>({...m,type:'mooring',radius:3.65*m.scale}));let seed=920441;const rand=()=>((seed=(seed*1664525+1013904223)>>>0)/4294967296);
+ const objects=MOORINGS.map(m=>({...m,type:'mooring'}));let seed=920441;const rand=()=>((seed=(seed*1664525+1013904223)>>>0)/4294967296);
  for(let s=170,i=0;s<COURSE_LENGTH-170;s+=95+rand()*70,i++){
-  const lane=racingLine(s),w=halfWidth(s)-6;
+  const lane=racingLine(s),w=halfWidth(s)-8,district=districtAt(s).id;
   for(let j=0;j<(i%3===0?3:1);j++){
    let x=clamp(lane+(rand()-.5)*w*1.45+j*7,-w,w),island=islandAt(s+j*8);
    if(island&&Math.abs(x-island.x)<island.radius+6)x=island.x+(j%2?1:-1)*(island.radius+9);
-   objects.push({id:`hazard-${i}-${j}`,type:i%4===0?'gator':'floater',s:s+j*8,x,drift:rand()*6.28,radius:i%4===0?2.8:2.3});
+   const type=district==='mangrove'?'gator':district==='cove'?'floater':i%4===0?'gator':'floater';
+   objects.push({id:`hazard-${i}-${j}`,type,s:s+j*8,x,drift:rand()*6.28,radius:type==='gator'?2.8:2.3});
   }
  }
  for(let s=70,i=0;s<COURSE_LENGTH-50;s+=100,i++){
   const type=i%7===3?'flamingo':i%7===5?'sunscreen':'coffee',x=racingLine(s,i%3===0?1:-1)+Math.sin(i*3)*5;
   objects.push({id:`pickup-${i}`,type,s,x,radius:4});
  }
- for(let s=270,i=0;s<COURSE_LENGTH-180;s+=365,i++)objects.push({id:`ramp-${i}`,type:'ramp',s,x:racingLine(s)+((i%2)*2-1)*6,radius:5.2});
- for(const [i,f]of [.32,.48,.58,.79,.92].entries())objects.push({id:`taxi-${i}`,type:'taxi',s:f*COURSE_LENGTH,x:0,drift:i*2.6,radius:5});
+ for(let s=270,i=0;s<COURSE_LENGTH-180;s+=365,i++)objects.push({id:`ramp-${i}`,type:'ramp',s,x:racingLine(s)+(islandAt(s)?0:((i%2)*2-1)*6),radius:5.2});
+ for(const [i,f]of [.535,.565].entries()){const s=f*COURSE_LENGTH;objects.push({id:`mangrove-cut-coffee-${i}`,type:'coffee',s,x:racingLine(s,1),radius:4})}
+ for(const [i,f]of [.095,.165,.40,.741,.87].entries())objects.push({id:`taxi-${i}`,type:'taxi',s:f*COURSE_LENGTH,x:0,drift:i*2.6,radius:5});
+ objects.push({id:'marina-departure',type:'yacht',model:'super',s:COURSE_LENGTH*.282,x:0,scale:1.35,radius:5.1,halfLength:20.8,yaw:Math.PI/2,departureAt:16,departureDuration:25});
+ // A staggered tube crossing creates several open gaps, not a wall. It is
+ // separate from the rafted boats on the edge of the broad party cove.
+ for(const [i,x]of [-29,-17,12,29].entries())objects.push({id:`party-crossing-${i}`,type:'floater',s:COURSE_LENGTH*.741-20+i*9,x,drift:i*1.9,radius:2.3});
  for(let s=520,i=0;s<COURSE_LENGTH-150;s+=310,i++)objects.push({id:`wake-${i}`,type:'wake',s,x:racingLine(s),radius:17});
  return objects.sort((a,b)=>a.s-b.s);
 }
 export function createRace(){return{status:'ready',demo:false,s:0,x:0,heading:frameAt(0).heading,turn:0,vx:0,speed:0,elapsed:0,y:0,vy:0,boost:.55,boosting:false,drifting:false,driftCharge:0,driftTotal:0,drafting:false,combo:0,comboTime:0,flamingo:false,sunscreen:0,immunity:0,fireCooldown:0,fireFlash:0,soakFlash:0,soaked:0,shots:[],nextShotId:0,lastShotCallout:-4,checkpoint:0,hits:0,jumps:0,nearMisses:0,pickups:0,rank:4,events:[],objects:courseObjects().map(o=>({...o,consumed:false,passed:false,scared:0})),rivals:[{s:20,x:-7,heading:frameAt(20).heading,speed:0,pace:39.8,lane:-1,soaked:0,soakImmunity:0},{s:35,x:6,heading:frameAt(35).heading,speed:0,pace:42.5,lane:1,soaked:0,soakImmunity:0},{s:52,x:-2,heading:frameAt(52).heading,speed:0,pace:44.7,lane:-1,soaked:0,soakImmunity:0}],lastCallout:-10,endMedal:null}};
 export function objectX(o,t){
+ if(o.type==='yacht'){
+  const u=clamp((t-o.departureAt)/o.departureDuration,0,1),ease=u*u*(3-2*u);
+  return (halfWidth(o.s)-o.halfLength-2)*(1-2*ease);
+ }
  if(o.type==='taxi')return Math.sin(t*.16+o.drift)*(halfWidth(o.s)-11);
  if(!['gator','floater'].includes(o.type))return o.x;
  return o.x+Math.sin(t*(o.type==='gator'?.8:.45)+o.drift)*(o.type==='gator'?4:2)+(o.scared?(o.scaredSide||Math.sign(o.x)||1)*Math.sin(Math.PI*(1-o.scared/4))*12:0);
+}
+// Swept slab test in a hull's rotated local frame. Long yachts must block a
+// shot at the bow as well as at their centre, including a transverse departure.
+function hullContact(x,z,dx,dz,frame,lane,o,padding){
+ const ox=x-frame.x-frame.nx*lane,oz=z-frame.z-frame.nz*lane;
+ const lateral=ox*frame.nx+oz*frame.nz,along=ox*frame.fx+oz*frame.fz;
+ const dl=dx*frame.nx+dz*frame.nz,da=dx*frame.fx+dz*frame.fz,c=Math.cos(o.yaw||0),s=Math.sin(o.yaw||0);
+ const origin=[lateral*c+along*s,-lateral*s+along*c],direction=[dl*c+da*s,-dl*s+da*c],extent=[o.radius+padding,(o.halfLength??13.5*o.scale)+padding];
+ let first=0,last=1;
+ for(let axis=0;axis<2;axis++){
+  if(Math.abs(direction[axis])<1e-10){if(Math.abs(origin[axis])>extent[axis])return Infinity;continue}
+  let a=(-extent[axis]-origin[axis])/direction[axis],b=(extent[axis]-origin[axis])/direction[axis];if(a>b)[a,b]=[b,a];
+  first=Math.max(first,a);last=Math.min(last,b);if(first>last)return Infinity;
+ }
+ return first;
 }
 export function hit(r,side=1){
  if(r.immunity>0||r.y>1.5)return;r.immunity=1.15;
@@ -61,6 +86,10 @@ function advanceWaterShots(r,dt){
    // their progress changes. Restarted races release these weak cache keys.
    let frame=waterTargetFrames.get(o);if(!frame||frame.s!==o.s){frame={s:o.s,...frameAt(o.s)};waterTargetFrames.set(o,frame)}
    const lane=rival?o.x:objectX(o,r.elapsed),radius=(rival?RIVAL_SOAK.radius:o.radius??2.3)+WATER_SHOT.radius;
+   if(!rival&&(o.type==='yacht'||o.type==='mooring')){
+    const t=hullContact(x,z,dx,dz,frame,lane,o,WATER_SHOT.radius),height=y+(shot.y-y)*t;
+    if(t>=0&&t<=1&&t<contact&&height>0&&height<6){target=o;targetIsRival=false;contact=t}continue;
+   }
    const ox=x-frame.x-frame.nx*lane,oz=z-frame.z-frame.nz*lane,b=2*(ox*dx+oz*dz),c=ox*ox+oz*oz-radius*radius,discriminant=b*b-4*length2*c;
    if(discriminant<0)continue;
    const t=c<0?0:(-b-Math.sqrt(discriminant))/(2*(length2||1)),height=y+(shot.y-y)*t;
@@ -84,9 +113,17 @@ function advanceWaterShots(r,dt){
   }else if(land||shot.age>=WATER_SHOT.lifetime||shot.y<.12){r.events.push({type:'splash',x:shot.x,y:.12,z:shot.z,hit:false});r.shots.splice(i,1)}
  }
 }
+function trafficLine(r,s,speed,line){
+ for(const o of r.objects)if(o.type==='yacht'&&o.s-s<145&&o.s-s>-14){
+  const arrival=r.elapsed+Math.max(0,o.s-s)/Math.max(25,speed),stern=objectX(o,arrival)+o.halfLength+8;
+  const weight=clamp((145-(o.s-s))/65,0,1);return line+(clamp(stern,-halfWidth(o.s)+8,halfWidth(o.s)-8)-line)*weight;
+ }
+ return line;
+}
 // Demonstration input uses the real vehicle physics; demo runs cannot save records.
 export function pilotInput(r){
- const look=clamp(22+r.speed*.62,25,52),future=racingLine(r.s+look),p=pointAt(r.s,r.x),q=pointAt(r.s+look,future);
+ const look=clamp(22+r.speed*.62,25,52),future=trafficLine(r,r.s,r.speed,racingLine(r.s+look));
+ const p=pointAt(r.s,r.x),q=pointAt(r.s+look,future);
  const desired=Math.atan2(q.x-p.x,-(q.z-p.z)),error=angleDelta(desired,r.heading),bend=Math.abs(curvature(r.s+28));
  return{steer:clamp(error*3.7-r.turn*.44,-1,1),brake:bend>.009&&r.speed>27,boost:bend<.005&&Math.abs(error)<.22};
 }
@@ -94,7 +131,7 @@ function advanceRivals(r,dt){
  for(const v of r.rivals){
   v.soaked=Math.max(0,(v.soaked||0)-dt);v.soakImmunity=Math.max(0,(v.soakImmunity||0)-dt);
   const target=v.pace*(1-Math.min(.22,Math.abs(curvature(v.s+28))*12))*(v.soaked>0?RIVAL_SOAK.speedMultiplier:1);v.speed+=(target-v.speed)*(1-Math.exp(-dt*1.4));v.s=Math.min(COURSE_LENGTH+40,v.s+v.speed*dt);
-  const oldX=v.x;v.x+=(racingLine(v.s+24,v.lane)+Math.sin(v.s*.012+v.pace)*2-v.x)*(1-Math.exp(-dt*2.2));v.heading=frameAt(v.s).heading+Math.atan2((v.x-oldX)/dt,v.speed);
+  const oldX=v.x,line=trafficLine(r,v.s,v.speed,racingLine(v.s+24,v.lane));v.x+=(line+Math.sin(v.s*.012+v.pace)*2-v.x)*(1-Math.exp(-dt*2.2));v.heading=frameAt(v.s).heading+Math.atan2((v.x-oldX)/dt,v.speed);
   if(Math.abs(v.s-r.s)<5&&Math.abs(v.x-r.x)<3.8&&r.y<1.5)hit(r,Math.sign(r.x-v.x)||1);
  }
  const rank=1+r.rivals.filter(v=>v.s>r.s).length;if(rank<r.rank&&r.elapsed>3)r.events.push({type:'overtake',text:rank===1?'There we go. Lead the way!':'See you at Fisheries!'});r.rank=rank;
@@ -117,9 +154,22 @@ export function stepRace(r,input,dt){
  const island=islandAt(r.s);if(island&&Math.abs(r.x-island.x)<island.radius+2.8){const side=Math.sign(r.x-island.x)||-1;r.x=island.x+side*(island.radius+3);hit(r,side);r.heading=frameAt(r.s).heading+side*.23;r.speed=Math.min(r.speed,19)}
  advanceWaterShots(r,dt);
  for(const o of r.objects){
-  o.scared=Math.max(0,o.scared-dt);if(o.consumed||o.passed||o.s>r.s+110||o.s<Math.min(previousS,r.s)-18)continue;
+  o.scared=Math.max(0,o.scared-dt);if(o.consumed||o.passed||o.s>r.s+110||o.s<Math.min(previousS,r.s)-32)continue;
   const dx=Math.abs(objectX(o,r.elapsed)-r.x),dz=o.s-r.s,inRange=dz<4.8&&dz>-5.5;
-  if(o.type==='mooring'){if(Math.abs(dz)<13.5*o.scale+2&&dx<o.radius+1.45&&r.y<2){const side=Math.sign(r.x-o.x)||-Math.sign(o.x);r.x=o.x+side*(o.radius+1.5);hit(r,side);r.heading=frameAt(r.s).heading+side*.2;r.speed=Math.min(r.speed,19)}continue}
+  if(o.type==='mooring'||o.type==='yacht'){
+   const lateral=r.x-objectX(o,r.elapsed),along=-dz,c=Math.cos(o.yaw||0),s=Math.sin(o.yaw||0),u=lateral*c+along*s,v=-lateral*s+along*c;
+   const pu=o.radius+1.5-Math.abs(u),pv=(o.halfLength??13.5*o.scale)+2-Math.abs(v);
+   if(pu>0&&pv>0&&r.y<2){
+    let side=Math.sign(lateral)||1;
+    const lane=objectX(o,r.elapsed),crossExtent=Math.abs(c)*o.radius+Math.abs(s)*(o.halfLength??13.5*o.scale);
+    // A hull berthed against the bank cannot pin the player in a gap narrower
+    // than their boat. Resolve that contact into the open channel.
+    if(side===Math.sign(lane)&&Math.abs(lane)+crossExtent+4.8>halfWidth(o.s)-3.3){side=-Math.sign(lane);r.x=lane+side*(crossExtent+1.51)}
+    else if(pu<pv){const push=(Math.sign(u)||side)*(pu+.01);r.x+=push*c;r.s=clamp(r.s+push*s,0,COURSE_LENGTH)}
+    else{const push=(Math.sign(v)||-1)*(pv+.01);r.x-=push*s;r.s=clamp(r.s+push*c,0,COURSE_LENGTH)}
+    hit(r,side);r.heading=frameAt(r.s).heading+side*.2;r.speed=Math.min(r.speed,19);
+   }continue;
+  }
   if(pickupTypes.includes(o.type)&&inRange&&dx<o.radius+1.3&&r.y<5){
    o.consumed=true;r.pickups++;
    if(o.type==='coffee'){r.boost=Math.min(1,r.boost+.42);r.events.push({type:'coffee',text:'Cafecito. Send it!'})}
