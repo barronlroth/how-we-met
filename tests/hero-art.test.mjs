@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 import {Box3, Vector3, Texture} from 'three';
-const bytes=await readFile(new URL('../florida/assets/models/airboat-couple-v4.glb',import.meta.url));
+const bytes=await readFile(new URL('../florida/assets/models/airboat-couple-v5.glb',import.meta.url));
 const document=JSON.parse(bytes.subarray(20,20+bytes.readUInt32LE(12)));
 const loader=new GLTFLoader();
 loader.register(()=>({name:'NODE_BITMAP_PLACEHOLDER',loadTexture:()=>Promise.resolve(new Texture())}));

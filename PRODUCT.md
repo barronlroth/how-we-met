@@ -27,7 +27,7 @@ Confirmed in the September 4, 2026 design conversation:
 - Produce the art needed for the game as part of the work.
 - Three.js is the proposed rendering technology, suggested by the user.
 
-The user subsequently approved desktop first, racing as the core activity, Cafecito Boost, Flamingo Floatie, SPF 1000, and an optional air horn. They delegated the implementation approach and authorized publishing on the existing How We Met site. The user subsequently requested mobile support on September 5; a separate dodge action remains later work. The first implementation is an automatically accelerating, point-to-point race with keyboard or touch steering/braking, medals, and a best time stored in the current browser.
+The user subsequently approved desktop first, racing as the core activity, Cafecito Boost, Flamingo Floatie, SPF 1000, and an optional air horn. They delegated the implementation approach and authorized publishing on the existing How We Met site. The user subsequently requested mobile support on September 5, then replaced the optional horn direction with visible shooting; a separate dodge action remains later work. The first implementation is an automatically accelerating, point-to-point race with keyboard or touch steering/braking, medals, and a best time stored in the current browser.
 
 ## Brand Commitments
 
@@ -54,6 +54,13 @@ Character correction, September 5: Nina has blonde hair. Use golden blonde waves
 
 ## September 5 mobile support
 
-The user requested: “build mobile support now please.” Florida supports touch driving in portrait and landscape, with a left analog steering pad, pull-down braking/drift, and right Cafecito, Drift, and Horn controls. Multiple pointers can be held independently. Coarse input defaults to touch controls and Smooth graphics; players can select Keyboard/Touch and Smooth/Detailed on entry or pause, with browser-local preferences. Keyboard input continues to work in touch mode. Explicit control preferences take priority over automatic detection.
+The user requested: “build mobile support now please.” Florida supports touch driving in portrait and landscape, with a left analog steering pad, pull-down braking/drift, and right Cafecito, Drift, and SOAK controls (the later shooting update replaces Horn). Multiple pointers can be held independently. Coarse input defaults to touch controls and Smooth graphics; players can select Keyboard/Touch and Smooth/Detailed on entry or pause, with browser-local preferences. Keyboard input continues to work in touch mode. Explicit control preferences take priority over automatic detection.
 
 Preserve the selected blonde-haired couple and waterfront assets in both quality modes. Smooth caps DPR at 1, uses two-sample anti-aliasing and 1024px shadows, and skips screen-space ambient occlusion. Detailed preserves the prior 1.25 DPR cap, four samples, 2048px shadows, and ambient occlusion. Rotation, app backgrounding, and lost focus clear input and pause active races. No orientation lock or device-motion permission is required. Phone hardware performance remains a separate validation step from desktop browser viewport tests.
+
+
+## September 5 shooting and character shape correction
+
+The user rejected the horn attack and requested something the boat can shoot. The current action is a deck-mounted water blaster: hold Space or the touch SOAK button and steer the boat to aim. Visible shots travel forward and splash on contact. A direct hit briefly displaces a tube rider or makes a gator duck; this replaces the horn's area effect. Racing, drift, Cafecito, and the existing protection pickups remain the core loop.
+
+The user separately rejected the character geometry: the face texture looked good, but the shapes distorted the result. Preserve the selected animated-feature art and facial atlas while correcting the actual head, face UV, body, hair, clothing, and hand geometry. Nina remains blonde. The correction targets the long lower faces, disproportionate heads and necks, rope-like hair, detached-looking sleeves, blocky shorts, and simple wrist ends. Compare the resulting meshes in front/three-quarter authoring renders and in the browser; good texture art alone does not satisfy this request.

@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-09-05T19:26:26.189730+00:00",
+  "generatedAt": "2026-09-06T00:44:40.618244Z",
   "title": "Design System: How We Met — Florida V2",
   "extensions": {
     "colorMeta": {
@@ -272,7 +272,7 @@
       },
       "touch-label": {
         "displayName": "Touch Label",
-        "purpose": "Written touch steering, drift, horn, and boost guidance, never below 11px."
+        "purpose": "Written touch steering, drift, water shot, and boost guidance, never below 11px."
       },
       "settings-label": {
         "displayName": "Settings Label",
@@ -452,19 +452,19 @@
       "name": "Touch Driving Actions",
       "kind": "custom",
       "refersTo": "touch-action",
-      "description": "Drift/Horn above Cafecito, with written cooldown/refill states and a fuel strip. Data-state attributes preview runtime held, cooling, boosting, and empty states; no input simulation is embedded.",
-      "html": "<div class=\"ds-touch-actions\">\n   <button class=\"ds-touch-action ds-touch-brake\" data-control=\"brake\" aria-label=\"Hold to brake; steer to drift\"><svg viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path d=\"M8 4v7m8-7v7M6 11h12v8H6zM3 6v3m18-3v3\"/></svg><span>DRIFT</span></button>\n   <button class=\"ds-touch-action ds-touch-horn\" data-control=\"horn\" aria-label=\"Sound the horn\"><svg viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path d=\"M3 10h6l6-5v14l-6-5H3zm6 4v6H6v-6m12-6 3-2m-3 6h4m-4 4 3 2\"/></svg><span>HORN</span></button>\n   <button class=\"ds-touch-action ds-touch-boost\" data-control=\"boost\" aria-label=\"Hold for cafecito boost\"><svg viewBox=\"0 0 32 32\" aria-hidden=\"true\"><path d=\"M5 11h17v9q0 7-8 7t-9-7zm17 1h3q8 0 0 8h-3M7 30h17M10 7q-3-3 0-6m7 6q-3-3 0-6\"/></svg><span><strong>CAFECITO</strong><small>HOLD TO BOOST</small></span><span class=\"ds-touch-fuel\" aria-hidden=\"true\"><span></span></span></button>\n  </div>",
-      "css": ".ds-touch-actions{width:164px;display:grid;grid-template-columns:1fr 1fr;gap:10px;font-family:Nunito,sans-serif}.ds-touch-action{position:relative;display:flex;align-items:center;justify-content:center;gap:6px;min-height:64px;border-radius:16px;background:#103b48ed;color:var(--cream,#fff9e9);font-size:11px;font-weight:1000;touch-action:none;overflow:hidden;padding:10px 8px}.ds-touch-action>svg{width:25px;height:25px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}.ds-touch-brake,.ds-touch-horn{flex-direction:column;gap:3px}.ds-touch-action[data-state=held]{background:var(--cream,#fff9e9);color:var(--navy,#103b48)}.ds-touch-action[data-state=cooling]{color:#d0e1df;background:#103b48cb}.ds-touch-boost{grid-column:1/-1;min-height:72px;padding-bottom:17px;background:var(--yellow,#ffdc57);color:var(--navy,#103b48);gap:10px}.ds-touch-boost>svg{width:28px;height:32px}.ds-touch-boost strong{font-size:15px;display:block}.ds-touch-boost small{font-size:11px;font-weight:1000;display:block;margin-top:2px}.ds-touch-boost[data-state=held],.ds-touch-boost[data-state=boosting]{background:var(--aqua,#59f1e3);color:var(--navy,#103b48)}.ds-touch-boost[data-state=empty]{background:#e6e6c8}.ds-touch-fuel{position:absolute;left:10px;right:10px;bottom:7px;height:5px;border-radius:3px;background:#103b4840;overflow:hidden}.ds-touch-fuel>span{display:block;width:100%;height:100%;background:var(--navy,#103b48);transform-origin:left;transform:scaleX(.55)}.ds-touch-action{font-family:Nunito,sans-serif;border:0;cursor:pointer}.ds-touch-action:focus-visible{outline:3px solid var(--yellow,#ffdc57);outline-offset:5px}.ds-touch-action:active{background:var(--cream,#fff9e9);color:var(--navy,#103b48)}.ds-touch-boost:active{background:var(--aqua,#59f1e3);color:var(--navy,#103b48)}@media(hover:hover){.ds-touch-action:hover{filter:brightness(1.08)}}@media(max-width:360px){.ds-touch-actions{width:144px}.ds-touch-boost strong{font-size:13px}}@media(orientation:landscape) and (max-height:520px){.ds-touch-actions{gap:8px;width:150px}.ds-touch-action{min-height:52px;padding:6px;flex-direction:row;gap:4px;border-radius:13px}.ds-touch-action>svg{width:21px;height:21px}.ds-touch-boost{min-height:60px;padding-bottom:15px}.ds-touch-boost strong{font-size:13px}}"
+      "description": "Drift/SOAK above Cafecito, with a short shot-refill strip and a boost-fuel strip. Data-state attributes preview held, firing, boosting and empty states; no input simulation is embedded.",
+      "html": "<div class=\"ds-touch-actions\">\n   <button class=\"ds-touch-action ds-touch-brake\" data-control=\"brake\" aria-label=\"Hold to brake; steer to drift\"><svg viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path d=\"M8 4v7m8-7v7M6 11h12v8H6zM3 6v3m18-3v3\"/></svg><span>DRIFT</span></button>\n   <button class=\"ds-touch-action ds-touch-fire\" data-control=\"fire\" aria-label=\"Hold to shoot water\"><svg viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path d=\"M5 12h10l3-3v8l-3-2H9l-1 5H5l1-5H3v-3h2zm2-4h5v4H7zm14 1 1-2m-1 6h2m-2 4 1 2\"/></svg><span>SOAK</span><span class=\"ds-shot-reload\" aria-hidden=\"true\"></span></button>\n   <button class=\"ds-touch-action ds-touch-boost\" data-control=\"boost\" aria-label=\"Hold for cafecito boost\"><svg viewBox=\"0 0 32 32\" aria-hidden=\"true\"><path d=\"M5 11h17v9q0 7-8 7t-9-7zm17 1h3q8 0 0 8h-3M7 30h17M10 7q-3-3 0-6m7 6q-3-3 0-6\"/></svg><span><strong>CAFECITO</strong><small>HOLD TO BOOST</small></span><span class=\"ds-touch-fuel\" aria-hidden=\"true\"><span></span></span></button>\n  </div>",
+      "css": ".ds-touch-actions{width:164px;display:grid;grid-template-columns:1fr 1fr;gap:10px;font-family:Nunito,sans-serif}.ds-touch-action{position:relative;display:flex;align-items:center;justify-content:center;gap:6px;min-height:64px;border-radius:16px;background:#103b48ed;color:var(--cream,#fff9e9);font-size:11px;font-weight:1000;touch-action:none;overflow:hidden;padding:10px 8px}.ds-touch-action>svg{width:25px;height:25px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}.ds-touch-brake,.ds-touch-fire{flex-direction:column;gap:3px}.ds-touch-action[data-state=held]{background:var(--cream,#fff9e9);color:var(--navy,#103b48)}.ds-touch-boost{grid-column:1/-1;min-height:72px;padding-bottom:17px;background:var(--yellow,#ffdc57);color:var(--navy,#103b48);gap:10px}.ds-touch-boost>svg{width:28px;height:32px}.ds-touch-boost strong{font-size:15px;display:block}.ds-touch-boost small{font-size:11px;font-weight:1000;display:block;margin-top:2px}.ds-touch-boost[data-state=held],.ds-touch-boost[data-state=boosting]{background:var(--aqua,#59f1e3);color:var(--navy,#103b48)}.ds-touch-boost[data-state=empty]{background:#e6e6c8}.ds-touch-fuel{position:absolute;left:10px;right:10px;bottom:7px;height:5px;border-radius:3px;background:#103b4840;overflow:hidden}.ds-touch-fuel>span{display:block;width:100%;height:100%;background:var(--navy,#103b48);transform-origin:left;transform:scaleX(.55)}.ds-touch-action{font-family:Nunito,sans-serif;border:0;cursor:pointer}.ds-touch-action:focus-visible{outline:3px solid var(--yellow,#ffdc57);outline-offset:5px}.ds-touch-action:active{background:var(--cream,#fff9e9);color:var(--navy,#103b48)}.ds-touch-boost:active{background:var(--aqua,#59f1e3);color:var(--navy,#103b48)}@media(hover:hover){.ds-touch-action:hover{filter:brightness(1.08)}}@media(max-width:360px){.ds-touch-actions{width:144px}.ds-touch-boost strong{font-size:13px}}@media(orientation:landscape) and (max-height:520px){.ds-touch-actions{gap:8px;width:150px}.ds-touch-action{min-height:52px;padding:6px;flex-direction:row;gap:4px;border-radius:13px}.ds-touch-action>svg{width:21px;height:21px}.ds-touch-boost{min-height:60px;padding-bottom:15px}.ds-touch-boost strong{font-size:13px}} .ds-touch-fire[data-state=held],.ds-touch-fire[data-state=firing]{background:var(--aqua,#59f1e3);color:var(--navy,#103b48)}.ds-shot-reload{position:absolute;left:10px;right:10px;bottom:6px;height:3px;background:currentColor;transform-origin:left;transform:scaleX(var(--reload,1));opacity:.55}"
     }
   ],
   "narrative": {
     "northStar": "A Florida Postcard in Motion",
-    "overview": "Florida is a playful miniature waterfront with a detailed cream, coral, and teal airboat, rounded characters, layered planting, yachts, balconies, and reflective turquoise water. Sculpted faces and limbs, painted facial expression, short dark curls, and broad golden blonde waves carry the selected animated-feature direction. Nina’s blonde hair follows the user’s correction and supersedes the brown hair in the selected illustration. Sparse arcade instruments leave the course and couple primary.\n\nThis record captures the built Florida V2 world, its keyboard and touch instruments, and its homepage link. The user pinned the original generated concept as the visual target; it remains a reference, not runtime imagery or proof of equivalent fidelity. Toronto retains its pixel art, Press Start 2P, Quicksand, and existing palette.",
+    "overview": "Florida is a playful miniature waterfront with a detailed cream, coral, and teal airboat, rounded characters, layered planting, yachts, balconies, and reflective turquoise water. Smaller sculpted heads, broad cheek and jaw planes, painted facial expression, tapered limbs and hands, directional dark curls, and broad golden blonde waves carry the selected animated-feature direction. Nina’s blonde hair follows the user’s correction and supersedes the brown hair in the selected illustration. Sparse arcade instruments leave the course and couple primary.\n\nThis record captures the built Florida V2 world, its keyboard and touch instruments, and its homepage link. The user pinned the original generated concept as the visual target; it remains a reference, not runtime imagery or proof of equivalent fidelity. Toronto retains its pixel art, Press Start 2P, Quicksand, and existing palette.",
     "keyCharacteristics": [
       "Shaped hull, modeled deck seams, separate upholstered seats, and an exposed fan and engine.",
-      "Sculpted seated couple, painted expressions with glossy eye surfaces, distinct curls and blonde waves, and Nina’s pointing pose.",
+      "Proportioned seated couple, landmark-aligned painted faces and glossy almond eye surfaces, dark curls, blonde waves, and Nina’s pointing pose.",
       "Dense moorings, planted banks, villas, condos, branching channels, and active boat traffic.",
-      "Cream and navy instruments, yellow actions, and aqua Cafecito feedback across keyboard and touch controls.",
+      "Cream and navy instruments, yellow actions, aqua Cafecito feedback, and visible cyan water shots across keyboard and touch controls.",
       "Close couple framing at entry and finish, with bridge and Fisheries visible on desktop.",
       "Safe-area-aware thumb controls, a clear portrait chase view, and native entry/pause settings."
     ],
@@ -491,18 +491,18 @@
       },
       {
         "name": "The Rounded Couple Rule",
-        "body": "Preserve dimensional heads and limbs, Barron’s dark curls, Nina’s golden blonde waves, the selected outfits, and readable seated poses when extending the couple’s art.",
+        "body": "Preserve the approved facial atlas, its landmark alignment, proportional heads and bodies, Barron’s dark curls, Nina’s golden blonde waves, selected outfits, and readable seated poses when extending the couple’s art.",
         "section": "shapes"
       }
     ],
     "dos": [
       "Do preserve the couple, readable hazards, curved course, and desktop arrival landmarks.",
       "Do extend the built shaped geometry and material detail when adding Florida scenery.",
-      "Do preserve the sculpted couple, Barron’s dark curls, Nina’s golden blonde waves, selected outfits, and readable pointing pose.",
+      "Do preserve the approved facial atlas and correct its mapping and surrounding geometry when proportions distort the likeness; retain dark curls, blonde waves, selected outfits, and readable pointing pose.",
       "Do keep the user-approved FLORIDA eyebrow and original concept reference.",
       "Do pair color-coded states with text or recognizable geometry.",
       "Do preserve keyboard focus, pause behavior, independent touch pointers, and the touch driving instructions.",
-      "Do retain at least 44px touch targets and 11px newly added touch labels, with written action and cooldown states.",
+      "Do retain at least 44px touch targets and 11px newly added touch labels, with written action names and visible firing/refill states.",
       "Do let native settings own editing keys while keeping Tab inside dialogs and canvas driving shortcuts available."
     ],
     "donts": [
@@ -511,6 +511,7 @@
       "Don’t confuse the generated facial albedo with Blender-authored geometry, native-canvas materials, supplied portraits, or a concept-image crop.",
       "Don’t describe desktop viewport checks as physical phone testing or reduced motion as a static scene.",
       "Don’t let automatic touch detection override an explicit control choice or let held inputs survive pause, rotation, or leaving the app.",
+      "Don’t use long egg-shaped heads, rope-like hair, detached sleeve flanges, or blocky limb ends to carry the selected character art.",
       "Don’t turn authoring renders, browser stills, or individual benchmarks into claims of concept equality, photorealistic likeness, or universal 60 FPS."
     ]
   }

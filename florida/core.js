@@ -4,6 +4,8 @@ export const MEDAL_TIMES=Object.freeze({gold:95,silver:120});
 export const medal=t=>t<=MEDAL_TIMES.gold?'GOLD':t<=MEDAL_TIMES.silver?'SILVER':'BRONZE';
 export const formatTime=s=>`${Math.floor(s/60)}:${(s%60).toFixed(2).padStart(5,'0')}`;
 const pickupTypes=['coffee','flamingo','sunscreen'];
+const waterTargetTypes=new Set(['gator','floater','taxi','mooring']),waterTargetFrames=new WeakMap();
+export const WATER_SHOT=Object.freeze({cooldown:.24,lifetime:1.3,speed:102,radius:.52,muzzleSide:1.2,muzzleForward:2.95,muzzleHeight:1.14});
 export function courseObjects(){
  const objects=MOORINGS.map(m=>({...m,type:'mooring',radius:3.65*m.scale}));let seed=920441;const rand=()=>((seed=(seed*1664525+1013904223)>>>0)/4294967296);
  for(let s=170,i=0;s<COURSE_LENGTH-170;s+=95+rand()*70,i++){
@@ -23,11 +25,11 @@ export function courseObjects(){
  for(let s=520,i=0;s<COURSE_LENGTH-150;s+=310,i++)objects.push({id:`wake-${i}`,type:'wake',s,x:racingLine(s),radius:17});
  return objects.sort((a,b)=>a.s-b.s);
 }
-export function createRace(){return{status:'ready',demo:false,s:0,x:0,heading:frameAt(0).heading,turn:0,vx:0,speed:0,elapsed:0,y:0,vy:0,boost:.55,boosting:false,drifting:false,driftCharge:0,driftTotal:0,drafting:false,combo:0,comboTime:0,flamingo:false,sunscreen:0,immunity:0,hornCooldown:0,hornFlash:0,checkpoint:0,hits:0,jumps:0,nearMisses:0,pickups:0,rank:4,events:[],objects:courseObjects().map(o=>({...o,consumed:false,passed:false,scared:0})),rivals:[{s:20,x:-7,heading:frameAt(20).heading,speed:0,pace:39.8,lane:-1},{s:35,x:6,heading:frameAt(35).heading,speed:0,pace:42.5,lane:1},{s:52,x:-2,heading:frameAt(52).heading,speed:0,pace:44.7,lane:-1}],lastCallout:-10,endMedal:null}};
+export function createRace(){return{status:'ready',demo:false,s:0,x:0,heading:frameAt(0).heading,turn:0,vx:0,speed:0,elapsed:0,y:0,vy:0,boost:.55,boosting:false,drifting:false,driftCharge:0,driftTotal:0,drafting:false,combo:0,comboTime:0,flamingo:false,sunscreen:0,immunity:0,fireCooldown:0,fireFlash:0,soakFlash:0,soaked:0,shots:[],nextShotId:0,lastShotCallout:-4,checkpoint:0,hits:0,jumps:0,nearMisses:0,pickups:0,rank:4,events:[],objects:courseObjects().map(o=>({...o,consumed:false,passed:false,scared:0})),rivals:[{s:20,x:-7,heading:frameAt(20).heading,speed:0,pace:39.8,lane:-1},{s:35,x:6,heading:frameAt(35).heading,speed:0,pace:42.5,lane:1},{s:52,x:-2,heading:frameAt(52).heading,speed:0,pace:44.7,lane:-1}],lastCallout:-10,endMedal:null}};
 export function objectX(o,t){
  if(o.type==='taxi')return Math.sin(t*.16+o.drift)*(halfWidth(o.s)-11);
  if(!['gator','floater'].includes(o.type))return o.x;
- return o.x+Math.sin(t*(o.type==='gator'?.8:.45)+o.drift)*(o.type==='gator'?4:2)+(o.scared?(Math.sign(o.x)||1)*(1-o.scared/4)*12:0);
+ return o.x+Math.sin(t*(o.type==='gator'?.8:.45)+o.drift)*(o.type==='gator'?4:2)+(o.scared?(o.scaredSide||Math.sign(o.x)||1)*Math.sin(Math.PI*(1-o.scared/4))*12:0);
 }
 export function hit(r,side=1){
  if(r.immunity>0||r.y>1.5)return;r.immunity=1.15;
@@ -35,10 +37,45 @@ export function hit(r,side=1){
  else if(r.flamingo){r.flamingo=false;r.events.push({type:'bounce',text:'Flamingo down. Dignity intact.'});r.vy=3.5;r.y=.1}
  else{r.hits++;r.speed*=.55;r.combo=0;r.events.push({type:'hit',text:['Eyes on the water, babe.','We meant to do that.','That was a very expensive-looking boat.'][r.hits%3]})}
 }
-export function horn(r){
- if(r.status!=='racing'||r.hornCooldown>0)return false;r.hornCooldown=4;r.hornFlash=1;let count=0;
- for(const o of r.objects)if(['gator','floater'].includes(o.type)&&o.s>r.s-4&&o.s<r.s+85&&Math.abs(objectX(o,r.elapsed)-r.x)<23){o.scared=4;count++}
- r.events.push({type:'horn',text:count?'Coming through, gentlemen!':'Subtle. Very subtle.'});return true;
+// Shots keep their world-space heading after launch: steering aims the cannon,
+// but a bend in the canal never bends a projectile toward a target.
+export function fireWater(r){
+ if(r.status!=='racing'||r.fireCooldown>0)return false;
+ const p=pointAt(r.s,r.x),fx=Math.sin(r.heading),fz=-Math.cos(r.heading),nx=Math.cos(r.heading),nz=Math.sin(r.heading),speed=WATER_SHOT.speed+r.speed*.55;
+ const shot={id:r.nextShotId++,s:r.s,courseS:r.s,x:p.x+fx*WATER_SHOT.muzzleForward+nx*WATER_SHOT.muzzleSide,y:r.y+WATER_SHOT.muzzleHeight,z:p.z+fz*WATER_SHOT.muzzleForward+nz*WATER_SHOT.muzzleSide,vx:fx*speed,vz:fz*speed,vy:.65,age:0};
+ r.shots.push(shot);r.fireCooldown=WATER_SHOT.cooldown;r.fireFlash=.14;
+ r.events.push({type:'shot',x:shot.x,y:shot.y,z:shot.z,vx:fx,vz:fz});return true;
+}
+function advanceWaterShots(r,dt){
+ for(let i=r.shots.length-1;i>=0;i--){
+  const shot=r.shots[i],x=shot.x,z=shot.z,y=shot.y;
+  shot.x+=shot.vx*dt;shot.z+=shot.vz*dt;shot.y+=shot.vy*dt;shot.vy-=1.6*dt;shot.age+=dt;
+  const dx=shot.x-x,dz=shot.z-z,length2=dx*dx+dz*dz;let target=null,contact=Infinity;
+  for(const o of r.objects){
+   if(!waterTargetTypes.has(o.type)||o.consumed||o.scared||Math.abs(o.s-shot.s)>190)continue;
+   // Course positions are fixed; only a floater/taxi's lateral offset moves.
+   // Weak keys let a restarted race release every cached frame with its objects.
+   let frame=waterTargetFrames.get(o);if(!frame||frame.s!==o.s){frame={s:o.s,...frameAt(o.s)};waterTargetFrames.set(o,frame)}
+   const lane=objectX(o,r.elapsed),radius=(o.radius??2.3)+WATER_SHOT.radius;
+   const ox=x-frame.x-frame.nx*lane,oz=z-frame.z-frame.nz*lane,b=2*(ox*dx+oz*dz),c=ox*ox+oz*oz-radius*radius,discriminant=b*b-4*length2*c;
+   if(discriminant<0)continue;
+   const t=c<0?0:(-b-Math.sqrt(discriminant))/(2*(length2||1)),height=y+(shot.y-y)*t;
+   // Swept collision prevents a fast shot skipping a narrow swimmer between ticks.
+   if(t>=0&&t<=1&&t<contact&&height>0&&height<(o.type==='gator'?1.45:o.type==='floater'?2.4:3.7)) {target=o;contact=t}
+  }
+  // Project onto the nearby canal so a missed shot splashes against the bank
+  // or island instead of passing through waterfront houses.
+  for(let pass=0;pass<2;pass++){const frame=frameAt(shot.courseS);shot.courseS=clamp(shot.courseS+(shot.x-frame.x)*frame.fx+(shot.z-frame.z)*frame.fz,0,COURSE_LENGTH+100)}
+  const frame=frameAt(shot.courseS),lateral=(shot.x-frame.x)*frame.nx+(shot.z-frame.z)*frame.nz,island=islandAt(shot.courseS),land=Math.abs(lateral)>halfWidth(shot.courseS)-.5||(island&&Math.abs(lateral-island.x)<island.radius);
+  if(target){
+   const hazard=target.type==='gator'||target.type==='floater';let text;
+   if(hazard){
+    target.scared=4;target.scaredSide=Math.sign(objectX(target,r.elapsed)-r.x)||Math.sign(target.x)||1;r.soaked++;r.soakFlash=.7;
+    if(r.elapsed-r.lastShotCallout>3){r.lastShotCallout=r.elapsed;text=target.type==='gator'?'Gator says absolutely not.':['Water fight. Florida rules.','Consider that a refreshing detour.','Sorry! Complimentary boat wash.'][r.soaked%3]}
+   }
+   r.events.push({type:'splash',x:x+dx*contact,y:y+(shot.y-y)*contact,z:z+dz*contact,hit:hazard,text});r.shots.splice(i,1);
+  }else if(land||shot.age>=WATER_SHOT.lifetime||shot.y<.12){r.events.push({type:'splash',x:shot.x,y:.12,z:shot.z,hit:false});r.shots.splice(i,1)}
+ }
 }
 // Demonstration input uses the real vehicle physics; demo runs cannot save records.
 export function pilotInput(r){
@@ -56,7 +93,8 @@ function advanceRivals(r,dt){
 }
 export function stepRace(r,input,dt){
  if(r.status!=='racing')return;dt=clamp(dt,0,1/30);r.elapsed+=dt;
- for(const f of ['sunscreen','immunity','hornCooldown','hornFlash','comboTime'])r[f]=Math.max(0,r[f]-dt);if(!r.comboTime)r.combo=0;
+ for(const f of ['sunscreen','immunity','fireCooldown','fireFlash','soakFlash','comboTime'])r[f]=Math.max(0,r[f]-dt);if(!r.comboTime)r.combo=0;
+ if(input.fire)fireWater(r);
  r.boosting=!!input.boost&&r.boost>.005&&!input.brake;if(r.boosting){r.boost=Math.max(0,r.boost-dt*.145);if(r.boost<.005)r.boost=0}
  const steer=clamp(input.steer||0,-1,1),wasDrifting=r.drifting;r.drifting=!!input.brake&&Math.abs(steer)>.25&&r.speed>17&&r.y<.3;
  if(r.drifting){r.driftCharge=Math.min(1,r.driftCharge+dt*.36);r.driftTotal+=dt}
@@ -69,6 +107,7 @@ export function stepRace(r,input,dt){
  if(r.y>0||r.vy>0){r.vy-=18*dt;r.y+=r.vy*dt;if(r.y<=0){r.y=0;r.vy=0;r.events.push({type:'land'})}}
  const edge=halfWidth(r.s)-3.3;if(Math.abs(r.x)>edge){const side=-Math.sign(r.x);r.x=clamp(r.x,-edge,edge);hit(r,side);r.heading=frameAt(r.s).heading+side*.18;r.turn*=.2;r.speed=Math.min(r.speed,18)}
  const island=islandAt(r.s);if(island&&Math.abs(r.x-island.x)<island.radius+2.8){const side=Math.sign(r.x-island.x)||-1;r.x=island.x+side*(island.radius+3);hit(r,side);r.heading=frameAt(r.s).heading+side*.23;r.speed=Math.min(r.speed,19)}
+ advanceWaterShots(r,dt);
  for(const o of r.objects){
   o.scared=Math.max(0,o.scared-dt);if(o.consumed||o.passed||o.s>r.s+110||o.s<Math.min(previousS,r.s)-18)continue;
   const dx=Math.abs(objectX(o,r.elapsed)-r.x),dz=o.s-r.s,inRange=dz<4.8&&dz>-5.5;
@@ -86,7 +125,7 @@ export function stepRace(r,input,dt){
  }
  advanceRivals(r,dt);
  if(r.checkpoint<CHECKPOINTS.length&&r.s>=CHECKPOINTS[r.checkpoint]){r.checkpoint++;r.events.push({type:'checkpoint'})}
- if(r.s>=COURSE_LENGTH){r.status='finished';r.endMedal=medal(r.elapsed);r.events.push({type:'finish'})}
+ if(r.s>=COURSE_LENGTH){r.status='finished';r.shots.length=0;r.endMedal=medal(r.elapsed);r.events.push({type:'finish'})}
 }
 const STORAGE_KEY='howwemet_florida_best_v2';
 export function loadBest(storage){try{const n=Number(storage.getItem(STORAGE_KEY));return Number.isFinite(n)&&n>0?n:null}catch{return null}}

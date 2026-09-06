@@ -61,207 +61,277 @@ def loft(a,name,rows,mat,parent,segments=32,rings=24):
     return a.mesh(name,verts,faces,mat,parent)
 
 
+def weld_cloth(a,name,objects,parent,voxel=.017):
+    """Unify shoulder/sleeve and hip/thigh volumes into a continuous cloth surface."""
+    bpy.ops.object.select_all(action='DESELECT')
+    for obj in objects:obj.select_set(True)
+    bpy.context.view_layer.objects.active=objects[0]
+    bpy.ops.object.join();obj=bpy.context.object;obj.name=name
+    mod=obj.modifiers.new('Continuous garment topology','REMESH');mod.mode='VOXEL';mod.voxel_size=voxel;mod.use_smooth_shade=True
+    bpy.ops.object.modifier_apply(modifier=mod.name)
+    mod=obj.modifiers.new('Soft cloth transitions','SMOOTH');mod.factor=.65;mod.iterations=4
+    bpy.ops.object.modifier_apply(modifier=mod.name)
+    mod=obj.modifiers.new('Game garment topology','DECIMATE');mod.ratio=.15;mod.use_collapse_triangulate=True
+    bpy.ops.object.modifier_apply(modifier=mod.name)
+    for face in obj.data.polygons:face.use_smooth=True
+    obj.select_set(False)
+    return obj
+
+
+def limb(a,name,points,radii,mat,parent,depth=1,segments=12):
+    pts=curve_points(points,8 if name in ('Finger','Thumb') else 14);verts=[];faces=[]
+    for j,p in enumerate(pts):
+        u=j/(len(pts)-1);v=u*(len(radii)-1);i=min(len(radii)-2,int(v));t=v-i
+        radius=radii[i]*(1-t)+radii[i+1]*t
+        tangent=(Vector(pts[min(j+1,len(pts)-1)])-Vector(pts[max(0,j-1)])).normalized()
+        right=tangent.cross(Vector((0,0,-1)))
+        if right.length<.01:right=tangent.cross(Vector((0,1,0)))
+        right.normalize();normal=right.cross(tangent).normalized()
+        for k in range(segments):
+            theta=k/segments*math.tau
+            verts.append(tuple(Vector(p)+right*(math.cos(theta)*radius)+normal*(math.sin(theta)*radius*depth)))
+            if j:faces.append(((j-1)*segments+k,(j-1)*segments+(k+1)%segments,j*segments+(k+1)%segments,j*segments+k))
+    faces.extend([tuple(reversed(range(segments))),tuple(range((len(pts)-1)*segments,len(pts)*segments))])
+    return a.mesh(name,verts,faces,mat,parent)
+
+
+def make_hand(a,parent,wrist,direction,skin,pointing=False):
+    hand=a.group('Pointing hand' if pointing else 'Sculpted relaxed hand',parent,wrist)
+    hand.rotation_mode='QUATERNION'
+    hand.rotation_quaternion=Vector((0,1,0)).rotation_difference(Vector((direction[0],-direction[2],direction[1])).normalized())
+    a.ell('Palm',(0,0,-.05),(.047,.027,.069),skin,hand,12,8)
+    # A visible thumb web and four tapered fingers replace the wrist stubs.
+    limb(a,'Thumb',[(.035,0,-.025),(.060,-.005,-.049),(.064,-.017,-.079)],[.023,.019,.012],skin,hand,segments=8)
+    for i,x in enumerate([-.031,-.011,.011,.031]):
+        length=[.045,.060,.068,.052][i]
+        if pointing and i==2:
+            pts=[(x,0,-.094),(x,.002,-.170),(x+.005,.003,-.221)];r=[.014,.012,.008]
+        else:
+            curl=.040 if pointing else .017
+            pts=[(x,0,-.096),(x,-.007,-.112-length*.5),(x,-curl,-.106-length)];r=[.014,.013,.009]
+        limb(a,'Finger',pts,r,skin,hand,segments=8)
+    return hand
+
+
 def make_head(a,parent,nina):
-    skin='skinN' if nina else 'skinB';hair='hairN' if nina else 'hairB'
+    skin='skinN' if nina else 'skinB'
     head=a.group('NinaHead' if nina else 'BarronHead',parent)
-    # A continuous chin/jaw/cheek/forehead surface, with the nose sculpted into it.
-    rows=([(1.33,.045,.065,-.014),(1.37,.126,.134,-.007),(1.45,.209,.193,.0),
-           (1.56,.270,.239,.008),(1.70,.278,.247,.016),(1.85,.277,.244,.027),
-           (1.97,.240,.224,.037),(2.04,.125,.128,.04),(2.064,.008,.01,.04)] if nina else
-          [(1.305,.06,.076,-.012),(1.35,.146,.153,-.012),(1.42,.215,.192,-.003),
-           (1.56,.266,.229,.008),(1.70,.268,.241,.013),(1.84,.280,.250,.023),
-           (1.965,.243,.222,.034),(2.035,.129,.13,.04),(2.06,.01,.012,.04)])
+    # Shorter lower face, distinct jaw turn, fuller smiling cheeks and a round cranium.
+    rows=([(1.380,.045,.065,-.022),(1.415,.137,.151,-.014),(1.480,.226,.200,-.003),
+           (1.585,.284,.230,.008),(1.700,.291,.242,.020),(1.810,.281,.245,.026),
+           (1.935,.254,.237,.035),(2.035,.174,.171,.04),(2.075,.008,.012,.04)] if nina else
+          [(1.360,.057,.090,-.024),(1.395,.156,.165,-.014),(1.465,.243,.197,-.005),
+           (1.575,.286,.226,.009),(1.710,.290,.244,.017),(1.825,.277,.250,.023),
+           (1.950,.260,.239,.035),(2.037,.164,.16,.04),(2.075,.01,.012,.04)])
+    # Atlas landmarks stay at a nearly uniform scale. The former 1.52→1.65 span
+    # stretched V .315→.400, lengthening the philtrum about 2.5 times.
+    def face_uv(x,y):
+        return ((.5 if nina else 0)+(.5+x/.66)*.5,(y-1.340)/.735)
+    eye_y=1.340+.735*(.601 if nina else .619)
+    eye_x=.123 if nina else .124
+    nose_y=1.340+.735*.405
+    mouth_y=1.340+.735*(.284 if nina else .308)
     def displace(x,y):
         g=lambda cx,cy,wx,wy:math.exp(-((x-cx)/wx)**2-((y-cy)/wy)**2)
-        nose=-.021*g(0,1.725,.034,.105)-(.039 if nina else .047)*g(0,1.65,.056,.037)
-        nose-=.017*(g(-.044,1.638,.021,.023)+g(.044,1.638,.021,.023))
-        # Raised smile cheeks, a shaped muzzle and soft nasolabial folds.
-        cheeks=-.018*(g(-.178,1.585,.075,.081)+g(.178,1.597,.075,.081))
-        muzzle=-.003*g(0,1.518,.12,.064)
-        dimples=.010*(g(-.165,1.547,.023,.04)+g(.167,1.56,.023,.04))
-        sockets=.023*(g(-.126,1.768,.094,.062)+g(.126,1.778,.094,.062))
-        brow=-.017*(g(-.123,1.842,.102,.034)+g(.123,1.850,.102,.034))
-        chin=-.018*g(0,1.391,.082,.038)
-        return nose+cheeks+muzzle+dimples+sockets+brow+chin
+        bridge=-.030*g(0,nose_y+.062,.035,.092)
+        tip=-(.049 if nina else .055)*g(0,nose_y,.047,.037)
+        nostril=-.017*(g(-.041,nose_y-.008,.021,.020)+g(.041,nose_y-.008,.021,.020))
+        cheeks=-.035*(g(-.169,mouth_y+.045,.077,.068)+g(.169,mouth_y+.05,.077,.068))
+        muzzle=-.014*g(0,mouth_y,.12,.046)
+        # Almond-shaped sockets, lids and convex eye surfaces agree with the atlas.
+        sockets=.018*(g(-eye_x,eye_y,.092,.054)+g(eye_x,eye_y,.092,.054))
+        brows=-.012*(g(-eye_x,eye_y+.072,.10,.032)+g(eye_x,eye_y+.072,.10,.032))
+        lip=-.010*g(0,mouth_y-.008,.114,.023)
+        chin=-.020*g(0,1.417,.102,.047)
+        return bridge+tip+nostril+cheeks+muzzle+sockets+brows+lip+chin
     def front(x,y):
         w,d,z=[interpolate(rows,y,c) for c in (1,2,3)]
         cosine=math.sqrt(max(0,1-(x/max(w,.01))**2))
-        return z-cosine*d+displace(x,y)*cosine**5
+        # Broad frontal planes avoid wrapping a good smile around an egg.
+        flat=cosine*(1+.46*(1-cosine))
+        return z-flat*d+displace(x,y)*cosine**3
     verts=[];faces=[];segments=52;rings=37
     for row in range(rings):
         y=rows[0][0]+(rows[-1][0]-rows[0][0])*row/(rings-1)
         w,d,z=[interpolate(rows,y,c) for c in (1,2,3)]
         for i in range(segments):
             angle=i/segments*math.tau;c=math.cos(angle);x=math.sin(angle)*w
-            verts.append((x,y,z-c*d+displace(x,y)*max(0,c)**5))
+            flat=c*(1+.46*(1-c)) if c>=0 else c
+            verts.append((x,y,z-flat*d+displace(x,y)*max(0,c)**3))
             if row:faces.append(((row-1)*segments+i,(row-1)*segments+(i+1)%segments,row*segments+(i+1)%segments,row*segments+i))
     faces.extend([tuple(reversed(range(segments))),tuple(range((rings-1)*segments,rings*segments))])
-    face_mat='faceN' if nina else 'faceB'
-    surface=a.mesh('Sculpted textured face',verts,faces,face_mat,head)
-    surface.data.materials.append(a.M[skin])
-    # Planar facial UV coordinates become the front hemisphere of a full sculpted head.
-    # Back hemisphere and ears remain matched skin; no reference photograph is projected.
-    uv=surface.data.uv_layers.new(name='FaceUV')
-    anchors=[(1.30,.015),(1.39,.08),(1.49,.275 if nina else .285),(1.52,.315),(1.65,.40),
-             (1.774,.601 if nina else .619),(1.86,.746),(2.064,1.0)]
-    def face_uv(x,y):
-        return ((.5 if nina else 0)+(.5+x/.64)*.5,interpolate(anchors,y,1))
+    surface=a.mesh('Landmark-aligned sculpted face',verts,faces,'faceN' if nina else 'faceB',head)
+    surface.data.materials.append(a.M[skin]);uv=surface.data.uv_layers.new(name='FaceUV')
     for poly in surface.data.polygons:
-        if sum(verts[v][2] for v in poly.vertices)/len(poly.vertices)>.035:poly.material_index=1
-        for loop_i in poly.loop_indices:
-            x,y,z=verts[surface.data.loops[loop_i].vertex_index]
-            uv.data[loop_i].uv=face_uv(x,y)
-    a.ell('Neck',(0,1.24,.027),(.113,.18,.105),skin,parent,16,10)
+        if sum(verts[v][2] for v in poly.vertices)/len(poly.vertices)>.055:poly.material_index=1
+        for li in poly.loop_indices:
+            x,y,z=verts[surface.data.loops[li].vertex_index];uv.data[li].uv=face_uv(x,y)
+    loft(a,'Shaped neck and throat',[(1.17,.143,.104,.035),(1.26,.133,.112,.025),(1.36,.112,.107,.022),(1.48,.110,.106,.018)],skin,parent,20,12)
     for side in (-1,1):
-        a.ell('Sculpted ear',(side*.286,1.669,.027),(.046,.089,.044),skin,head,16,10)
-        a.path('Ear fold',[(side*.302,1.707,-.008),(side*.316,1.67,-.018),(side*.30,1.638,-.012)],.009,'lipsN' if nina else 'lipsB',head)
-        if nina:a.ring('Gold hoop',(side*.318,1.585,.012),.05,.007,'gold',head,n=24)
-        else:a.ell('Ear stud',(side*.324,1.614,-.012),(.012,.013,.009),'chrome',head,10,6)
-    # Shallow glossy eye lenses share the atlas mapping; lids and expression belong to the
-    # continuous sculpted skin, avoiding assembled white spheres and contour-ring geometry.
+        a.ell('Ear',(side*.292,1.685,.035),(.043,.080,.040),skin,head,16,10)
+        a.path('Ear fold',[(side*.304,1.72,.001),(side*.317,1.685,-.010),(side*.30,1.655,-.003)],.007,'lipsN' if nina else 'lipsB',head)
+        if nina:a.ring('Gold hoop',(side*.317,1.610,.007),.040,.006,'gold',head,n=20)
+        else:a.ell('Ear stud',(side*.322,1.639,-.007),(.010,.011,.007),'chrome',head,10,6)
     for side in (-1,1):
-        x=side*(.126 if nina else .123);y=1.774
-        ev=[(x,y,front(x,y)-.006)];ef=[];steps=20
-        for k in range(1,4):
-            r=k/3
+        x=side*eye_x;y=eye_y;ev=[(x,y,front(x,y)-.016)];ef=[];steps=24
+        for k in range(1,5):
+            r=k/4
             for j in range(steps):
-                t=j/steps*math.tau;dx=.080*math.cos(t)*r;dy=.039*math.sin(t)*r
-                ev.append((x+dx,y+dy,front(x+dx,y+dy)-.002-.004*(1-r*r)))
+                t=j/steps*math.tau;dx=.077*math.cos(t)*r
+                # Taper towards the canthi instead of outlining two round lenses.
+                dy=.039*math.sin(t)*r*(.84+.16*abs(math.sin(t)))
+                xx=x+dx;yy=y+dy
+                ev.append((xx,yy,front(xx,yy)-.001-.015*(1-r*r)))
                 if k==1:ef.append((0,1+(j+1)%steps,1+j))
                 else:
                     lo=1+(k-2)*steps;hi=1+(k-1)*steps
                     ef.append((lo+j,lo+(j+1)%steps,hi+(j+1)%steps,hi+j))
-        eye=a.mesh('Glossy painted eye',ev,ef,'eyeN' if nina else 'eyeB',head)
+        eye=a.mesh('Convex almond eye',ev,ef,'eyeN' if nina else 'eyeB',head)
         uv=eye.data.uv_layers.new(name='FaceUV')
         for poly in eye.data.polygons:
             for li in poly.loop_indices:
                 xx,yy,zz=ev[eye.data.loops[li].vertex_index];uv.data[li].uv=face_uv(xx,yy)
     make_hair(a,head,nina)
-    # Place the pivot inside the head instead of rotating the entire face around the seat.
     for child in head.children:child.location.z-=1.67
-    head.location.z=1.67
-    head.rotation_euler.z=.10 if nina else -.07
-    head.rotation_euler.y=-.075 if nina else .085
-    head.scale=(.90,.90,.90)
+    head.location.z=1.580
+    head.rotation_euler.z=.055 if nina else -.04
+    head.rotation_euler.y=-.055 if nina else .055
+    scale=.81 if nina else .82;head.scale=(scale,scale,scale)
     return head
+
+
+def hair_lock(a,head,name,controls,width,depth,mat):
+    """A broad tapered lock with integral flowing relief, never raised stripe rods."""
+    points=curve_points(controls,22);verts=[];faces=[];sides=20
+    for i,p in enumerate(points):
+        u=i/(len(points)-1)
+        tangent=(Vector(points[min(i+1,len(points)-1)])-Vector(points[max(0,i-1)])).normalized()
+        right=tangent.cross(Vector((0,0,-1)))
+        if right.length<.01:right=tangent.cross(Vector((0,1,0)))
+        right.normalize();normal=right.cross(tangent).normalized()
+        r=width*(.38+.62*math.sin(math.pi*min(.96,u+.05))**.5)*(1-.82*u**3)
+        for k in range(sides):
+            angle=k/sides*math.tau
+            groove=1+.22*math.cos(angle*5+u*2.0)
+            verts.append(tuple(Vector(p)+right*(math.cos(angle)*r)+normal*(math.sin(angle)*r*depth*groove)))
+            if i:faces.append(((i-1)*sides+k,(i-1)*sides+(k+1)%sides,i*sides+(k+1)%sides,i*sides+k))
+    faces.extend([tuple(reversed(range(sides))),tuple(range((len(points)-1)*sides,len(points)*sides))])
+    return a.mesh(name,verts,faces,mat,head)
 
 
 def make_hair(a,head,nina):
     if not nina:
-        # A connected dome supplies the silhouette, with overlapping solid curl lobes.
-        a.ell('Dense sculpted curl mass',(0,2.016,.062),(.303,.202,.261),'hairB',head,24,14)
-        rng=random.Random(305)
-        for i in range(24):
-            angle=i*2.39996;r=math.sqrt((i+.45)/24)
-            xx=math.cos(angle)*.283*r;zz=.058+math.sin(angle)*.241*r
-            yy=2.03+.169*math.sqrt(max(0,1-r*r))
-            scale=rng.uniform(.75,1.3);phase=rng.uniform(-.8,.8)
-            # Sweep the curl across and over the scalp. Its filled lobe prevents loop-like holes.
-            a.ell('Overlapping curl volume',(xx,yy,zz),(.079*scale,.065*scale,.071*scale),'hairB',head,12,8)
-            pts=[]
-            for j in range(15):
-                u=j/14;t=phase+u*math.pi*1.67;radius=.059*scale*(1-u*.69)
-                pts.append((xx+math.cos(t)*radius,yy+.029+math.sin(t)*radius*.63,zz-.041+u*.045))
-            sweep(a,'Rolled curl ridge',pts,.024*scale,'curlLight' if i%5==0 else 'hairB',head,depth=.65,sides=7)
-        for i,(x,y,z,scale) in enumerate([(-.22,2.025,-.119,.82),(-.13,2.096,-.176,1.1),(-.018,2.075,-.207,1.25),(.096,2.04,-.213,1.0),(.205,2.025,-.127,.78)]):
-            a.ell('Forelock body',(x,y,z),(.075*scale,.075*scale,.061*scale),'hairB',head,12,8)
-            pts=curve_points([(x-.034,y+.013,z),(x-.009,y+.064,z-.028),(x+.05,y+.043,z-.05),(x+.055,y-.024,z-.060),(x+.009,y-.056,z-.069),(x-.01,y-.021,z-.072)],20)
-            sweep(a,'Swept forehead curl',pts,.026*scale,'hairB',head,depth=.75,sides=7)
+        # Hair follows a real hairline; shallow directional curls replace spherical lobes.
+        verts=[];faces=[];segments=32;rings=12
+        for j in range(rings):
+            u=j/(rings-1);r=math.sin(u*math.pi/2)
+            for i in range(segments):
+                angle=i/segments*math.tau;c=math.cos(angle)
+                edge=1.81+.185*max(0,c)**3+.013*math.sin(angle*7)
+                x=math.sin(angle)*.300*r-.014*(1-r)
+                z=.044-c*.267*r
+                y=2.195-(2.195-edge)*(1-math.cos(u*math.pi/2))
+                verts.append((x,y,z))
+                if j:faces.append(((j-1)*segments+i,(j-1)*segments+(i+1)%segments,j*segments+(i+1)%segments,j*segments+i))
+        a.mesh('Shaped curly hair crown',verts,faces,'hairB',head)
+        rng=random.Random(571)
+        for i in range(34):
+            angle=i*2.39996;r=math.sqrt((i+.4)/35)
+            cx=math.cos(angle)*.262*r;cz=.04+math.sin(angle)*.227*r
+            cy=2.002+.177*math.sqrt(max(0,1-r*r));phase=rng.uniform(-.8,.8)
+            pts=[];size=rng.uniform(.8,1.18)
+            for j in range(12):
+                u=j/11;t=phase+u*math.pi*1.75;radius=.061*size*(1-u*.76)
+                pts.append((cx+math.cos(t)*radius,cy+.018+math.sin(t)*radius*.62,cz-.022+u*.025))
+            sweep(a,'Directional sculpted curl',pts,.043*size,'curlLight' if i%7==0 else 'hairB',head,depth=.80,sides=8)
+        for x,y,z,r in [(-.228,2.042,-.142,.67),(-.136,2.090,-.180,.91),(-.045,2.039,-.224,1.10),(.061,2.105,-.181,.82),(.187,2.049,-.151,.71)]:
+            pts=curve_points([(x-.040*r,y+.018*r,z+.070),(x-.060*r,y+.071*r,z+.012),(x+.025*r,y+.074*r,z-.012),(x+.054*r,y+.023*r,z-.005),(x+.028*r,y-.008*r,z+.015),(x+.003*r,y+.014*r,z+.035)],18)
+            sweep(a,'Swept fringe curl',pts,.037*r,'hairB',head,depth=.96,sides=8)
+        for x,y,z in [(-.205,2.11,-.129),(-.103,2.15,-.186),(.005,2.16,-.19),(.122,2.13,-.17),(.219,2.087,-.10)]:
+            pts=curve_points([(x-.051,y,z+.020),(x-.025,y+.018,z-.037),(x+.035,y-.012,z-.068),(x+.040,y-.073,z-.063),(x+.005,y-.083,z-.046)],17)
+            sweep(a,'Front crown curl',pts,.039,'hairB',head,depth=.91,sides=8)
         for side in (-1,1):
-            sweep(a,'Shaped sideburn',curve_points([(side*.26,2.001,.001),(side*.286,1.858,.002),(side*.271,1.75,.001)],14),.040,'hairB',head,depth=.5)
+            hair_lock(a,head,'Tapered sideburn',[(side*.261,1.98,.012),(side*.29,1.84,.008),(side*.279,1.76,.003)],.030,.5,'hairB')
         return
-    # One broad continuous hair mantle; waves deform the mass instead of detached ropes.
-    verts=[];faces=[];columns=56;rows=24
-    for row in range(rows):
-        u=row/(rows-1)
-        y=2.11-u*1.20
+    # Rounded crown, with a closed volumetric back and broad asymmetric waves.
+    verts=[];faces=[];columns=36;rings=19
+    for row in range(rings):
+        u=row/(rings-1);y=2.12-u*1.13
         for col in range(columns):
-            q=col/(columns-1);theta=.85+q*(math.tau-1.70)
-            scalp=math.sin(min(1,u/.24)*math.pi/2)
-            width=.326+.040*math.sin(u*math.pi)+.070*math.sin(u*math.pi*3-.6)
-            depth=.288+.03*u
-            # Large travelling waves, with a little finer relief flowing down the surface.
-            wave=.031*math.sin(u*math.pi*3.1+q*2.2)+.007*math.cos(q*math.tau*16+u*3)
-            x=math.sin(theta)*(width+wave)*scalp
-            z=.045-math.cos(theta)*(depth+wave*.5)*scalp+.09*u*u
-            yy=y+(.045*math.sin(q*math.pi*7)+.020*math.cos(q*29))*u**5
+            q=col/(columns-1);angle=.91+q*(math.tau-1.82)
+            cap=math.sin(min(1,u/.17)*math.pi/2)
+            wave=.026*math.sin(u*math.pi*3.2+q*2.5)+.006*math.cos(q*math.tau*10+u*2)
+            width=.319+.030*math.sin(u*math.pi)+wave
+            depth=.275+.046*u
+            x=math.sin(angle)*width*cap
+            z=.042-math.cos(angle)*(depth+wave*.45)*cap+.055*u*u
+            yy=y+.030*math.sin(q*19)*u**6
             verts.append((x,yy,z))
             if row and col:faces.append(((row-1)*columns+col-1,(row-1)*columns+col,row*columns+col,row*columns+col-1))
-    mantle=a.mesh('Continuous wavy hair mantle',verts,faces,'hairN',head)
-    # Wide rolling S-curves expand over the shoulders and turn back into curled tips.
+    mantle=a.mesh('Rounded blonde hair mantle',verts,faces,'hairN',head)
+    mod=mantle.modifiers.new('Hair mass thickness','SOLIDIFY');mod.thickness=.025
+    bpy.context.view_layer.objects.active=mantle;bpy.ops.object.modifier_apply(modifier=mod.name)
     for side in (-1,1):
-        for j in range(2):
-            spread=j*.052;asym=.035 if side==1 else 0
-            controls=[(side*(.014+j*.02),2.098,-.105+j*.025),(side*(.15+j*.03),2.068,-.228+j*.025),
-                      (side*(.295+spread),1.866,-.197+j*.025),(side*(.33+spread),1.66,-.185+j*.045),
-                      (side*(.46+spread+asym),1.405,-.118+j*.035),(side*(.36+spread),1.17,-.142+j*.04),
-                      (side*(.465+spread-asym),.968,-.038+j*.04),(side*(.39+spread),.82+j*.06,.055),
-                      (side*(.32+spread),.89+j*.065,.074)]
-            pts=curve_points(controls,40)
-            sweep(a,'Rolling blonde wave',pts,.084 if j==0 else .079,'hairN',head,depth=.72,sides=8)
-            # Highlights broaden through the lower waves; roots retain the darker golden base.
-            for offset,width in [(-.022,.008),(.024,.011)]:
-                sweep(a,'Golden wave highlight',[(p[0]+offset,p[1]+.003,p[2]-.046) for p in pts[4:]],width,'hairGold',head,depth=.24,sides=5)
-    for i in range(10):
-        q=(i+.5)/10;theta=.70+q*(math.tau-1.40);pts=[]
-        for j in range(24):
-            u=.08+j/23*.90;scalp=math.sin(min(1,u/.24)*math.pi/2)
-            width=.326+.040*math.sin(u*math.pi)+.070*math.sin(u*math.pi*3-.6)
-            wave=.031*math.sin(u*math.pi*3.1+q*2.2)
-            pts.append((math.sin(theta)*(width+wave+.005)*scalp,2.11-u*1.20,.045-math.cos(theta)*(.293+.03*u+wave*.5)*scalp+.09*u*u))
-        sweep(a,'Mantle highlight',pts,.0035,'hairGold',head,depth=.25,sides=5)
+        # Swept away from the face, unequal lengths, narrow tapered ends, no loops.
+        front=[(side*.019,2.115,-.077),(side*.121,2.073,-.239),(side*.249,1.923,-.256),
+               (side*.287,1.73,-.236),(side*.345,1.551,-.164),(side*.321,1.368,-.139),
+               (side*.387,1.206,-.097),(side*.358,.977,-.045),(side*.287,.922,-.015)]
+        if side==1:front=[(x+(0 if y>1.8 else .02),y-(0 if y>1.8 else .055),z-.014) for x,y,z in front]
+        hair_lock(a,head,'Face framing blonde wave',front,.059,1.14,'hairGold')
+        outer=[(side*.080,2.097,-.034),(side*.252,1.968,-.102),(side*.326,1.781,-.066),
+               (side*.348,1.558,-.012),(side*.401,1.377,.010),(side*.366,1.122,.039),(side*.399,.907,.097)]
+        hair_lock(a,head,'Shoulder wave',outer,.089,.89,'hairN')
+        flowing=[(side*.085,2.080,-.045),(side*.196,1.954,-.187),(side*.263,1.779,-.226),(side*.283,1.739,-.217),(side*.300,1.559,-.243),(side*.343,1.397,-.240),(side*.373,1.210,-.211),(side*.316,1.039,-.211),(side*.356,.936,-.199)]
+        if side==1: flowing=[(x+.017,y-.067,z-.028) for x,y,z in flowing]
+        hair_lock(a,head,'Overlapping blonde S wave',flowing,.047,1.03,'hairN')
+        inner=[(side*.148,2.069,.038),(side*.29,1.923,.095),(side*.326,1.711,.117),
+               (side*.355,1.51,.155),(side*.314,1.27,.189),(side*.35,1.05,.206)]
+        hair_lock(a,head,'Layered back wave',inner,.077,.85,'hairGold')
 
 
 def make_person(nina,parent,p,a):
-    root=a.group('Nina' if nina else 'Barron',parent,p);skin='skinN' if nina else 'skinB'
-    shirt='ninaShirt' if nina else 'shirt'
-    rows=[(.52,.245,.158,.018),(.62,.235 if nina else .267,.163,.018),(.83,.247 if nina else .298,.177,.01),
-          (1.02,.281 if nina else .329,.174,.006),(1.13,.284 if nina else .324,.153,.02),(1.19,.233 if nina else .270,.128,.025),(1.25,.115,.10,.025)]
-    loft(a,'Tailored coral T shirt' if nina else 'Soft linen shirt',rows,shirt,root,28,18)
-    if nina:
-        a.ring('Crew neckline',(0,1.248,.025),.112,.012,shirt,root,'xz',28)
-    else:
-        a.mesh('Open neckline',[(-.081,1.246,-.088),(.081,1.246,-.088),(0,1.051,-.185)],[(0,1,2)],skin,root,False)
-        for side in (-1,1):
-            a.mesh('Camp collar',[(side*.071,1.25,-.085),(side*.154,1.195,-.155),(side*.117,1.103,-.190),(side*.028,1.139,-.168)],[(0,1,2,3)],shirt,root)
-        a.path('Gold chain',[(-.08,1.208,-.138),(0,1.138,-.186),(.08,1.208,-.138)],.005,'gold',root)
-        a.path('Button placket',[(.012,.57,-.145),(.012,.83,-.18),(.012,1.052,-.184)],.006,shirt,root)
-        for y in (.67,.81,.95):a.ell('Linen button',(.014,y,-.182),(.011,.011,.005),'cream',root,10,6)
+    root=a.group('Nina' if nina else 'Barron',parent,p);skin='skinN' if nina else 'skinB';shirt='ninaShirt' if nina else 'shirt'
+    rows=[(.535,.246 if nina else .269,.168,.018),(.66,.247 if nina else .28,.171,.016),
+          (.87,.266 if nina else .316,.183,.012),(1.045,.301 if nina else .355,.182,.012),
+          (1.17,.276 if nina else .326,.154,.025),(1.245,.169 if nina else .19,.117,.026),(1.27,.118,.092,.025)]
+    torso=loft(a,'Tailored shirt body',rows,shirt,root,32,24);garment=[torso]
     for side in (-1,1):
-        # A tapered sleeve grows out of the shoulder and follows the upper-arm axis.
-        # Its crown is inside the torso; the outside contour slopes down to an open cuff.
-        start=Vector((side*(.208 if nina else .247),1.081,.015))
-        end=Vector((side*(.348 if nina else .38),.984,-.026))
-        axis=(end-start).normalized();up=Vector((side*abs(axis.y),abs(axis.x),0)).normalized()
-        front=axis.cross(up).normalized();sv=[];sf=[];n=20
-        profiles=[(0,.125),(.35,.122),(.78,.106),(.94,.103),(1,.106)]
-        for row,(t,r) in enumerate(profiles):
-            center=start.lerp(end,t)
-            for i in range(n):
-                angle=i/n*math.tau
-                sv.append(tuple(center+up*(math.cos(angle)*r)+front*(math.sin(angle)*r*1.08)))
-                if row:sf.append(((row-1)*n+i,(row-1)*n+(i+1)%n,row*n+(i+1)%n,row*n+i))
-        sf.append(tuple(reversed(range(n))))
-        a.mesh('Sloping short sleeve with open cuff',sv,sf,shirt,root)
-        a.path('Cloth fold',[(side*.17,.55,-.145),(side*.18,.62,-.156),(side*.20,.71,-.164)],.006,shirt,root)
-        a.box('Linen shorts' if nina else 'Teal shorts',(side*.167,.44,-.096),(.30,.27,.43),'linen' if nina else 'shorts',root,.068)
-        a.path('Seated calf',[(side*.167,.405,-.12),(side*.172,.35,-.49),(side*.178,.26,-.63),(side*.18,-.11,-.69)],.097 if nina else .112,skin,root,radii=[1.12,1,.82,.61])
-        a.box('Sandal sole',(side*.18,-.184,-.76),(.21,.053,.37),'seam',root,.03)
-        a.ell('Foot',(side*.18,-.133,-.756),(.089,.056,.16),skin,root,16,10)
-        a.path('Sandal strap',[(side*.18-.088,-.13,-.82),(side*.18,-.079,-.81),(side*.18+.088,-.13,-.82)],.018,'cream' if nina else 'rubber',root)
+        start=(side*(.195 if nina else .227),1.078,.018)
+        middle=(side*(.282 if nina else .315),1.047,-.007)
+        end=(side*(.338 if nina else .388),.975,-.031)
+        garment.append(limb(a,'Integrated short sleeve',[start,middle,end],[.102 if nina else .113,.112 if nina else .122,.103 if nina else .114],shirt,root,depth=1.04,segments=16))
+    weld_cloth(a,'Continuous coral T shirt' if nina else 'Continuous linen camp shirt',garment,root)
     if nina:
-        a.path('Shorts waistband',[(-.247,.548,-.06),(0,.56,-.205),(.247,.548,-.06)],.013,'linen',root)
-        a.ell('Shorts button',(0,.53,-.222),(.014,.014,.006),'cream',root,10,6)
-    make_head(a,root,nina)
-    arm=a.group('PointingArm' if nina else 'DrivingArm',root,(.30,1.08,-.025))
-    if nina:
-        a.path('Pointing forearm',[(.03,-.05,0),(.20,.005,-.16),(.37,.22,-.38)],.069,skin,arm,radii=[1,.95,.68])
-        a.ell('Hand',(.38,.235,-.42),(.054,.048,.079),skin,arm,16,10)
-        a.path('Index finger',[(.39,.25,-.46),(.45,.296,-.56),(.472,.31,-.592)],.017,skin,arm,radii=[1,.86,.5])
-        a.path('Curled fingers',[(.36,.226,-.454),(.367,.213,-.485),(.40,.22,-.48)],.018,skin,arm)
+        a.ring('Soft crew neckline',(0,1.266,.025),.116,.008,shirt,root,'xz',28)
     else:
-        a.path('Steering forearm',[(.04,-.09,-.01),(.08,-.26,-.24),(-.15,-.30,-.53)],.077,skin,arm,radii=[1,.91,.66])
-        a.ell('Hand at wheel',(-.15,-.30,-.56),(.058,.055,.079),skin,arm,16,10)
-    a.path('Relaxed left arm',[(-.31,1.014,-.03),(-.383,.80,-.12),(-.31,.62,-.38 if nina else -.63)],.075,skin,root,radii=[1.03,.92,.65])
-    a.ell('Left hand',(-.31,.62,-.40 if nina else -.66),(.058,.047,.082),skin,root,16,10)
+        a.mesh('Open neckline',[(-.100,1.283,-.091),(.100,1.283,-.091),(.061,1.165,-.180),(0,1.083,-.199),(-.061,1.165,-.180)],[(0,1,2,3,4)],skin,root,False)
+        for side in (-1,1):
+            a.mesh('Soft camp collar',[(side*.089,1.273,-.099),(side*.163,1.208,-.151),(side*.128,1.121,-.200),(side*.040,1.154,-.192)],[(0,1,2,3)],shirt,root)
+        a.path('Gold chain',[(-.086,1.225,-.137),(0,1.145,-.187),(.086,1.225,-.137)],.004,'gold',root)
+        a.path('Button placket',[(.009,.57,-.154),(.009,.83,-.182),(.009,1.075,-.185)],.0045,shirt,root)
+        for y in (.67,.81,.95):a.ell('Linen button',(.012,y,-.186),(.009,.009,.005),'cream',root,10,6)
+    shorts='linen' if nina else 'shorts'
+    pelvis=loft(a,'Soft shorts hips',[(.32,.207,.135,-.033),(.40,.272,.193,-.047),(.51,.264,.173,.0),(.568,.246,.165,.013)],shorts,root,28,14)
+    pants=[pelvis]
+    for side in (-1,1):
+        pants.append(limb(a,'Seated cloth thigh',[(side*.144,.449,-.07),(side*.165,.412,-.247),(side*.176,.382,-.402)],[.158,.147,.132],shorts,root,depth=1.05,segments=16))
+        limb(a,'Shaped thigh and calf',[(side*.177,.379,-.37),(side*.178,.315,-.59),(side*.182,.221,-.650),(side*.182,-.109,-.70)],[.106 if nina else .116,.105 if nina else .113,.084,.057],skin,root,depth=.93,segments=14)
+        a.box('Sandal sole',(side*.182,-.184,-.764),(.195,.043,.34),'seam',root,.022)
+        a.ell('Foot',(side*.182,-.139,-.759),(.083,.047,.146),skin,root,16,10)
+        a.path('Sandal strap',[(side*.182-.079,-.127,-.822),(side*.182,-.090,-.817),(side*.182+.079,-.127,-.822)],.014,'cream' if nina else 'rubber',root)
+    weld_cloth(a,'Continuous seated shorts',pants,root,.016)
+    a.path('Cloth waistband',[(-.238,.551,-.037),(0,.567,-.160),(.238,.551,-.037)],.009,shorts,root)
+    if nina:a.ell('Shorts button',(0,.53,-.178),(.012,.012,.005),'cream',root,10,6)
+    make_head(a,root,nina)
+    # Shoulder pivots remain compatible with the existing runtime animation.
+    arm=a.group('PointingArm' if nina else 'DrivingArm',root,(.315 if nina else .350,1.046,-.026))
+    if nina:
+        limb(a,'Pointing arm',[(.019,-.075,.0),(.158,-.078,-.118),(.278,.077,-.297)],[.080,.077,.046],skin,arm,depth=.93,segments=14)
+        make_hand(a,arm,(.278,.077,-.297),(.52,.43,-1),skin,True)
+    else:
+        limb(a,'Driving arm',[(.042,-.08,-.006),(.091,-.252,-.216),(-.181,-.283,-.510)],[.088,.083,.047],skin,arm,depth=.94,segments=14)
+        make_hand(a,arm,(-.181,-.283,-.510),(-.3,-.35,-1),skin)
+    wrist=(-.32,.64,-.373 if nina else -.626)
+    limb(a,'Relaxed left arm',[(-.332 if nina else -.378,1.001,-.034),(-.390 if nina else -.424,.803,-.115),wrist],[.080 if nina else .09,.077 if nina else .083,.044 if nina else .048],skin,root,depth=.94,segments=14)
+    make_hand(a,root,wrist,(.1,-.50,-1),skin)
     return root

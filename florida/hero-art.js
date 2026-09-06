@@ -3,7 +3,7 @@ import {flamingo, textSign} from './art.js';
 
 let template;
 export async function loadHeroArt() {
-  const gltf = await new GLTFLoader().loadAsync('./assets/models/airboat-couple-v4.glb');
+  const gltf = await new GLTFLoader().loadAsync('./assets/models/airboat-couple-v5.glb');
   template = gltf.scene;
 }
 export function heroAirboat() {

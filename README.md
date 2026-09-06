@@ -7,14 +7,15 @@ Two chapters of Barron and Nina's wedding game: the original pixel-art Toronto p
 Run `npm ci`, `npm test`, and `npm run build`, then `npm run preview`. Open `http://127.0.0.1:4179/florida/`.
 
 - A/D or left/right arrows steer; S or down arrow brakes; hold it while steering to drift and earn boost. The boat accelerates automatically.
-- Hold Shift to spend Cafecito Boost. Space sounds the horn. Escape or P pauses.
+- Hold Shift to spend Cafecito Boost. Hold Space to fire the deck-mounted water blaster; steer the boat to aim. Escape or P pauses.
+- Water shots travel forward and splash on impact. A direct hit briefly sends a tube rider aside or makes a gator duck; missed shots do not clear nearby hazards.
 - Flamingo Floatie absorbs one hit. SPF 1000 prevents slowdown from collisions for eight seconds.
 - Complete the 4 km course through all four checkpoints to the 17th Street Causeway Bridge. Fisheries sits on the right on the southbound approach.
 - Gold: 1:35 or faster. Silver: 2:00 or faster. Bronze: finish the course.
 - Three rival boats race the route. Slipstream behind them to refill cafecito; close-call chains and ramps also reward boost. Two island splits offer routes on either side.
 - “Watch a run” demonstrates the real driving physics without writing a best time.
 - Best times stay in this browser; there is no shared Florida leaderboard or account service.
-- On a phone, steer with the left thumb pad and pull down to brake/drift. Hold Cafecito to boost; tap Horn to clear hazards. Separate Drift and Horn buttons sit on the right. Portrait and landscape are supported.
+- On a phone, steer with the left thumb pad and pull down to brake/drift. Hold Cafecito to boost and SOAK to shoot water. Separate Drift and SOAK buttons sit on the right. Portrait and landscape are supported.
 - Entry and pause settings let you choose Keyboard/Touch controls and Smooth/Detailed graphics. Coarse input defaults to Touch and Smooth; explicit choices persist in this browser. Rotation or switching away pauses the race.
 - A current browser with WebGL 2 is required. Sound is opt-in. Physical-phone performance has not yet been measured.
 
@@ -22,7 +23,7 @@ Run `npm ci`, `npm test`, and `npm run build`, then `npm run preview`. Open `htt
 
 To publish an update, run the tests and build, commit the source, and run `vercel --prod` from this repository linked to the existing `how-we-met` project. The live Florida chapter is at `https://how-we-met-six.vercel.app/florida/`.
 
-Mobile input behavior, viewport checks and hardware limits are recorded in [mobile validation](docs/florida-mobile-validation.md); previous art and rendering work is recorded in [Florida validation](docs/florida-v2-validation.md). For future model work, see [the Blender setup and export workflow](docs/blender-workflow.md). Blender is optional and is not a browser dependency. `npm run blender:hero` regenerates the player GLB from its authored Python source; normal web builds consume the checked-in GLB and do not need Blender.
+The current water blaster and rebuilt character shapes are recorded in [shape and shooting validation](docs/florida-shape-shooting-validation.md). Earlier mobile input behavior, viewport checks and hardware limits are recorded in [mobile validation](docs/florida-mobile-validation.md); previous art and rendering work is recorded in [Florida validation](docs/florida-v2-validation.md). For future model work, see [the Blender setup and export workflow](docs/blender-workflow.md). Blender is optional and is not a browser dependency. `npm run blender:hero` regenerates the player GLB from its authored Python source; normal web builds consume the checked-in GLB and do not need Blender.
 
 ## Original Toronto prototype
 

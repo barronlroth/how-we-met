@@ -14,7 +14,7 @@ from mathutils import Vector
 
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / 'florida/assets/models'
-WORK = ROOT / 'artifacts/florida-characters-v4'
+WORK = ROOT / 'artifacts/florida-characters-v5'
 OUT.mkdir(parents=True, exist_ok=True)
 WORK.mkdir(parents=True, exist_ok=True)
 bpy.ops.wm.read_factory_settings(use_empty=True)
@@ -38,8 +38,8 @@ M = {k:material(k,*v) for k,v in {
     'chrome':('c2ccbf',.28,.75), 'rubber':('273b3b',.8), 'teak':('bf8b52',.6),
     'linen':('e8dcc1',.9), 'seam':('71543b',.8), 'canvas':('d4ddcc',.9),
     'skinB':('e4a16e',.64), 'skinN':('de9d6c',.64), 'lipsB':('bf796b',.72),
-    'lipsN':('bf735e',.62), 'hairB':('24170e',.48), 'curlLight':('452818',.52),
-    'hairN':('b58a48',.48), 'hairGold':('e6c582',.48), 'eyes':('718e4c',.3),
+    'lipsN':('bf735e',.62), 'hairB':('24170e',.67), 'curlLight':('39251a',.67),
+    'hairN':('bc975a',.68), 'hairGold':('d4b577',.68), 'eyes':('718e4c',.3),
     'ink':('263632',.65), 'white':('fff7e4',.5), 'shirt':('7c8b69',.92),
     'ninaShirt':('df795c',.9), 'shorts':('427e83',.8), 'gold':('d9ae61',.35,.65),
 }.items()}
@@ -210,6 +210,12 @@ for o in list(bpy.data.objects):
     bm=bmesh.new();bm.from_mesh(o.data)
     if all(e.is_manifold for e in bm.edges):bmesh.ops.recalc_face_normals(bm,faces=list(bm.faces))
     bm.to_mesh(o.data);bm.free()
+# Bake the static hand poses into their parent articulation before material merging.
+for hand in [o for o in list(bpy.data.objects) if o.type=='EMPTY' and 'hand' in o.name.lower()]:
+    bpy.context.view_layer.update()
+    for child in list(hand.children):
+        world=child.matrix_world.copy();child.parent=hand.parent;child.matrix_world=world
+    bpy.data.objects.remove(hand,do_unlink=True)
 # Merge fixed geometry by shared material within each articulation node.
 # This keeps the authored details cheap to submit in Three.js.
 for parent in [o for o in list(bpy.data.objects) if o.type=='EMPTY']:
@@ -223,14 +229,19 @@ for parent in [o for o in list(bpy.data.objects) if o.type=='EMPTY']:
         if len(objects)>1:bpy.ops.object.join()
         bpy.context.object.name=f'{parent.name}_{key[0]}'
 
+# Hair is a continuous silhouette at game scale; remove redundant curve tessellation.
+for obj in [o for o in bpy.data.objects if o.type=='MESH' and any(m and m.name in ('hairB','curlLight','hairN','hairGold') for m in o.data.materials)]:
+    bpy.context.view_layer.objects.active=obj
+    mod=obj.modifiers.new('Compact sculpted hair','DECIMATE');mod.ratio=.68
+    bpy.ops.object.modifier_apply(modifier=mod.name)
 bpy.ops.object.select_all(action='SELECT')
-asset=OUT/'airboat-couple-v4.glb'
+asset=OUT/'airboat-couple-v5.glb'
 bpy.ops.export_scene.gltf(filepath=str(asset),export_format='GLB',use_selection=True,export_yup=True)
-bpy.ops.wm.save_as_mainfile(filepath=str(WORK/'airboat-couple-v4.blend'))
+bpy.ops.wm.save_as_mainfile(filepath=str(WORK/'airboat-couple-v5.blend'))
 meshes=[o for o in bpy.data.objects if o.type=='MESH']
 for o in meshes:o.data.calc_loop_triangles()
 report={'version':bpy.app.version_string,'asset_bytes':asset.stat().st_size,'mesh_objects':len(meshes),
-        'triangles':sum(len(o.data.loop_triangles) for o in meshes),'materials':len(M),
+        'triangles':sum(len(o.data.loop_triangles) for o in meshes),'materials':len({m.name for o in meshes for m in o.data.materials if m}),
         'source':'Original authored geometry and generated facial albedo atlas; no embedded reference portraits'}
 (WORK/'report.json').write_text(json.dumps(report,indent=2)+'\n')
 print('HERO_ASSET '+json.dumps(report))
@@ -256,3 +267,18 @@ camera.rotation_euler=(xyz((.05,2.65,-1.6))-camera.location).to_track_quat('-Z',
 camera.data.ortho_scale=3.25
 scene.render.resolution_x=1200;scene.render.resolution_y=1000
 scene.render.filepath=str(WORK/'couple-close.png');bpy.ops.render.render(write_still=True)
+
+# Neutral face and shoulder review uses the exact exported characters, including
+# their transformations. It is deliberately rendered after saving/exporting art.
+for obj in hero.children_recursive: obj.hide_render=True
+hero.hide_render=True
+review=group('Character shape review')
+person(False,review,(-.48,.1,0));person(True,review,(.48,.1,0))
+camera.location=xyz((0,1.84,-7))
+camera.rotation_euler=(xyz((0,1.55,0))-camera.location).to_track_quat('-Z','Y').to_euler()
+camera.data.ortho_scale=1.96
+scene.render.resolution_x=1200;scene.render.resolution_y=1050
+scene.render.filepath=str(WORK/'characters-front.png');bpy.ops.render.render(write_still=True)
+camera.location=xyz((3.4,2.1,-7))
+camera.rotation_euler=(xyz((0,1.55,0))-camera.location).to_track_quat('-Z','Y').to_euler()
+scene.render.filepath=str(WORK/'characters-three-quarter.png');bpy.ops.render.render(write_still=True)

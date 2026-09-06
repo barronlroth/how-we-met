@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {createRace,stepRace,pilotInput,hit,horn,frameAt,pointAt,halfWidth,ISLANDS,COURSE_LENGTH,CHECKPOINTS,loadBest,saveBest,medal} from '../florida/core.js';
+import {createRace,stepRace,pilotInput,hit,frameAt,pointAt,halfWidth,ISLANDS,COURSE_LENGTH,CHECKPOINTS,loadBest,saveBest,medal} from '../florida/core.js';
 function playing(){const r=createRace();r.status='racing';return r}
 function advance(r,seconds,input={}){for(let i=0;i<seconds*120;i++)stepRace(r,typeof input==='function'?input(r):input,1/120)}
 function isolated(s=0){const r=playing();r.objects=[];r.rivals=[];r.s=s;r.heading=frameAt(s).heading;return r}
@@ -26,9 +26,6 @@ test('Cafecito is collected once and boost accelerates the boat',()=>{
 test('Flamingo absorbs one collision; SPF protects without consuming it',()=>{
  const r=isolated();r.speed=30;r.flamingo=true;hit(r);assert.equal(r.flamingo,false);assert.equal(r.speed,30);assert.equal(r.hits,0);r.immunity=0;hit(r);assert.equal(r.hits,1);assert.equal(r.speed,16.5);
  r.immunity=0;r.sunscreen=8;r.flamingo=true;hit(r);assert.equal(r.hits,1);assert.equal(r.flamingo,true);advance(r,9);assert.equal(r.sunscreen,0);
-});
-test('horn scatters nearby hazards and respects cooldown',()=>{
- const r=isolated();r.objects=[{id:'gator',type:'gator',s:30,x:0,drift:0,scared:0}];assert.equal(horn(r),true);assert.equal(r.objects[0].scared,4);assert.equal(horn(r),false);advance(r,5);assert.equal(horn(r),true);
 });
 test('ramps launch the boat, clear low hazards and land once',()=>{
  const r=isolated(3700);r.speed=35;r.objects=[{id:'ramp',type:'ramp',s:3701,x:0,radius:5.2,scared:0}];advance(r,.05);assert.equal(r.jumps,1);assert.ok(r.y>0);r.y=2;r.vy=1;hit(r);assert.equal(r.hits,0);advance(r,2);assert.equal(r.y,0);assert.equal(r.jumps,1);assert.ok(r.events.some(e=>e.type==='land'));

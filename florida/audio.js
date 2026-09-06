@@ -11,6 +11,7 @@ export class GameAudio {
       this.engine.connect(filter);filter.connect(this.engineGain);this.engineGain.connect(this.master);this.engine.start();
       const noiseBuffer=this.ctx.createBuffer(1,this.ctx.sampleRate*2,this.ctx.sampleRate),samples=noiseBuffer.getChannelData(0);
       for(let i=0;i<samples.length;i++)samples[i]=(Math.random()*2-1)*.5;
+      this.noiseBuffer=noiseBuffer;
       this.wind=this.ctx.createBufferSource();this.wind.buffer=noiseBuffer;this.wind.loop=true;
       this.windFilter=this.ctx.createBiquadFilter();this.windFilter.type='lowpass';this.windFilter.frequency.value=1000;this.windGain=this.ctx.createGain();this.windGain.gain.value=0;
       this.wind.connect(this.windFilter);this.windFilter.connect(this.windGain);this.windGain.connect(this.master);this.wind.start();
@@ -23,10 +24,19 @@ export class GameAudio {
     const t=this.ctx.currentTime+delay,osc=this.ctx.createOscillator(),env=this.ctx.createGain();osc.type=type;osc.frequency.setValueAtTime(freq,t);
     if(endFreq)osc.frequency.exponentialRampToValueAtTime(endFreq,t+duration);
     env.gain.setValueAtTime(.001,t);env.gain.exponentialRampToValueAtTime(gain,t+.012);env.gain.exponentialRampToValueAtTime(.001,t+duration);
+    osc.onended=()=>{osc.disconnect();env.disconnect();osc.onended=null};
     osc.connect(env);env.connect(this.master);osc.start(t);osc.stop(t+duration+.05);
   }
+  noise(duration,frequency,gain){
+    if(!this.ctx||!this.enabled||!this.noiseBuffer)return;
+    const t=this.ctx.currentTime,source=this.ctx.createBufferSource(),filter=this.ctx.createBiquadFilter(),env=this.ctx.createGain();
+    source.onended=()=>{source.disconnect();filter.disconnect();env.disconnect();source.onended=null};
+    source.buffer=this.noiseBuffer;filter.type='bandpass';filter.frequency.setValueAtTime(frequency,t);filter.frequency.exponentialRampToValueAtTime(180,t+duration);filter.Q.value=.6;
+    env.gain.setValueAtTime(gain,t);env.gain.exponentialRampToValueAtTime(.001,t+duration);source.connect(filter);filter.connect(env);env.connect(this.master);source.start(t);source.stop(t+duration+.02);
+  }
   effect(type){
-    if(type==='horn'){this.tone(220,.48,'sawtooth',.1);this.tone(277,.5,'triangle',.1)}
+    if(type==='shot'){this.tone(620,.10,'sine',.085,0,170);this.noise(.12,1100,.1)}
+    if(type==='splash'){this.tone(260,.12,'sine',.045,0,80);this.noise(.24,1900,.1)}
     if(type==='coffee'||type==='checkpoint'){[523,659,784].forEach((f,i)=>this.tone(f,.17,'sine',.25,i*.065))}
     if(type==='flamingo'){this.tone(380,.25,'sine',.18,0,640);this.tone(780,.2,'sine',.12,.14,980)}
     if(type==='sunscreen'){this.tone(880,.4,'triangle',.13,0,1320)}

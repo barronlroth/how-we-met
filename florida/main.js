@@ -8,8 +8,8 @@ import {prepareMaterials,raceBoat,waterTaxi} from './detail-art.js';
 import {loadArtMaterials} from './premium-art.js';
 import {loadHeroArt,heroAirboat} from './hero-art.js';
 import {makeWorld,makeWater,makeSky,SUN} from './world.js';
-import {makeEffects} from './effects.js';
-import {createRace,stepRace,pilotInput,horn,objectX,pointAt,frameAt,angleDelta,sector,COURSE_LENGTH,MEDAL_TIMES,formatTime,loadBest,saveBest,ISLANDS} from './core.js';
+import {makeEffects,makeWaterCannon} from './effects.js';
+import {createRace,stepRace,pilotInput,fireWater,WATER_SHOT,objectX,pointAt,frameAt,angleDelta,sector,COURSE_LENGTH,MEDAL_TIMES,formatTime,loadBest,saveBest,ISLANDS} from './core.js';
 import {TRACK,routeBounds} from './course.js';
 import {GameAudio} from './audio.js';
 import {createFrameProfile} from './performance.js';
@@ -19,7 +19,7 @@ const $=id=>document.getElementById(id),reducedMotion=matchMedia('(prefers-reduc
 let storage;try{storage=localStorage}catch{storage={getItem:()=>null,setItem:()=>{}}}
 let race=createRace(),best=loadBest(storage),renderer,composer,scene,camera,boat,scenery,water,effects,sunshine,portraitFill,ambientOcclusion;
 let countIn=0,pausedFrom='racing',lastTime=0,time=0,captionUntil=0,deflate=0,shake=0,cameraSnap=true,lastFocus=null,currentSpf=false;
-const audio=new GameAudio(),pressed=new Set(),entities=new Map(),rivalModels=[],hornRings=[],hullMaterials=[];
+const audio=new GameAudio(),pressed=new Set(),entities=new Map(),rivalModels=[],hullMaterials=[];
 const desiredCamera=new T.Vector3(),lookAt=new T.Vector3(),smoothLook=new T.Vector3();
 let smoothedHeading=0,fps=60,perfFrames=0,perfTime=0;
 const frameProfile=createFrameProfile();
@@ -28,7 +28,7 @@ function preference(key,fallback,choices){try{const value=storage.getItem(key);r
 let explicitControls=preference('florida-controls','auto',['touch','keyboard'])!=='auto';
 let controlsMode=preference('florida-controls',coarsePointer.matches?'touch':'keyboard',['touch','keyboard']);
 let graphicsMode=preference('florida-graphics',coarsePointer.matches?'smooth':'detailed',['smooth','detailed']);
-const touch=bindTouchControls($('touch-controls'),{active:()=>controlsMode==='touch'&&!race.demo&&['racing','countdown'].includes(race.status),onHorn:()=>horn(race)});
+const touch=bindTouchControls($('touch-controls'),{active:()=>controlsMode==='touch'&&!race.demo&&['racing','countdown'].includes(race.status),onFire:()=>fireWater(race)});
 function resetInput(){pressed.clear();touch.reset()}
 function syncControls(){
  document.body.classList.toggle('touch-mode',controlsMode==='touch');
@@ -83,7 +83,7 @@ window.addEventListener('keydown',event=>{
  if(event.code==='Tab'&&['paused','finished'].includes(race.status)){const dialog=$(race.status==='paused'?'paused':'finish'),items=[...dialog.querySelectorAll('button,a,select')],first=items[0],last=items.at(-1);if(event.shiftKey&&document.activeElement===first){event.preventDefault();last.focus()}else if(!event.shiftKey&&document.activeElement===last){event.preventDefault();first.focus()}}
  if(race.status!=='racing')return;
  if(['KeyA','KeyD','KeyW','KeyS','ArrowLeft','ArrowRight','ArrowUp','ArrowDown','ShiftLeft','ShiftRight','Space'].includes(event.code)){event.preventDefault();pressed.add(event.code)}
- if(event.code==='Space'&&!event.repeat)horn(race);
+ if(event.code==='Space'&&!event.repeat)fireWater(race);
 });
 window.addEventListener('keyup',e=>pressed.delete(e.code));
 window.addEventListener('blur',()=>{resetInput();if(['racing','countdown'].includes(race.status))pauseRace()});
@@ -94,7 +94,7 @@ function orientationChanged(){resetInput();cameraSnap=true;if(['racing','countdo
 if(screen.orientation?.addEventListener)screen.orientation.addEventListener('change',orientationChanged);else window.addEventListener('orientationchange',orientationChanged);
 function events(){
  for(const e of race.events){
-  audio.effect(e.type);
+  audio.effect(e.type);effects.event(e);
   if(e.type==='checkpoint'){setCaption(['Now for the marina. Pick your line.','The water taxi does not have right of way. In this game.','One more big turn. Then dinner.','There’s the bridge. Fisheries on the right!'][race.checkpoint-1],4);pulse('#8ef0d3')}
   else if(e.type==='finish'){
    cameraSnap=true;effects.reset();$('hud').hidden=true;$('pause').hidden=true;$('finish').hidden=false;$('countdown').hidden=true;document.body.classList.remove('racing');
@@ -109,17 +109,17 @@ function events(){
 function updateHud(){
  $('sector').textContent=sector(race.s);$('checkpoint').textContent=`${race.checkpoint} / 4 checkpoints`;$('timer').textContent=formatTime(race.elapsed);$('speed').textContent=Math.round(race.speed*2.237);
  $('position').innerHTML=`${race.rank}<span>/4</span>`;$('boost-fill').style.strokeDashoffset=100-race.boost*100;$('boost-fill').style.stroke=race.boosting?'#fff9de':'#59f1e3';
- $('floatie-status').hidden=!race.flamingo;$('spf-status').hidden=race.sunscreen<=0;$('spf-status').textContent=`SPF 1000 · ${Math.ceil(race.sunscreen)}s`;$('horn-status').firstChild.textContent=race.hornCooldown?`HORN · ${race.hornCooldown.toFixed(1)}s `:'HORN ';
+ $('floatie-status').hidden=!race.flamingo;$('spf-status').hidden=race.sunscreen<=0;$('spf-status').textContent=`SPF 1000 · ${Math.ceil(race.sunscreen)}s`;$('fire-status').classList.toggle('is-firing',pressed.has('Space')||touch.state.fire);
  $('distance').textContent=`${((COURSE_LENGTH-race.s)/1000).toFixed(1)} km`;const p=mapPoint(pointAt(race.s,race.x));$('map-dot').setAttribute('cx',p.x);$('map-dot').setAttribute('cy',p.y);
- const special=race.drifting?'DRIFT +':race.drafting?'SLIPSTREAM':race.combo>1?`${race.combo}× CLOSE CALLS`:race.boosting?'CAFECITO!':'';$('combo').hidden=!special;$('combo').textContent=special;
+ const special=race.soakFlash>0?'SPLASH!':race.drifting?'DRIFT +':race.drafting?'SLIPSTREAM':race.combo>1?`${race.combo}× CLOSE CALLS`:race.boosting?'CAFECITO!':'';$('combo').hidden=!special;$('combo').textContent=special;
  $('speed-lines').style.opacity=!reducedMotion&&race.status==='racing'?(race.boosting?.34:Math.max(0,(race.speed-30)/100)):0;
  $('touch-boost-fill').style.transform=`scaleX(${race.boost})`;$('touch-boost').classList.toggle('is-boosting',race.boosting);$('touch-boost').classList.toggle('is-empty',race.boost<.005);$('touch-boost-label').textContent=race.boost<.005?'DRIFT TO REFILL':race.boosting?'VAMOS!':'HOLD TO BOOST';
- $('touch-horn-label').textContent=race.hornCooldown>0?`${race.hornCooldown.toFixed(1)}s`:'HORN';$('touch-horn').classList.toggle('is-cooling',race.hornCooldown>0);
+ $('touch-fire').classList.toggle('is-firing',race.fireFlash>0);$('touch-fire').style.setProperty('--reload',String(Math.max(0,1-race.fireCooldown/WATER_SHOT.cooldown)));
  if(time>captionUntil)$('nina').style.opacity='0';
 }
 function renderEntities(s){
  for(const o of race.objects){const mesh=entities.get(o.id);if(!mesh)continue;mesh.visible=o.s>s-80&&o.s<s+650&&!o.consumed;if(!mesh.visible)continue;const p=pointAt(o.s,objectX(o,race.elapsed));mesh.position.set(p.x,0,p.z);mesh.rotation.set(0,-p.heading,0);
-  if(o.type==='floater'){mesh.position.y=.08+Math.sin(time*1.8+o.drift)*.11;mesh.rotation.z=Math.sin(time*1.6+o.drift)*.065;mesh.rotation.y+=.25*Math.sin(time*.3+o.drift)}
+  if(o.type==='floater'){mesh.position.y=.08+Math.sin(time*1.8+o.drift)*.11;mesh.rotation.z=Math.sin(time*1.6+o.drift)*.065;mesh.rotation.y+=.25*Math.sin(time*.3+o.drift);if(o.scared){const hitAge=4-o.scared;mesh.rotation.y+=Math.sin(hitAge*3)*Math.min(1,o.scared)*.8;mesh.rotation.z+=Math.sin(hitAge*9)*Math.exp(-hitAge*2)*.3;mesh.position.y+=Math.sin(Math.min(1,hitAge)*Math.PI)*.45}}
   else if(o.type==='gator'){mesh.position.y=o.scared?-Math.min(1.5,o.scared):.035;mesh.rotation.y+=Math.PI/2+Math.sin(time*.7+o.drift)*.22}
   else if(o.type==='taxi'){mesh.rotation.y+=Math.cos(race.elapsed*.16+o.drift)>0?-Math.PI/2:Math.PI/2;mesh.position.y=Math.sin(time*1.2)*.04}
   else if(!['ramp','wake'].includes(o.type)){mesh.position.y=1.4+Math.sin(time*2+o.s)*.22;mesh.rotation.y=time*.7}
@@ -137,6 +137,7 @@ function frame(now){
  updateHud();const ready=race.status==='ready',finished=race.status==='finished',staged=ready||finished,s=staged?COURSE_LENGTH-200:race.s,x=staged?4:race.x,p=pointAt(s,x),heading=staged?p.heading:race.heading;
  const bob=reducedMotion?0:Math.sin(time*3)*.025+Math.sin(time*7)*race.speed*.00065;
  boat.position.set(p.x,(staged?0:race.y)+bob,p.z);boat.rotation.y=-heading+(staged?Math.PI+.18:0);boat.rotation.z=reducedMotion||staged?0:T.MathUtils.lerp(boat.rotation.z,-race.turn*.19,1-Math.exp(-dt*8));boat.rotation.x=reducedMotion||staged?0:T.MathUtils.lerp(boat.rotation.x,race.y>0?-race.vy*.018:-Math.min(.065,race.speed*.001)+Math.sin(time*8)*.004,1-Math.exp(-dt*8));
+ boat.userData.waterCannon.update(staged||reducedMotion?0:race.fireFlash);
  boat.userData.fan.rotation.z+=dt*(staged?5:14+race.speed*1.9);boat.userData.nina.rotation.z=reducedMotion?0:-race.turn*.13+Math.sin(time*1.7)*.012;boat.userData.nina.userData.arm.rotation.x=race.y>1?-.65:Math.sin(time*1.5)*.045;
  deflate=Math.max(0,deflate-dt*.9);const f=boat.userData.floatie;f.visible=!staged&&(race.flamingo||deflate>0);f.scale.set(1,race.flamingo?1:deflate*.9+.04,1);f.position.y=.6;
  const spf=race.sunscreen>0;if(spf!==currentSpf){currentSpf=spf;for(const e of hullMaterials){e.material.roughness=spf?.13:e.roughness;e.material.metalness=spf?.22:e.metalness;e.material.emissive?.setHex(spf?0x14281e:0)}}
@@ -151,22 +152,20 @@ function frame(now){
  const fov=staged?63:race.boosting&&!reducedMotion?84:68;camera.fov=T.MathUtils.lerp(camera.fov,fov,1-Math.exp(-dt*5));camera.updateProjectionMatrix();
  scenery.update(s,camera);water.update(s,time);renderEntities(s);effects.update(race,dt,time);
  sunshine.position.set(p.x+SUN.x*130,130*SUN.y,p.z+SUN.z*130);sunshine.target.position.set(p.x,0,p.z);sunshine.target.updateMatrixWorld();
- for(let i=0;i<hornRings.length;i++){const r=hornRings[i],progress=1-race.hornFlash+i*.18;r.visible=!staged&&race.hornFlash>0&&progress<1;r.position.set(p.x+fx*12,.28,p.z+fz*12);r.scale.setScalar(3+progress*38);r.material.opacity=Math.max(0,(1-progress)*.32)}
  audio.update(race.speed,race.status==='racing',race.boosting);renderer.info.reset();renderer.shadowMap.needsUpdate=true;const renderStart=performance.now();composer.render();
  if(race.status==='racing'&&race.elapsed>5&&!document.hidden&&!$('performance').hidden)frameProfile.sample(sector(race.s),realDt*1000,performance.now()-renderStart,renderer.info.render.calls,renderer.info.render.triangles);
- perfTime+=realDt;perfFrames++;if(perfTime>.5){if(!$('performance').hidden)$('performance').textContent=`${Math.round(perfFrames/perfTime)} fps · ${renderer.info.render.calls} draws · ${Math.round(renderer.info.render.triangles/1000)}k triangles\n${innerWidth}×${innerHeight} · ${graphicsMode} · DPR ${renderer.getPixelRatio()} · excludes first 5 race seconds\n${frameProfile.summary()}\nMulti-draw ${renderer.extensions.has('WEBGL_multi_draw')}`;perfTime=0;perfFrames=0}
+ perfTime+=realDt;perfFrames++;if(perfTime>.5){if(!$('performance').hidden)$('performance').textContent=`${Math.round(perfFrames/perfTime)} fps · ${renderer.info.render.calls} draws · ${Math.round(renderer.info.render.triangles/1000)}k triangles\n${innerWidth}×${innerHeight} · ${graphicsMode} · DPR ${renderer.getPixelRatio()} · excludes first 5 race seconds\n${frameProfile.summary()}\nWater shots ${race.shots.length} · fired ${race.nextShotId} · soaked ${race.soaked}\nMulti-draw ${renderer.extensions.has('WEBGL_multi_draw')}`;perfTime=0;perfFrames=0}
 }
 async function boot(){
  await document.fonts.ready;await prepareMaterials();await Promise.all([loadArtMaterials(),loadHeroArt()]);renderer=new T.WebGLRenderer({canvas:$('world'),antialias:true,powerPreference:'high-performance'});applyGraphics();renderer.outputColorSpace=T.SRGBColorSpace;renderer.toneMapping=T.ACESFilmicToneMapping;renderer.toneMappingExposure=1.0;renderer.shadowMap.enabled=true;renderer.shadowMap.autoUpdate=false;renderer.shadowMap.type=T.PCFShadowMap;renderer.info.autoReset=false;
  scene=new T.Scene();scene.fog=new T.Fog(0xb6d5dc,520,1700);camera=new T.PerspectiveCamera(63,innerWidth/innerHeight,.15,6000);resize();scene.add(new T.HemisphereLight(0xd8edfa,0x647653,.55));
  sunshine=new T.DirectionalLight(0xfff0d3,4.3);sunshine.castShadow=true;sunshine.shadow.mapSize.set(2048,2048);Object.assign(sunshine.shadow.camera,{left:-100,right:100,top:100,bottom:-100,near:1,far:280});sunshine.shadow.normalBias=.045;sunshine.shadow.bias=-.00008;sunshine.shadow.radius=2;scene.add(sunshine,sunshine.target);
  portraitFill=new T.PointLight(0xffe3c8,90,24,2);portraitFill.visible=false;scene.add(portraitFill);
- makeSky(scene,renderer);water=makeWater(scene);scenery=makeWorld(scene,{multiDraw:renderer.extensions.has('WEBGL_multi_draw')});boat=heroAirboat();scene.add(boat);effects=makeEffects(scene);
+ makeSky(scene,renderer);water=makeWater(scene);scenery=makeWorld(scene,{multiDraw:renderer.extensions.has('WEBGL_multi_draw')});boat=heroAirboat();scene.add(boat);boat.userData.waterCannon=makeWaterCannon(boat);effects=makeEffects(scene);
  (boat.userData.hull||boat.children[0]).traverse(o=>{if(o.isMesh){o.material=o.material.clone();hullMaterials.push({material:o.material,roughness:o.material.roughness,metalness:o.material.metalness})}});
  const models={floater:[floater(0),floater(1),floater(2)],gator:gator(),ramp:ramp(),wake:boatWake(),coffee:pickup('coffee'),flamingo:pickup('flamingo'),sunscreen:pickup('sunscreen'),taxi:waterTaxi()};
  for(const [i,o]of race.objects.entries()){const m=(o.type==='floater'?models.floater[i%3]:models[o.type])?.clone(true);if(m){scene.add(m);entities.set(o.id,m)}}
  for(const color of [0xf27e54,0x539cb0,0xe1ba49]){const m=raceBoat(color);scene.add(m);rivalModels.push(m)}
- for(let i=0;i<3;i++){const r=new T.Mesh(new T.TorusGeometry(1,.006,4,70),new T.MeshBasicMaterial({color:0xfff3b5,transparent:true,opacity:.4,depthWrite:false}));r.rotation.x=-Math.PI/2;r.visible=false;scene.add(r);hornRings.push(r)}
  composer=new EffectComposer(renderer);composer.renderTarget1.samples=4;composer.renderTarget2.samples=4;composer.addPass(new RenderPass(scene,camera));const ao=ambientOcclusion=new SSAOPass(scene,camera,innerWidth,innerHeight,12);ao.kernelRadius=2.6;ao.minDistance=.000025;ao.maxDistance=.002;const setAOSize=ao.setSize.bind(ao);ao.setSize=(w,h)=>setAOSize(Math.round(w*.5),Math.round(h*.5));const drawAO=ao.render.bind(ao);ao.render=(...args)=>{scenery.setAO(true);try{drawAO(...args)}finally{scenery.setAO(false)}};composer.addPass(ao);composer.addPass(new OutputPass());applyGraphics();
  const gold=formatTime(MEDAL_TIMES.gold).slice(0,-3);$('gold-target').textContent=`GOLD · ${gold}`;$('personal-best').textContent=best===null?`Gold: ${gold}. Find the faster line.`:`Your best: ${formatTime(best)}`;
  $('map-route').setAttribute('d',TRACK.filter((_,i)=>i%12===0).map((p,i)=>{const q=mapPoint(p);return`${i?'L':'M'}${q.x.toFixed(2)} ${q.y.toFixed(2)}`}).join(' '));

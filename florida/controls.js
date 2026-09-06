@@ -5,10 +5,12 @@ const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
 export function createTouchState() {
   const pointers = new Map();
   let steering = null;
-  const state = { steer: 0, brake: false, boost: false, x: 0, y: 0 };
+  const state = { steer: 0, brake: false, boost: false, fire: false, x: 0, y: 0 };
+  function held(action) { for (const value of pointers.values()) if (value === action) return true; return false; }
   function refresh() {
-    state.brake = !!steering?.braking || [...pointers.values()].includes('brake');
-    state.boost = [...pointers.values()].includes('boost');
+    state.brake = !!steering?.braking || held('brake');
+    state.boost = held('boost');
+    state.fire = held('fire');
   }
   function move(id, x, y) {
     if (steering?.id !== id) return;
@@ -22,7 +24,7 @@ export function createTouchState() {
   return {
     state,
     begin(id, action, pad) {
-      if (pointers.has(id) || !['steer', 'brake', 'boost', 'horn'].includes(action)) return false;
+      if (pointers.has(id) || !['steer', 'brake', 'boost', 'fire'].includes(action)) return false;
       if (action === 'steer') {
         if (steering || !pad || !(pad.radius > 0)) return false;
         steering = { id, x: pad.x, y: pad.y, radius: pad.radius, braking: false };
@@ -35,10 +37,10 @@ export function createTouchState() {
       if (steering?.id === id) { steering = null; state.steer = state.x = state.y = 0; }
       refresh();
     },
-    held(action) { return [...pointers.values()].includes(action); },
+    held,
     reset() {
       pointers.clear(); steering = null;
-      Object.assign(state, { steer: 0, brake: false, boost: false, x: 0, y: 0 });
+      Object.assign(state, { steer: 0, brake: false, boost: false, fire: false, x: 0, y: 0 });
     }
   };
 }
@@ -48,11 +50,12 @@ export function drivingInput(keys, touch) {
   return {
     steer: keyboardSteer || touch.steer,
     brake: keys.has('KeyS') || keys.has('ArrowDown') || touch.brake,
-    boost: keys.has('ShiftLeft') || keys.has('ShiftRight') || touch.boost
+    boost: keys.has('ShiftLeft') || keys.has('ShiftRight') || touch.boost,
+    fire: keys.has('Space') || !!touch.fire
   };
 }
 
-export function bindTouchControls(root, { active, onHorn }) {
+export function bindTouchControls(root, { active, onFire }) {
   const input = createTouchState(), captures = new Map();
   const pad = root.querySelector('[data-control="steer"]');
   const buttons = [...root.querySelectorAll('button[data-control]')];
@@ -82,7 +85,7 @@ export function bindTouchControls(root, { active, onHorn }) {
       event.preventDefault();
       element.setPointerCapture(event.pointerId); captures.set(event.pointerId, element);
       if (action === 'steer') input.move(event.pointerId, event.clientX, event.clientY);
-      if (action === 'horn') onHorn();
+      if (action === 'fire') onFire();
       paint();
     });
     element.addEventListener('pointermove', event => { input.move(event.pointerId, event.clientX, event.clientY); paint(); });
@@ -98,18 +101,20 @@ export function bindTouchControls(root, { active, onHorn }) {
       event.preventDefault(); event.stopPropagation();
       if (!active() || event.repeat) return;
       const action = button.dataset.control;
-      if (input.begin(`key-${action}`, action) && action === 'horn') onHorn();
+      if (input.begin(`key-${action}`, action) && action === 'fire') onFire();
       paint();
     });
     button.addEventListener('keyup', event => {
       if (!['Space', 'Enter'].includes(event.code)) return;
-      event.preventDefault(); event.stopPropagation();
+      // Let the global release handler clear a key first pressed on the canvas
+      // if focus moved onto this button while that key was still held.
+      event.preventDefault();
       input.end(`key-${button.dataset.control}`); paint();
     });
     button.addEventListener('blur', () => { input.end(`key-${button.dataset.control}`); paint(); });
-    // Assistive click activation of the single-shot horn has no pointer sequence.
+    // Assistive click activation of the water shot has no pointer sequence.
     button.addEventListener('click', event => {
-      if (event.detail === 0 && active() && button.dataset.control === 'horn') onHorn();
+      if (event.detail === 0 && active() && button.dataset.control === 'fire') onFire();
     });
   }
   return {

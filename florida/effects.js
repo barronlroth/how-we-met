@@ -1,5 +1,6 @@
 import * as T from 'three';
 import {pointAt} from './course.js';
+import {WATER_SHOT} from './core.js';
 export function makeEffects(scene){
  const count=700,positions=new Float32Array(count*3),alpha=new Float32Array(count),sizes=new Float32Array(count),velocities=new Float32Array(count*3),ages=new Float32Array(count).fill(9),life=new Float32Array(count);
  const geo=new T.BufferGeometry();geo.setAttribute('position',new T.BufferAttribute(positions,3));geo.setAttribute('aAlpha',new T.BufferAttribute(alpha,1));geo.setAttribute('aSize',new T.BufferAttribute(sizes,1));
@@ -14,7 +15,28 @@ export function makeEffects(scene){
  const opacity=new Float32Array(wakeCount);wake.geometry.setAttribute('instanceOpacity',new T.InstancedBufferAttribute(opacity,1));
  wake.material.onBeforeCompile=shader=>{shader.vertexShader=shader.vertexShader.replace('#include <common>','#include <common>\nattribute float instanceOpacity;varying float vInstanceOpacity;').replace('#include <begin_vertex>','#include <begin_vertex>\nvInstanceOpacity=instanceOpacity;');shader.fragmentShader=shader.fragmentShader.replace('#include <common>','#include <common>\nvarying float vInstanceOpacity;').replace('#include <color_fragment>','#include <color_fragment>\ndiffuseColor.a*=vInstanceOpacity;')};wake.material.customProgramCacheKey=()=>"broken-wake-v3";
  function emit(x,y,z,vx,vy,vz,scale,duration){const k=cursor++%count;positions[k*3]=x;positions[k*3+1]=y;positions[k*3+2]=z;velocities[k*3]=vx;velocities[k*3+1]=vy;velocities[k*3+2]=vz;ages[k]=0;life[k]=duration;sizes[k]=scale}
- return{reset(){history.length=0;ages.fill(9);alpha.fill(0)},update(r,dt,t){
+ const shotLimit=Math.ceil(WATER_SHOT.lifetime/WATER_SHOT.cooldown)+1,shotGeometry=new T.SphereGeometry(1,12,8);
+ const droplets=new T.InstancedMesh(shotGeometry,new T.MeshBasicMaterial({color:0x3aebff,toneMapped:false}),shotLimit*3),cores=new T.InstancedMesh(shotGeometry,new T.MeshBasicMaterial({color:0xedffff,toneMapped:false}),shotLimit);
+ droplets.frustumCulled=cores.frustumCulled=false;droplets.count=cores.count=0;scene.add(droplets,cores);
+ const splashes=Array.from({length:8},()=>{const mesh=new T.Mesh(new T.RingGeometry(.73,1,32).rotateX(-Math.PI/2),new T.MeshBasicMaterial({color:0xc5ffff,transparent:true,opacity:0,depthWrite:false,side:T.DoubleSide}));mesh.visible=false;scene.add(mesh);return{mesh,age:1}});let splashCursor=0;
+ return{reset(){history.length=0;ages.fill(9);alpha.fill(0);carry=wakeTime=0;droplets.count=cores.count=0;for(const splash of splashes){splash.age=1;splash.mesh.visible=false}},event(event){
+  if(event.type==='shot')for(let i=0;i<9;i++){const side=(Math.random()-.5)*2;emit(event.x,event.y,event.z,event.vx*(7+Math.random()*8)+side,1+Math.random()*2,event.vz*(7+Math.random()*8)+side,.1+Math.random()*.14,.16+Math.random()*.16)}
+  if(event.type==='splash'){
+   for(let i=0;i<(event.hit?38:22);i++){const angle=i*2.4,spread=2+Math.random()*5;emit(event.x,event.y,event.z,Math.sin(angle)*spread,2+Math.random()*6,Math.cos(angle)*spread,.2+Math.random()*.35,.35+Math.random()*.55)}
+   const splash=splashes[splashCursor++%splashes.length];splash.age=0;splash.mesh.position.set(event.x,.15,event.z);splash.mesh.visible=true;
+  }
+ },update(r,dt,t){
+  const visualDt=r.status==='paused'?0:dt;
+  droplets.count=Math.min(r.shots.length,shotLimit)*3;cores.count=Math.min(r.shots.length,shotLimit);
+  for(let i=0;i<cores.count;i++){
+   const shot=r.shots[i],speed=Math.hypot(shot.vx,shot.vz),fx=shot.vx/speed,fz=shot.vz/speed;
+   dummy.rotation.set(0,-Math.atan2(fx,-fz),0);
+   for(let j=0;j<3;j++){const tail=j*1.6;dummy.position.set(shot.x-fx*tail,shot.y,shot.z-fz*tail);dummy.scale.set(.45-j*.1,.35-j*.075,1.2-j*.16);dummy.updateMatrix();droplets.setMatrixAt(i*3+j,dummy.matrix)}
+   dummy.position.set(shot.x+fx*.32,shot.y+.17,shot.z+fz*.32);dummy.scale.set(.23,.16,.7);dummy.updateMatrix();cores.setMatrixAt(i,dummy.matrix);
+  }
+  droplets.instanceMatrix.needsUpdate=cores.instanceMatrix.needsUpdate=true;
+  for(const splash of splashes){splash.age+=visualDt;const life=1-splash.age/.6;splash.mesh.visible=life>0;if(life>0){splash.mesh.scale.setScalar(1.1+splash.age*10);splash.mesh.material.opacity=life*.65}}
+
   const p=pointAt(r.s,r.x),nx=Math.cos(r.heading),nz=Math.sin(r.heading),fx=Math.sin(r.heading),fz=-Math.cos(r.heading),active=r.status==='racing';
   if(active&&r.speed>3&&r.y<1.5){carry+=dt*(r.boosting?220:r.drifting?260:130);for(let j=0;j<Math.floor(carry);j++){const side=j%2?1:-1,spread=(r.drifting?7:3)+Math.random()*4;emit(p.x+nx*side*1.2-fx,p.y||.45,p.z+nz*side*1.2-fz,nx*side*spread-fx*r.speed*.25,1.3+Math.random()*3,nz*side*spread-fz*r.speed*.25,.12+Math.random()*.28,.5+Math.random()*.7)}carry%=1;
    wakeTime+=dt;if(wakeTime>.045){wakeTime%=.045;history.unshift({x:p.x-fx*2.7,z:p.z-fz*2.7,nx,nz,fx,fz,t,speed:r.speed});while(history.length>(wakeCount-12)/3)history.pop()}
@@ -27,4 +49,15 @@ export function makeEffects(scene){
   wake.geometry.attributes.instanceOpacity.needsUpdate=true;
   wake.instanceMatrix.needsUpdate=true;geo.attributes.position.needsUpdate=true;geo.attributes.aAlpha.needsUpdate=true;geo.attributes.aSize.needsUpdate=true;
  }};
+}
+
+// A compact toy-like deck cannon, separate from the exported couple model.
+// Three small meshes share the boat transform; no extra shadow or light pass.
+export function makeWaterCannon(boat){
+ const cannon=new T.Group();cannon.position.set(WATER_SHOT.muzzleSide,WATER_SHOT.muzzleHeight-.42,-WATER_SHOT.muzzleForward+.74);boat.add(cannon);
+ const base=new T.Mesh(new T.CylinderGeometry(.32,.43,.22,16),new T.MeshStandardMaterial({color:0xfff0cb,roughness:.48}));cannon.add(base);
+ const barrel=new T.Group();barrel.position.y=.42;cannon.add(barrel);
+ const body=new T.Mesh(new T.CapsuleGeometry(.22,.5,4,12),new T.MeshStandardMaterial({color:0x20aaaf,roughness:.3,metalness:.1}));body.rotation.x=Math.PI/2;body.position.z=-.24;barrel.add(body);
+ const nozzle=new T.Mesh(new T.TorusGeometry(.185,.063,8,20),new T.MeshStandardMaterial({color:0xffd358,roughness:.34}));nozzle.position.z=-.74;barrel.add(nozzle);
+ return{muzzle:nozzle,update(flash){barrel.position.z=flash>0?Math.sin(flash/.14*Math.PI)*.12:0}};
 }
