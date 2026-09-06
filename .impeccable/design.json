@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-09-06T01:30:48.718085Z",
+  "generatedAt": "2026-09-06T01:57:31.690052Z",
   "title": "Design System: How We Met — Florida V2",
   "extensions": {
     "colorMeta": {
@@ -459,11 +459,12 @@
   ],
   "narrative": {
     "northStar": "A Florida Postcard in Motion",
-    "overview": "Florida is a playful miniature waterfront with five distinct districts: the urban New River, a superyacht marina, a shaded mangrove cut, a broad party cove, and the bridge approach. Restaurants, working boatyards, rooted banks, rafted boats, and a crowded Fisheries terrace frame the detailed cream, coral, and teal airboat and rounded couple. The route compresses and rearranges Fort Lauderdale references for racing; it is not a literal geographic route. Smaller sculpted heads, broad cheek and jaw planes, painted facial expression, tapered limbs and hands, directional dark curls, and broad golden blonde waves carry the selected animated-feature direction. Nina’s blonde hair follows the user’s correction and supersedes the brown hair in the selected illustration. Sparse arcade instruments leave the course and couple primary.\n\nThis record captures the built Florida V2 world, its keyboard and touch instruments, and its homepage link. The user pinned the original generated concept as the visual target; it remains a reference, not runtime imagery or proof of equivalent fidelity. Toronto retains its pixel art, Press Start 2P, Quicksand, and existing palette.",
+    "overview": "Florida is a playful miniature waterfront with five distinct districts: the urban New River, a superyacht marina, a shaded mangrove cut, a broad party cove, and the bridge approach. Restaurants, working boatyards, rooted banks, rafted boats, and a crowded Fisheries terrace frame the detailed cream, coral, and teal airboat and rounded couple. Blender-authored residences, hotels, clubs, and towers add recessed facades, balconies, pools, and planted terraces. Close bank planting, second rows of homes, and layered forest and skyline fill the view beyond the waterfront. The route compresses and rearranges Fort Lauderdale references for racing; it is not a literal geographic route. Smaller sculpted heads, broad cheek and jaw planes, painted facial expression, tapered limbs and hands, directional dark curls, and broad golden blonde waves carry the selected animated-feature direction. Nina’s blonde hair follows the user’s correction and supersedes the brown hair in the selected illustration. Sparse arcade instruments leave the course and couple primary.\n\nThis record captures the built Florida V2 world, its keyboard and touch instruments, and its homepage link. The user pinned the original generated concept as the visual target; it remains a reference, not runtime imagery or proof of equivalent fidelity. Toronto retains its pixel art, Press Start 2P, Quicksand, and existing palette.",
     "keyCharacteristics": [
       "Shaped hull, modeled deck seams, separate upholstered seats, and an exposed fan and engine.",
       "Proportioned seated couple, landmark-aligned painted faces and glossy almond eye surfaces, dark curls, blonde waves, and Nina’s pointing pose.",
-      "Five district compositions, changing channel widths and water colors, marina and mangrove branches, 67 physical moorings, and active crossing traffic.",
+      "Five district compositions, changing channel widths and water colors, marina and mangrove branches, 167 physical moorings, and active crossing traffic.",
+      "Six Blender-authored waterfront templates, close bank planting, second-row homes, and inexpensive forest and skyline layers extending beyond the foreground.",
       "Cream and navy instruments, yellow actions, aqua Cafecito feedback, and visible cyan water shots across keyboard and touch controls.",
       "Close couple framing at entry and finish, with bridge and Fisheries visible on desktop.",
       "Safe-area-aware thumb controls, a clear portrait chase view, and native entry/pause settings.",
@@ -500,6 +501,7 @@
       "Do preserve the couple, readable hazards, curved course, and desktop arrival landmarks.",
       "Do extend the built shaped geometry and material detail when adding Florida scenery.",
       "Do preserve district-specific silhouettes, open racing lanes, shared hull transforms, and the marina-to-mangrove-to-cove contrast instead of repeating villas along every bank.",
+      "Do retain close shoreline density, second-row homes, overlapping forest, and a cheap continuous horizon when adding or optimizing scenery.",
       "Do preserve the approved facial atlas and correct its mapping and surrounding geometry when proportions distort the likeness; retain dark curls, blonde waves, selected outfits, and readable pointing pose.",
       "Do keep the user-approved FLORIDA eyebrow and original concept reference.",
       "Do pair color-coded states with text or recognizable geometry.",

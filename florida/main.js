@@ -7,6 +7,7 @@ import {floater,gator,pickup,ramp,boatWake,C} from './art.js';
 import {prepareMaterials,raceBoat,waterTaxi,superyacht} from './detail-art.js';
 import {loadArtMaterials} from './premium-art.js';
 import {loadHeroArt,heroAirboat} from './hero-art.js';
+import {loadWaterfrontArt} from './waterfront-art.js';
 import {makeWorld,makeWater,makeSky,SUN} from './world.js';
 import {makeEffects,makeWaterCannon} from './effects.js';
 import {createRace,stepRace,pilotInput,fireWater,WATER_SHOT,RIVAL_SOAK,objectX,pointAt,frameAt,angleDelta,sector,COURSE_LENGTH,MEDAL_TIMES,formatTime,loadBest,saveBest,ISLANDS} from './core.js';
@@ -165,8 +166,8 @@ function frame(now){
  perfTime+=realDt;perfFrames++;if(perfTime>.5){if(!$('performance').hidden)$('performance').textContent=`${Math.round(perfFrames/perfTime)} fps · ${renderer.info.render.calls} draws · ${Math.round(renderer.info.render.triangles/1000)}k triangles\n${innerWidth}×${innerHeight} · ${graphicsMode} · DPR ${renderer.getPixelRatio()} · excludes first 5 race seconds\n${frameProfile.summary()}\nWater shots ${race.shots.length} · fired ${race.nextShotId} · soaked ${race.soaked}\nMulti-draw ${renderer.extensions.has('WEBGL_multi_draw')}`;perfTime=0;perfFrames=0}
 }
 async function boot(){
- await document.fonts.ready;await prepareMaterials();await Promise.all([loadArtMaterials(),loadHeroArt()]);renderer=new T.WebGLRenderer({canvas:$('world'),antialias:true,powerPreference:'high-performance'});applyGraphics();renderer.outputColorSpace=T.SRGBColorSpace;renderer.toneMapping=T.ACESFilmicToneMapping;renderer.toneMappingExposure=1.0;renderer.shadowMap.enabled=true;renderer.shadowMap.autoUpdate=false;renderer.shadowMap.type=T.PCFShadowMap;renderer.info.autoReset=false;
- scene=new T.Scene();scene.fog=new T.Fog(0xb6d5dc,520,1700);camera=new T.PerspectiveCamera(63,innerWidth/innerHeight,.15,6000);resize();scene.add(new T.HemisphereLight(0xd8edfa,0x647653,.55));
+ await document.fonts.ready;await prepareMaterials();await Promise.all([loadArtMaterials(),loadHeroArt(),loadWaterfrontArt()]);renderer=new T.WebGLRenderer({canvas:$('world'),antialias:true,powerPreference:'high-performance'});applyGraphics();renderer.outputColorSpace=T.SRGBColorSpace;renderer.toneMapping=T.ACESFilmicToneMapping;renderer.toneMappingExposure=1.0;renderer.shadowMap.enabled=true;renderer.shadowMap.autoUpdate=false;renderer.shadowMap.type=T.PCFShadowMap;renderer.info.autoReset=false;
+ scene=new T.Scene();scene.fog=new T.Fog(0xb6d5dc,460,1850);camera=new T.PerspectiveCamera(63,innerWidth/innerHeight,.15,6000);resize();scene.add(new T.HemisphereLight(0xd8edfa,0x647653,.55));
  sunshine=new T.DirectionalLight(0xfff0d3,4.3);sunshine.castShadow=true;sunshine.shadow.mapSize.set(2048,2048);Object.assign(sunshine.shadow.camera,{left:-100,right:100,top:100,bottom:-100,near:1,far:280});sunshine.shadow.normalBias=.045;sunshine.shadow.bias=-.00008;sunshine.shadow.radius=2;scene.add(sunshine,sunshine.target);
  portraitFill=new T.PointLight(0xffe3c8,90,24,2);portraitFill.visible=false;scene.add(portraitFill);
  makeSky(scene,renderer);water=makeWater(scene);scenery=makeWorld(scene,{multiDraw:renderer.extensions.has('WEBGL_multi_draw')});boat=heroAirboat();scene.add(boat);boat.userData.waterCannon=makeWaterCannon(boat);effects=makeEffects(scene);

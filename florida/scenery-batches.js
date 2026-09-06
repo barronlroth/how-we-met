@@ -2,16 +2,17 @@ import * as T from 'three';
 
 // Keep the existing chunk renderer on browsers without native multi-draw.
 // Pooling instance buffers there needs separate browser benchmarks before adoption.
-function chunkScenery(chunks) {
+function chunkScenery(chunks, {viewDistance, aoDistance, shadows}) {
   const root = new T.Group(); root.add(...chunks);
+  if (!shadows) root.traverse(mesh => { if (mesh.isMesh) mesh.castShadow = mesh.receiveShadow = false; });
   let distance = 0, ao = false;
   function visibility() {
-    for (const chunk of chunks) chunk.visible = Math.abs(chunk.userData.s - distance) < (ao ? 95 : 670);
+    for (const chunk of chunks) chunk.visible = Math.abs(chunk.userData.s - distance) < (ao ? aoDistance : viewDistance);
   }
   return { root, update(s) { distance = s; visibility(); }, setAO(enabled) { ao = enabled; visibility(); } };
 }
 
-function multiDrawScenery(chunks) {
+function multiDrawScenery(chunks, {viewDistance, aoDistance, shadows}) {
   const root = new T.Group(), byMaterial = new Map(), matrix = new T.Matrix4();
   for (const chunk of chunks) for (const mesh of chunk.children) {
     let entry = byMaterial.get(mesh.material);
@@ -23,7 +24,7 @@ function multiDrawScenery(chunks) {
   for (const [material, entry] of byMaterial) {
     const vertices = [...entry.geometries.keys()].reduce((sum, geometry) => sum + (geometry.index?.count ?? geometry.attributes.position.count), 0);
     const batch = new T.BatchedMesh(entry.capacity, vertices, 0, material);
-    batch.castShadow = batch.receiveShadow = true;
+    batch.castShadow = batch.receiveShadow = shadows;
     batch.frustumCulled = false; // Per-object culling runs separately for every camera/pass.
     batch.sortObjects = material.transparent;
     for (const geometry of entry.geometries.keys()) {
@@ -45,7 +46,7 @@ function multiDrawScenery(chunks) {
   let distance = 0, ao = false;
   function visibility() {
     for (const region of regions.values()) {
-      const visible = Math.abs(region.s - distance) < (ao ? 95 : 670);
+      const visible = Math.abs(region.s - distance) < (ao ? aoDistance : viewDistance);
       if (visible === region.visible) continue;
       region.visible = visible;
       for (const {batch, id} of region.instances) batch.setVisibleAt(id, visible);
@@ -54,6 +55,7 @@ function multiDrawScenery(chunks) {
   return { root, update(s) { distance = s; visibility(); }, setAO(enabled) { ao = enabled; visibility(); } };
 }
 
-export function batchScenery(chunks, {multiDraw = false} = {}) {
-  return multiDraw ? multiDrawScenery(chunks) : chunkScenery(chunks);
+export function batchScenery(chunks, {multiDraw = false, viewDistance = 670, aoDistance = 95, shadows = true} = {}) {
+  const options = {viewDistance, aoDistance, shadows};
+  return multiDraw ? multiDrawScenery(chunks, options) : chunkScenery(chunks, options);
 }

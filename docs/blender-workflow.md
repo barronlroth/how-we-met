@@ -57,3 +57,16 @@ Sources: [Blender macOS command line](https://docs.blender.org/manual/en/5.0/adv
 `tests/hero-art.test.mjs` loads the exported GLB with Three.js and verifies the animation nodes, axis convention, collision/camera envelope, and budgets of 42 meshes, 65,000 triangles, 25 exported materials, and 1.8 MB. The cannon and water effects are code-authored in `florida/effects.js`, outside the GLB. Runtime performance still uses the full-route browser benchmark. Current output counts and validation are recorded in [shape and shooting validation](florida-shape-shooting-validation.md); the earlier v4 asset remains a comparison/rollback reference.
 
 The builder produces `characters-front.png` and `characters-three-quarter.png` by isolating the actual modeled couple after export, in addition to `couple-close.png`, `hero-front.png`, and `hero-rear.png`. Use these to inspect proportions and UV placement; review the GLB in the game before accepting the change.
+
+
+## Authored waterfront kit
+
+`npm run blender:waterfront` runs `scripts/build-florida-waterfront.py` through the same isolated headless wrapper. It exports `florida/assets/models/waterfront-v1.glb`, saves editable source to ignored `artifacts/florida-waterfront-v1/waterfront-v1.blend`, writes `report.json`, and renders four buildings plus `waterfront-kit.png` using Cycles on CPU. To regenerate only the authoring images while retaining the checked-in export, run:
+
+```sh
+npm run blender:waterfront -- -- --render-only
+```
+
+The six roots are a waterfront residence, marina hotel, skyline tower, waterfront club, inexpensive distant tower, and canopy cluster. The close buildings model balconies, stepped volumes, pools, pergolas, window frames, planters, furniture, and planted decks. These are geometry and twelve shared opaque PBR materials; the kit uses no raster textures. The export totals 1,880,460 bytes and 40,236 triangles. `waterfront-art.js` loads it once, and scene copies share geometry and materials before the existing scenery batching. Low-cost horizon templates use 288 triangles for `SkylineFar` and 548 for `CanopyCluster`.
+
+`tests/waterfront-art.test.mjs` imports the actual GLB with Three.js and checks named roots, metre-scale dimensions, Y-up placement, finite positions/normals, shared clone resources, opaque materials, no embedded images, and the export budget. These checks complement the actual browser comparison in [density correction validation](florida-density-rescue-validation.md). The kit raises scene density and has a measurable cost relative to the sparse district build; Blender itself does not run in the browser. This export leaves the accepted hero GLB unchanged.

@@ -19,8 +19,12 @@ test('five districts cover the whole course with precise boundaries and visible 
  assert.deepEqual(CHECKPOINTS.map(s=>Math.round(s/COURSE_LENGTH*100)),[20,43,63,82]);
 });
 
-test('district banks transition smoothly and the cove opens substantially beyond the river',()=>{
- assert.ok(halfWidth(COURSE_LENGTH*.70)>halfWidth(COURSE_LENGTH*.13)*3);
+test('district banks stay intimate outside the yacht basins while the cove still opens beyond the river',()=>{
+ assert.ok(halfWidth(COURSE_LENGTH*.70)>halfWidth(COURSE_LENGTH*.13)*2);
+ for(const f of [.02,.08,.13,.19])assert.ok(halfWidth(COURSE_LENGTH*f)<=30);
+ for(const f of [.65,.70,.75,.79])assert.ok(halfWidth(COURSE_LENGTH*f)>=50&&halfWidth(COURSE_LENGTH*f)<=58);
+ for(const f of [.84,.90,.96])assert.ok(halfWidth(COURSE_LENGTH*f)>=35&&halfWidth(COURSE_LENGTH*f)<=42);
+ assert.ok(halfWidth(COURSE_LENGTH*.282)>=58&&halfWidth(COURSE_LENGTH*.282)<=64);
  for(let s=0;s<COURSE_LENGTH;s+=1){assert.ok(halfWidth(s)>=25);assert.ok(Math.abs(halfWidth(s+1)-halfWidth(s))<.27)}
 });
 
@@ -37,7 +41,8 @@ test('both mangrove branches have a continuous boat-width passage and reward the
 
 test('marinas use real shared hull placement, mangroves have no moorings, and the middle remains navigable',()=>{
  const counts=Object.fromEntries(DISTRICTS.map(d=>[d.id,MOORINGS.filter(o=>districtAt(o.s)===d).length]));
- assert.ok(counts.marina>30);assert.ok(counts.marina>counts.downtown*5);assert.equal(counts.mangrove,0);assert.ok(counts.cove>=12);
+ assert.ok(MOORINGS.length>=150&&MOORINGS.length<=180);
+ assert.ok(counts.downtown>=40);assert.ok(counts.marina>30);assert.equal(counts.mangrove,0);assert.ok(counts.cove>=40);assert.ok(counts.bridge>=30);
  assert.equal(new Set(MOORINGS.map(o=>o.id)).size,MOORINGS.length);
  assert.deepEqual(new Set(MOORINGS.map(o=>o.model)),new Set(['sport','super','sail']));
  for(const o of MOORINGS){assert.ok(o.radius>0&&o.halfLength>o.radius&&Number.isFinite(o.yaw));assert.ok(Math.abs(o.x)-o.radius>10)}
@@ -74,7 +79,7 @@ test('player contact uses the transverse yacht bow as well as its centre and gap
 });
 
 test('a berth beside the bank resolves a collision toward open water instead of trapping the player',()=>{
- const boat=MOORINGS.find(o=>o.id==='river-visitor-2'),r=playing(boat.s-boat.halfLength-1);
+ const boat=MOORINGS.find(o=>districtAt(o.s).id==='downtown'&&o.s>COURSE_LENGTH*.13&&o.x<0),r=playing(boat.s-boat.halfLength-1);
  r.x=boat.x-3;r.speed=30;r.objects=[{...boat,type:'mooring',scared:0}];advance(r,4);
  assert.ok(r.s>boat.s+boat.halfLength+10);assert.ok(r.hits>0);assert.ok(Math.abs(r.x)<=halfWidth(r.s)-3.29);
 });

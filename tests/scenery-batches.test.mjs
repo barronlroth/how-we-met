@@ -45,3 +45,16 @@ test('multi-draw shares geometry, preserves transforms and changes only region v
   assert.deepEqual([0, 1, 2].map(id => mesh.getVisibleAt(id)), [false, false, true]);
   assert.ok(mesh.perObjectFrustumCulled && mesh.castShadow);
 });
+
+test('distant scenery spans bends beyond detail culling and skips shadows and AO in both backends', () => {
+  for (const multiDraw of [false, true]) {
+    const chunks = [chunk(0, [[0, 0, 0]]), chunk(1100, [[2, 0, 0]]), chunk(1900, [[4, 0, 0]])];
+    const batch = batchScenery(chunks, {multiDraw, viewDistance: 1600, aoDistance: 0, shadows: false});
+    const visible = () => multiDraw ? [0, 1, 2].map(i => batch.root.children[0].getVisibleAt(i)) : chunks.map(c => c.visible);
+    batch.update(0); assert.deepEqual(visible(), [true, true, false]);
+    batch.setAO(true); assert.deepEqual(visible(), [false, false, false]);
+    batch.setAO(false); assert.deepEqual(visible(), [true, true, false]);
+    batch.root.traverse(mesh => { if (mesh.isMesh) assert.equal(mesh.castShadow, false); });
+    batch.update(1700); assert.deepEqual(visible(), [false, true, true]);
+  }
+});

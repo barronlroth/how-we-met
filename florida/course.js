@@ -31,9 +31,9 @@ export function frameAt(s){
 }
 export function pointAt(s,x=0){const p=frameAt(s);return{...p,x:p.x+p.nx*x,z:p.z+p.nz*x}}
 export const curvature=s=>angleDelta(frameAt(s+7).heading,frameAt(s-7).heading)/14;
-// Gentle bank transitions make the open cove a reveal, while the river and
-// shaded cut feel close. Widths include a viable racing lane on either island side.
-const widths=[[0,29],[.13,25],[.205,37],[.27,66],[.365,68],[.44,43],[.485,35],[.55,50],[.59,42],[.645,69],[.70,85],[.76,82],[.83,49],[1,54]];
+// Keep the waterfront close to the racing boat. Extra room belongs to the
+// departing yacht's basin and island splits, rather than the entire district.
+const widths=[[0,27],[.13,25],[.205,30],[.245,43],[.282,62],[.313,44],[.338,57],[.365,59],[.40,42],[.44,40],[.485,35],[.55,50],[.59,42],[.645,53],[.70,58],[.76,55],[.80,50],[.835,40],[1,39]];
 export function halfWidth(s){
  const u=clamp(s/total,0,1);for(let i=1;i<widths.length;i++)if(u<=widths[i][0]){const a=widths[i-1],b=widths[i],t=(u-a[0])/(b[0]-a[0]),ease=t*t*(3-2*t);return a[1]+(b[1]-a[1])*ease}return widths.at(-1)[1];
 }
@@ -42,15 +42,17 @@ export function racingLine(s,side=-1){const island=islandAt(s);return island?isl
 export const sector=s=>districtAt(s).name;
 export const routeBounds={minX:Math.min(...TRACK.map(p=>p.x))-80,maxX:Math.max(...TRACK.map(p=>p.x))+80,minZ:Math.min(...TRACK.map(p=>p.z)),maxZ:Math.max(...TRACK.map(p=>p.z))};
 
-// Only the marina has dense slips. Downtown has occasional visiting boats;
-// the mangrove bank is empty, and the cove has small raft-ups well off the line.
+// Busy banks remain close throughout the city, marina, cove and final sprint.
+// The mangrove bank is empty; cove raft-ups add a second row away from the line.
 // These exact hull transforms are also used by the renderer and collision code.
 const moorings=[];
 function moor(id,s,side,model,scale=1,inset=7,yaw=0){
  const radius=({sport:3.1,super:3.75,sail:2.9}[model])*scale,halfLength=({sport:12.2,super:15.4,sail:12}[model])*scale;
  moorings.push(Object.freeze({id,s,x:side*(halfWidth(s)-inset),model,scale,radius,halfLength,yaw}));
 }
-for(const [i,f]of [.025,.075,.14,.19].entries())moor(`river-visitor-${i}`,f*total,i%2?1:-1,'sport',.7,6,i%2?Math.PI:0);
+for(let s=total*.012,i=0;s<total*.205;s+=35,i++)for(const side of [-1,1]){
+ moor(`river-visitor-${i}-${side}`,s,side,i%6===4?'sail':'sport',.65+(i%4)*.065,5.5,side===1?Math.PI:0);
+}
 for(let s=total*.225,i=0;s<total*.425;s+=41,i++)for(const side of [-1,1]){
  // Leave the departing vessel's berth and passage visibly open.
  if(side===1&&Math.abs(s-total*.282)<43)continue;
@@ -60,8 +62,11 @@ for(let s=total*.225,i=0;s<total*.425;s+=41,i++)for(const side of [-1,1]){
 for(const [cluster,f]of [.672,.727,.779].entries())for(const side of [-1,1])for(let j=0;j<3;j++){
  moor(`cove-raft-${cluster}-${side}-${j}`,f*total+j*27,side,j===1?'sail':'sport',.76+(j%2)*.1,17+(j%2)*11,side===1?Math.PI:0);
 }
-for(const [i,f]of [.835,.875,.92,.965].entries())for(const side of [-1,1]){
- if(side===1&&f>.95)continue;
- moor(`bridge-visitor-${i}-${side}`,f*total,side,i===1?'super':'sport',i===1?1:.8,8,side===1?Math.PI:0);
+for(let s=total*.642,i=0;s<total*.794;s+=47,i++)for(const side of [-1,1]){
+ moor(`cove-berth-${i}-${side}`,s,side,i%4===0?'super':'sport',i%4===0?.9:.78+(i%3)*.07,6,side===1?Math.PI:0);
+}
+for(let s=total*.812,i=0;s<total*.985;s+=36,i++)for(const side of [-1,1]){
+ if(side===1&&s>total*.955)continue;
+ moor(`bridge-visitor-${i}-${side}`,s,side,i%5===2?'super':i%5===4?'sail':'sport',i%5===2?.9:.76+(i%3)*.06,6,side===1?Math.PI:0);
 }
 export const MOORINGS=Object.freeze(moorings.sort((a,b)=>a.s-b.s));

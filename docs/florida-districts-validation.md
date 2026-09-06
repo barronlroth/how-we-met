@@ -1,5 +1,7 @@
 # Florida districts and Nina banter — September 5, 2026
 
+> Historical record of the initial five-district release (`4cb0724`). The subsequent [density correction](florida-density-rescue-validation.md) supersedes its scenery counts, asset provenance, and current performance results.
+
 The user requested all five proposed environments and fictional Nina quotes about Miles, Brauser, Josh, Clark, and Dewey. This release changes the course composition, traffic, and commentary while preserving the approved couple, airboat, keyboard/touch controls, and water blaster.
 
 ## Built environments
