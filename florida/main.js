@@ -2,12 +2,16 @@ import * as T from 'three';
 import {EffectComposer} from 'three/addons/postprocessing/EffectComposer.js';
 import {RenderPass} from 'three/addons/postprocessing/RenderPass.js';
 import {SSAOPass} from 'three/addons/postprocessing/SSAOPass.js';
-import {OutputPass} from 'three/addons/postprocessing/OutputPass.js';
-import {floater,gator,pickup,ramp,boatWake,C} from './art.js';
+import {makeCombinedOutputPass} from './postprocessing.js';
+import {floater,flamingo,gator,pickup,ramp,boatWake,C} from './art.js';
 import {prepareMaterials,raceBoat,waterTaxi,superyacht} from './detail-art.js';
 import {loadArtMaterials} from './premium-art.js';
 import {loadHeroArt,heroAirboat} from './hero-art.js';
 import {loadWaterfrontArt} from './waterfront-art.js';
+import {loadVegetationArt} from './vegetation-art.js';
+import {loadLandmarkArt} from './landmark-art.js';
+import {loadSkyArt} from './sky.js';
+import {loadWaterArt} from './water.js';
 import {makeWorld,makeWater,makeSky,SUN} from './world.js';
 import {makeEffects,makeWaterCannon} from './effects.js';
 import {makeTargetHealth} from './target-health.js';
@@ -20,7 +24,7 @@ import {graphicsProfile} from './graphics.js';
 import {createNinaBanter,CHECKPOINT_LINES} from './nina-lines.js';
 const $=id=>document.getElementById(id),reducedMotion=matchMedia('(prefers-reduced-motion: reduce)').matches;
 let storage;try{storage=localStorage}catch{storage={getItem:()=>null,setItem:()=>{}}}
-let race=createRace(),best=loadBest(storage),renderer,composer,scene,camera,boat,scenery,water,effects,targetHealth,sunshine,portraitFill,ambientOcclusion;
+let race=createRace(),best=loadBest(storage),renderer,composer,scene,camera,boat,scenery,water,effects,targetHealth,sunshine,portraitFill,ambientOcclusion,openingFlamingo;
 let countIn=0,pausedFrom='racing',lastTime=0,time=0,captionUntil=0,deflate=0,shake=0,cameraSnap=true,lastFocus=null,currentSpf=false;
 let captionPriority=0,banterRun=0,banter=createNinaBanter();
 const audio=new GameAudio(),pressed=new Set(),entities=new Map(),rivalModels=[],hullMaterials=[];
@@ -124,7 +128,7 @@ function updateHud(){
  if(time>captionUntil)$('nina').style.opacity='0';
 }
 function renderEntities(s){
- for(const o of race.objects){const mesh=entities.get(o.id);if(!mesh)continue;mesh.visible=o.s>s-80&&o.s<s+650&&!o.consumed&&!o.destroyed;if(!mesh.visible)continue;const p=pointAt(o.s,objectX(o,race.elapsed));mesh.position.set(p.x,0,p.z);mesh.rotation.set(0,-p.heading,0);
+ for(const o of race.objects){const mesh=entities.get(o.id);if(!mesh)continue;mesh.visible=o.s>s-80&&o.s<s+650&&!o.consumed&&!o.destroyed&&(!(race.status==='ready'||race.status==='finished')||o.s>s+65);if(!mesh.visible)continue;const p=pointAt(o.s,objectX(o,race.elapsed));mesh.position.set(p.x,0,p.z);mesh.rotation.set(0,-p.heading,0);
   if(o.type==='floater'){mesh.position.y=.08+Math.sin(time*1.8+o.drift)*.11;mesh.rotation.z=Math.sin(time*1.6+o.drift)*.065;mesh.rotation.y+=.25*Math.sin(time*.3+o.drift);if(o.scared){const hitAge=4-o.scared;mesh.rotation.y+=Math.sin(hitAge*3)*Math.min(1,o.scared)*.8;mesh.rotation.z+=Math.sin(hitAge*9)*Math.exp(-hitAge*2)*.3;mesh.position.y+=Math.sin(Math.min(1,hitAge)*Math.PI)*.45}}
   else if(o.type==='gator'){mesh.position.y=o.scared?-.1+(reducedMotion?0:Math.sin((4-o.scared)*16)*.08):.035;mesh.rotation.y+=Math.PI/2+Math.sin(time*.7+o.drift)*.22}
   else if(o.type==='taxi'){mesh.rotation.y+=Math.cos(race.elapsed*.16+o.drift)>0?-Math.PI/2:Math.PI/2;mesh.position.y=Math.sin(time*1.2)*.04}
@@ -145,39 +149,43 @@ function frame(now){
   let left=dt;while(left>0){const step=Math.min(left,1/120);stepRace(race,race.demo?pilotInput(race):manual,step);left-=step}events();
  }
  const aside=banter.next({status:race.status,elapsed:race.elapsed,captionBusy:captionPriority>=1&&time<captionUntil+1.5});if(aside)setCaption(aside.text,aside.duration,1);
- updateHud();const ready=race.status==='ready',finished=race.status==='finished',staged=ready||finished,s=staged?COURSE_LENGTH-200:race.s,x=staged?4:race.x,p=pointAt(s,x),heading=staged?p.heading:race.heading;
+ updateHud();const ready=race.status==='ready',finished=race.status==='finished',staged=ready||finished,s=staged?COURSE_LENGTH-165:race.s,x=staged?4:race.x,p=pointAt(s,x),heading=staged?p.heading:race.heading;
+ const floatingPoint=pointAt(s+65,7);openingFlamingo.visible=staged;openingFlamingo.position.set(floatingPoint.x,.35+(reducedMotion?0:Math.sin(time*1.2)*.07),floatingPoint.z);openingFlamingo.rotation.y=-floatingPoint.heading-.55;
  const bob=reducedMotion?0:Math.sin(time*3)*.025+Math.sin(time*7)*race.speed*.00065;
- boat.position.set(p.x,(staged?0:race.y)+bob,p.z);boat.rotation.y=-heading+(staged?Math.PI+.18:0);boat.rotation.z=reducedMotion||staged?0:T.MathUtils.lerp(boat.rotation.z,-race.turn*.19,1-Math.exp(-dt*8));boat.rotation.x=reducedMotion||staged?0:T.MathUtils.lerp(boat.rotation.x,race.y>0?-race.vy*.018:-Math.min(.065,race.speed*.001)+Math.sin(time*8)*.004,1-Math.exp(-dt*8));
+ boat.scale.setScalar(staged&&innerWidth>=1100?1.18:1);boat.position.set(p.x,(staged?0:race.y)+bob,p.z);boat.rotation.y=-heading+(staged?Math.PI+.18:0);boat.rotation.z=reducedMotion||staged?0:T.MathUtils.lerp(boat.rotation.z,-race.turn*.19,1-Math.exp(-dt*8));boat.rotation.x=reducedMotion||staged?0:T.MathUtils.lerp(boat.rotation.x,race.y>0?-race.vy*.018:-Math.min(.065,race.speed*.001)+Math.sin(time*8)*.004,1-Math.exp(-dt*8));
  boat.userData.waterCannon.update(staged||reducedMotion?0:race.fireFlash);
  boat.userData.fan.rotation.z+=dt*(staged?5:14+race.speed*1.9);boat.userData.nina.rotation.z=reducedMotion?0:-race.turn*.13+Math.sin(time*1.7)*.012;boat.userData.nina.userData.arm.rotation.x=race.y>1?-.65:Math.sin(time*1.5)*.045;
  deflate=Math.max(0,deflate-dt*.9);const f=boat.userData.floatie;f.visible=!staged&&(race.flamingo||deflate>0);f.scale.set(1,race.flamingo?1:deflate*.9+.04,1);f.position.y=.6;
  const spf=race.sunscreen>0;if(spf!==currentSpf){currentSpf=spf;for(const e of hullMaterials){e.material.roughness=spf?.13:e.roughness;e.material.metalness=spf?.22:e.metalness;e.material.emissive?.setHex(spf?0x14281e:0)}}
  if(cameraSnap)smoothedHeading=heading;else smoothedHeading+=angleDelta(heading,smoothedHeading)*(1-Math.exp(-dt*5.4));
  const compact=innerWidth<1100,phone=innerWidth<600,portrait=controlsMode==='touch'&&innerHeight>innerWidth;
- const fx=Math.sin(smoothedHeading),fz=-Math.cos(smoothedHeading),nx=Math.cos(smoothedHeading),nz=Math.sin(smoothedHeading),back=staged?(phone?14:compact?12.5:8.5):portrait?(race.boosting?11.2:12.4):race.boosting?8.2:9.4,height=staged?(phone?11:compact?9:7.2):portrait?(race.boosting?7.8:8.6):race.boosting?5.4:6.4,side=staged?(phone?3:compact?.6:3.8):portrait?.6:3.8;
- desiredCamera.set(p.x-fx*back+nx*side,height+(staged?0:race.y*.58),p.z-fz*back+nz*side);lookAt.set(p.x+fx*(staged?(phone?7:12):portrait?11:16)+nx*(staged?(phone?-.8:compact?3.5:0):portrait?0:1.6),(staged?(phone?-2:compact?-1:-1.6):.4)+race.y*.35,p.z+fz*(staged?(phone?7:12):portrait?11:16)+nz*(staged?(phone?-.8:compact?3.5:0):portrait?0:1.6));
+ const fx=Math.sin(smoothedHeading),fz=-Math.cos(smoothedHeading),nx=Math.cos(smoothedHeading),nz=Math.sin(smoothedHeading),back=staged?(phone?14:compact?11.5:9.0):portrait?(race.boosting?11.2:12.4):race.boosting?8.2:9.4,height=staged?(phone?11:compact?8.5:6.0):portrait?(race.boosting?7.8:8.6):race.boosting?5.4:6.4,side=staged?(phone?3:compact?.6:3.8):portrait?.6:3.8;
+ desiredCamera.set(p.x-fx*back+nx*side,height+(staged?0:race.y*.58),p.z-fz*back+nz*side);lookAt.set(p.x+fx*(staged?(phone?7:12):portrait?11:16)+nx*(staged?(phone?-.8:compact?3.5:0):portrait?0:1.6),(staged?(phone?-2:compact?-1:-.8):.4)+race.y*.35,p.z+fz*(staged?(phone?7:12):portrait?11:16)+nz*(staged?(phone?-.8:compact?3.5:0):portrait?0:1.6));
  portraitFill.visible=staged;portraitFill.position.copy(desiredCamera);
- if(staged){camera.setViewOffset(innerWidth,innerHeight,-innerWidth*(phone?.03:compact?.18:finished?.15:.14),innerHeight*(phone?(controlsMode==='touch'&&innerHeight<700?.10:.16):0),innerWidth,innerHeight)}else if(portrait){camera.setViewOffset(innerWidth,innerHeight,0,innerHeight*.10,innerWidth,innerHeight)}else camera.clearViewOffset();
+ if(staged){camera.setViewOffset(innerWidth,innerHeight,-innerWidth*(phone?.03:compact?.18:finished?.20:.20),innerHeight*(phone?(controlsMode==='touch'&&innerHeight<700?.10:.16):0),innerWidth,innerHeight)}else if(portrait){camera.setViewOffset(innerWidth,innerHeight,0,innerHeight*.10,innerWidth,innerHeight)}else camera.clearViewOffset();
  const follow=1-Math.exp(-dt*8);if(cameraSnap){camera.position.copy(desiredCamera);smoothLook.copy(lookAt);cameraSnap=false}else{camera.position.lerp(desiredCamera,follow);smoothLook.lerp(lookAt,follow)}
  if(!reducedMotion&&race.status==='racing'){const vibrate=race.boosting?.022:.009;camera.position.y+=Math.sin(time*52)*vibrate;if(shake>0){camera.position.x+=Math.sin(time*61)*shake;camera.position.y+=Math.cos(time*43)*shake;shake=Math.max(0,shake-dt)}}camera.lookAt(smoothLook);
  const fov=staged?63:race.boosting&&!reducedMotion?84:68;camera.fov=T.MathUtils.lerp(camera.fov,fov,1-Math.exp(-dt*5));camera.updateProjectionMatrix();
- scenery.update(s,camera);water.update(s,time);renderEntities(s);effects.update(race,dt,time);targetHealth.update(race,camera);
+ scenery.update(s,camera,staged);water.update(s,time);renderEntities(s);effects.update(race,dt,time);targetHealth.update(race,camera);
  sunshine.position.set(p.x+SUN.x*130,130*SUN.y,p.z+SUN.z*130);sunshine.target.position.set(p.x,0,p.z);sunshine.target.updateMatrixWorld();
  audio.update(race.speed,race.status==='racing',race.boosting);renderer.info.reset();renderer.shadowMap.needsUpdate=true;const renderStart=performance.now();composer.render();
  if(race.status==='racing'&&race.elapsed>5&&!document.hidden&&!$('performance').hidden)frameProfile.sample(sector(race.s),realDt*1000,performance.now()-renderStart,renderer.info.render.calls,renderer.info.render.triangles);
  perfTime+=realDt;perfFrames++;if(perfTime>.5){if(!$('performance').hidden)$('performance').textContent=`${Math.round(perfFrames/perfTime)} fps · ${renderer.info.render.calls} draws · ${Math.round(renderer.info.render.triangles/1000)}k triangles\n${innerWidth}×${innerHeight} · ${graphicsMode} · DPR ${renderer.getPixelRatio()} · excludes first 5 race seconds\n${frameProfile.summary()}\nWater shots ${race.shots.length} · fired ${race.nextShotId} · hits ${race.soaked} · destroyed ${race.destroyed}\nMulti-draw ${renderer.extensions.has('WEBGL_multi_draw')}`;perfTime=0;perfFrames=0}
 }
+// Geometry is antialiased in the composer target; the canvas only receives
+// a fullscreen resolved image, so a second canvas MSAA buffer is redundant.
 async function boot(){
- await document.fonts.ready;await prepareMaterials();await Promise.all([loadArtMaterials(),loadHeroArt(),loadWaterfrontArt()]);renderer=new T.WebGLRenderer({canvas:$('world'),antialias:true,powerPreference:'high-performance'});applyGraphics();renderer.outputColorSpace=T.SRGBColorSpace;renderer.toneMapping=T.ACESFilmicToneMapping;renderer.toneMappingExposure=1.0;renderer.shadowMap.enabled=true;renderer.shadowMap.autoUpdate=false;renderer.shadowMap.type=T.PCFShadowMap;renderer.info.autoReset=false;
- scene=new T.Scene();scene.fog=new T.Fog(0xb6d5dc,460,1850);camera=new T.PerspectiveCamera(63,innerWidth/innerHeight,.15,6000);resize();scene.add(new T.HemisphereLight(0xd8edfa,0x647653,.55));
- sunshine=new T.DirectionalLight(0xfff0d3,4.3);sunshine.castShadow=true;sunshine.shadow.mapSize.set(2048,2048);Object.assign(sunshine.shadow.camera,{left:-100,right:100,top:100,bottom:-100,near:1,far:280});sunshine.shadow.normalBias=.045;sunshine.shadow.bias=-.00008;sunshine.shadow.radius=2;scene.add(sunshine,sunshine.target);
- portraitFill=new T.PointLight(0xffe3c8,90,24,2);portraitFill.visible=false;scene.add(portraitFill);
+ await document.fonts.ready;await prepareMaterials();await Promise.all([loadArtMaterials(),loadHeroArt(),loadWaterfrontArt(),loadVegetationArt(),loadLandmarkArt(),loadSkyArt(),loadWaterArt()]);renderer=new T.WebGLRenderer({canvas:$('world'),antialias:false,powerPreference:'high-performance'});applyGraphics();renderer.outputColorSpace=T.SRGBColorSpace;renderer.toneMapping=T.ACESFilmicToneMapping;renderer.toneMappingExposure=1.0;renderer.shadowMap.enabled=true;renderer.shadowMap.autoUpdate=false;renderer.shadowMap.type=T.PCFShadowMap;renderer.info.autoReset=false;
+ scene=new T.Scene();scene.fog=new T.Fog(0xb9d0dc,650,2350);camera=new T.PerspectiveCamera(63,innerWidth/innerHeight,.15,6000);resize();scene.add(new T.HemisphereLight(0xd7e8ff,0x555844,.65));
+ sunshine=new T.DirectionalLight(0xffdbad,3.8);sunshine.castShadow=true;sunshine.shadow.mapSize.set(2048,2048);Object.assign(sunshine.shadow.camera,{left:-100,right:100,top:100,bottom:-100,near:1,far:280});sunshine.shadow.normalBias=.045;sunshine.shadow.bias=-.00008;sunshine.shadow.radius=2;scene.add(sunshine,sunshine.target);
+ portraitFill=new T.PointLight(0xffe3c8,55,24,2);portraitFill.visible=false;scene.add(portraitFill);
+ openingFlamingo=flamingo();openingFlamingo.scale.setScalar(2.4);scene.add(openingFlamingo);
  makeSky(scene,renderer);water=makeWater(scene);scenery=makeWorld(scene,{multiDraw:renderer.extensions.has('WEBGL_multi_draw')});boat=heroAirboat();scene.add(boat);boat.userData.waterCannon=makeWaterCannon(boat);effects=makeEffects(scene,{reducedMotion});targetHealth=makeTargetHealth(scene);
  (boat.userData.hull||boat.children[0]).traverse(o=>{if(o.isMesh){o.material=o.material.clone();hullMaterials.push({material:o.material,roughness:o.material.roughness,metalness:o.material.metalness})}});
  const models={floater:[floater(0),floater(1),floater(2)],gator:gator(),ramp:ramp(),wake:boatWake(),coffee:pickup('coffee'),flamingo:pickup('flamingo'),sunscreen:pickup('sunscreen'),taxi:waterTaxi(),yacht:superyacht(1)};
  for(const [i,o]of race.objects.entries()){const m=(o.type==='floater'?models.floater[i%3]:models[o.type])?.clone(true);if(m){if(o.type==='yacht')m.scale.setScalar(o.scale);scene.add(m);entities.set(o.id,m)}}
  for(const color of [0xf27e54,0x539cb0,0xe1ba49]){const m=raceBoat(color);scene.add(m);rivalModels.push(m)}
- composer=new EffectComposer(renderer);composer.renderTarget1.samples=4;composer.renderTarget2.samples=4;composer.addPass(new RenderPass(scene,camera));const ao=ambientOcclusion=new SSAOPass(scene,camera,innerWidth,innerHeight,12);ao.kernelRadius=2.6;ao.minDistance=.000025;ao.maxDistance=.002;const setAOSize=ao.setSize.bind(ao);ao.setSize=(w,h)=>setAOSize(Math.round(w*.5),Math.round(h*.5));const drawAO=ao.render.bind(ao);ao.render=(...args)=>{scenery.setAO(true);try{drawAO(...args)}finally{scenery.setAO(false)}};composer.addPass(ao);composer.addPass(new OutputPass());applyGraphics();
+ composer=new EffectComposer(renderer);composer.renderTarget1.samples=4;composer.renderTarget2.samples=4;composer.addPass(new RenderPass(scene,camera));const ao=ambientOcclusion=new SSAOPass(scene,camera,innerWidth,innerHeight,12);ao.kernelRadius=2.6;ao.minDistance=.000025;ao.maxDistance=.002;const setAOSize=ao.setSize.bind(ao);ao.setSize=(w,h)=>setAOSize(Math.round(w*.5),Math.round(h*.5));const drawAO=ao.render.bind(ao);ao.render=(...args)=>{scenery.setAO(true);try{drawAO(...args)}finally{scenery.setAO(false)}};composer.addPass(ao);composer.addPass(makeCombinedOutputPass(ao));applyGraphics();
  const gold=formatTime(MEDAL_TIMES.gold).slice(0,-3);$('gold-target').textContent=`GOLD · ${gold}`;$('personal-best').textContent=best===null?`Gold: ${gold}. Find the faster line.`:`Your best: ${formatTime(best)}`;
  $('map-route').setAttribute('d',TRACK.filter((_,i)=>i%12===0).map((p,i)=>{const q=mapPoint(p);return`${i?'L':'M'}${q.x.toFixed(2)} ${q.y.toFixed(2)}`}).join(' '));
  $('map-branches').setAttribute('d',ISLANDS.flatMap(island=>[-1,1].map(side=>Array.from({length:20},(_,i)=>{const a=i/19*Math.PI,p=mapPoint(pointAt(island.s-Math.cos(a)*island.length*.55,island.x+Math.sin(a)*(island.width+12)*side));return`${i?'L':'M'}${p.x} ${p.y}`}).join(' '))).join(' '));

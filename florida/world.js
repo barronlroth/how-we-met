@@ -1,5 +1,8 @@
 import * as T from 'three';
-import {Water} from 'three/addons/objects/Water.js';
+import {makeDreamWater} from './water.js';
+export {makeSky} from './sky.js';
+import {vegetationAsset} from './vegetation-art.js';
+import {landmarkAsset} from './landmark-art.js';
 import {batchScenery} from './scenery-batches.js';
 import {waterfrontAsset} from './waterfront-art.js';
 import {waterfrontVilla,sportYacht,canopyTree} from './premium-art.js';
@@ -7,7 +10,7 @@ import {C,mat,box,ball,pipe,bake,buoy,fisheries,bridge,textSign} from './art.js'
 import {superyacht,lushPalm,shrub,marinaPier,pavilion,parasol} from './detail-art.js';
 import {waterfrontCrowd,promenadeFurniture,riverfrontBlock,riverBridge,sailboat,boatyard,marinaClub,mangrove,boardwalk,pelican,partyBar,partyPontoon,finishTerrace,beachSlipway} from './district-art.js';
 import {pointAt,halfWidth,curvature,districtAt,DISTRICTS,MOORINGS,COURSE_LENGTH,CHECKPOINTS,ISLANDS} from './course.js';
-export const SUN=new T.Vector3(.55,.79,-.33).normalize();
+export const SUN=new T.Vector3(-.62,.72,.31).normalize();
 const place=(g,template,s,x,y=0,rot=0,scale=1)=>{const p=pointAt(s,x),m=template.clone(true);m.position.set(p.x,y,p.z);m.rotation.y=-p.heading+rot;m.scale.multiplyScalar(scale);g.add(m);return m};
 const fronts=new WeakMap();
 function frontage(g,template,s,side,scale=1,setback=.8){
@@ -29,9 +32,11 @@ function terrain(scene){
 }
 export function makeWorld(scene,{multiDraw=false}={}){
  terrain(scene);const chunks=[],distantChunks=[],landmarks=[];
- const palms=[0,1,2].map(lushPalm),trees=[0,1].map(canopyTree),bushes=[0,1,2].map(shrub),homes=[0,1,2,3].map(waterfrontVilla);
+ const palms=['PalmRoyal','PalmCoconut','PalmRoyal'].map(vegetationAsset),trees=['HammockTree','SeaGrapeTree'].map(vegetationAsset),bushes=[0,1,2].map(()=>vegetationAsset('HedgeCluster')),homes=[0,1,2,3].map(waterfrontVilla);
+ for(const palm of palms)palm.scale.setScalar(.82);for(const bush of bushes)bush.scale.setScalar(.68);
  const boats={sport:sportYacht(1),super:superyacht(1),sail:sailboat(0)},pier=marinaPier(17),umbrella=parasol(),walkFurniture=promenadeFurniture(),cafes=[0,1,2].map(riverfrontBlock),yards=[0,1].map(boatyard),club=marinaClub(),roots=[0,1,2].map(mangrove),walk=boardwalk(),birds=[0,1].map(pelican),crowds=[0,1,2].map(waterfrontCrowd),bar=partyBar(),pontoons=[0,1,2].map(partyPontoon),terrace=finishTerrace(),slipway=beachSlipway();
- const residence=waterfrontAsset('WaterfrontResidence'),hotel=waterfrontAsset('MarinaHotel'),skyline=waterfrontAsset('SkylineTower'),restaurant=waterfrontAsset('WaterfrontClub'),farTower=waterfrontAsset('SkylineFar'),forest=waterfrontAsset('CanopyCluster');
+ const residence=waterfrontAsset('WaterfrontResidence'),hotel=waterfrontAsset('MarinaHotel'),skyline=waterfrontAsset('SkylineTower'),restaurant=waterfrontAsset('WaterfrontClub'),farTower=waterfrontAsset('SkylineFar'),forest=vegetationAsset('TreeBand');
+ skyline.scale.set(1.55,.86,1.5);
  const decorative=new T.Group();decorative.name='landmarks';
  // Each 100m region has a district composition. Reusable geometry is instanced,
  // then the existing scenery backend culls regions for both camera and reflection.
@@ -149,54 +154,21 @@ export function makeWorld(scene,{multiDraw=false}={}){
  }
  for(let s=120;s<COURSE_LENGTH-150;s+=180){const bend=curvature(s+40);if(Math.abs(bend)<.0025)continue;const sign=textSign(bend>0?'› › ›':'‹ ‹ ‹',7,2,{bg:'#163e43',color:'#ffd75d',font:'900 155px Nunito',border:null});place(decorative,sign,s,Math.sign(bend)*(halfWidth(s)-2),3.3)}
  for(const d of DISTRICTS.slice(1)){const at=d.start*COURSE_LENGTH+18,sign=textSign(d.name,16,2,{bg:'#17464a',color:'#ffe9a6',font:'900 85px Nunito'});place(decorative,sign,at,-halfWidth(at)-2,5.3,-Math.PI/10)}
- const fish=new T.Group();fish.add(fisheries());const deck=terrace.clone();deck.position.set(0,.6,17);deck.scale.setScalar(.8);fish.add(deck);
- for(const x of [-10,-5,0,5,10]){const u=umbrella.clone();u.position.set(x,1.15,14);u.scale.setScalar(.7);fish.add(u)}
- const f=place(decorative,bake(fish),COURSE_LENGTH-55,halfWidth(COURSE_LENGTH-55)+1,0,-.3,1.25);landmarks.push(f);
- const bridgeGroup=new T.Group();bridgeGroup.add(bridge(190));
- for(const side of [-1,1]){const sh=new T.Shape();sh.moveTo(0,16);sh.lineTo(64,16);sh.lineTo(64,1);sh.quadraticCurveTo(32,22,0,1);sh.closePath();const m=new T.Mesh(new T.ExtrudeGeometry(sh,{depth:12,bevelEnabled:false}),mat(0xd5ddc6,{side:T.DoubleSide}));m.position.set(side*31,0,-6);m.scale.x=side;m.castShadow=true;m.receiveShadow=true;bridgeGroup.add(m)}
- const b=place(decorative,bridgeGroup,COURSE_LENGTH,0);landmarks.push(b);
- scene.add(decorative);
- return{update(s,camera){batches.update(s,camera);horizonBatches.update(s,camera);for(const l of landmarks)l.visible=s>COURSE_LENGTH-850},setAO(enabled){batches.setAO(enabled);horizonBatches.setAO(enabled);decorative.visible=!enabled},destroyTarget(id){batches.setDestroyed(id)},resetDestruction(){batches.resetDestruction()},landmarks};
-}
-export function makeSky(scene,renderer){
- const sky=new T.Mesh(new T.SphereGeometry(5200,32,18),new T.ShaderMaterial({side:T.BackSide,depthWrite:false,uniforms:{top:{value:new T.Color(0x078ece)},horizon:{value:new T.Color(0x88cce0)},sunDirection:{value:SUN}},vertexShader:`varying vec3 direction;void main(){direction=position;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);}`,fragmentShader:`uniform vec3 top;uniform vec3 horizon;uniform vec3 sunDirection;varying vec3 direction;void main(){vec3 d=normalize(direction);float h=pow(max(0.0,d.y),.26);vec3 color=mix(horizon,top,h);float glow=pow(max(0.0,dot(d,sunDirection)),24.0);color+=vec3(.10,.065,.025)*glow;gl_FragColor=vec4(color,1.0);
-#include <tonemapping_fragment>
-#include <colorspace_fragment>
-}`}));scene.add(sky);
- const envScene=new T.Scene();envScene.add(sky.clone());const pmrem=new T.PMREMGenerator(renderer);const target=pmrem.fromScene(envScene,.035,.1,10000);scene.environment=target.texture;scene.environmentIntensity=.25;pmrem.dispose();
- // Broad cumulus banks give the skyline a sky of its own. A baked vertical
- // color gradient supplies soft undersides without transparent layers or lights.
- const puff=new T.SphereGeometry(1,16,10),positions=puff.attributes.position,colors=[];
- const underside=new T.Color(0xd4e1e8),crest=new T.Color(0xfffae9),color=new T.Color();
- for(let i=0;i<positions.count;i++){color.copy(underside).lerp(crest,T.MathUtils.smoothstep(positions.getY(i),-.7,.8));colors.push(color.r,color.g,color.b)}
- puff.setAttribute('color',new T.Float32BufferAttribute(colors,3));const cloudMaterial=new T.MeshBasicMaterial({vertexColors:true,fog:false}),clouds=new T.Group();
- for(let i=0;i<24;i++){
-  const angle=i*2.399,ring=i%2?2200:2900,cx=Math.sin(angle)*ring,cz=-1300+Math.cos(angle)*ring,cy=260+(i%5)*48;
-  const group=new T.Group();
-  for(let j=0;j<7;j++){
-   const m=new T.Mesh(puff,cloudMaterial),center=Math.sin(j*.7+i);
-   m.position.set(cx+(j-3)*45,cy+Math.sin(j*1.7+i)*18+Math.max(0,1-Math.abs(j-3)/3)*25,cz+center*22);
-   m.scale.set(50+(j%3)*13,24+Math.max(0,1-Math.abs(j-3)/3)*43+((j+i)%2)*8,37+(j%2)*12);group.add(m);
-  }
-  const cloud=instance(group);cloud.traverse(m=>{if(m.isMesh)m.castShadow=m.receiveShadow=false});clouds.add(cloud);
+ const f=place(decorative,landmarkAsset('FisheriesRestaurant'),COURSE_LENGTH-24,halfWidth(COURSE_LENGTH-24)+6,.45,-.35,1.45);landmarks.push(f);
+ const b=place(decorative,landmarkAsset('BridgeCauseway'),COURSE_LENGTH,0);landmarks.push(b);
+ // The opening uses three individually composed berths. Racing always restores
+ // the canonical collision-backed moorings without altering their transforms.
+ const openingBerths=new T.Group(),openingS=COURSE_LENGTH-165;
+ place(openingBerths,boats.super,openingS+14.4,-34,0,.4,.80);
+ place(openingBerths,boats.super,openingS+48.7,-34.5,0,.25,.80);
+ place(openingBerths,boats.super,openingS+72.1,-34.5,0,.25,1.30);
+ scene.add(openingBerths);
+ // A distant harbor continues through the bridge opening beyond the race route.
+ for(let i=0;i<16;i++){
+  const city=place(decorative,farTower,COURSE_LENGTH+650+(i%3)*22,-180+i*18,0,i*.31,.4+(i%4)*.07);
+  city.scale.y*=.45+(i%3)*.09;
  }
- scene.add(clouds);return sky;
+ scene.add(decorative);let showingOpening=false;
+ return{update(s,camera,staged=false){if(staged!==showingOpening){showingOpening=staged;batches.setTargetsVisible(!staged)}openingBerths.visible=staged;batches.update(s,camera);horizonBatches.update(s,camera);for(const l of landmarks)l.visible=s>COURSE_LENGTH-850},setAO(enabled){batches.setAO(enabled);horizonBatches.setAO(enabled);decorative.visible=!enabled},destroyTarget(id){batches.setDestroyed(id)},resetDestruction(){batches.resetDestruction()},landmarks};
 }
-export function makeWater(scene){
- const size=256,data=new Uint8Array(size*size*4),heights=new Float32Array(size*size);let seed=4491;
- const random=()=>((seed=(seed*1664525+1013904223)>>>0)/4294967296),smooth=t=>t*t*(3-2*t);
- for(const [cells,amplitude]of [[7,.45],[17,.55],[37,.28],[73,.16]]){const grid=Float32Array.from({length:cells*cells},random);for(let y=0;y<size;y++)for(let x=0;x<size;x++){const u=x/size*cells,v=y/size*cells,ix=Math.floor(u),iy=Math.floor(v),a=smooth(u-ix),b=smooth(v-iy),sample=(xx,yy)=>grid[(yy%cells)*cells+xx%cells],top=T.MathUtils.lerp(sample(ix,iy),sample(ix+1,iy),a),bottom=T.MathUtils.lerp(sample(ix,iy+1),sample(ix+1,iy+1),a);heights[y*size+x]+=T.MathUtils.lerp(top,bottom,b)*amplitude}}
- for(let y=0;y<size;y++)for(let x=0;x<size;x++){const h=(xx,yy)=>heights[((yy+size)%size)*size+(xx+size)%size],dx=(h(x+1,y)-h(x-1,y))*5,dy=(h(x,y+1)-h(x,y-1))*5,n=new T.Vector3(dx,dy,1).normalize(),k=(y*size+x)*4;data[k]=(n.x*.5+.5)*255;data[k+1]=(n.y*.5+.5)*255;data[k+2]=(n.z*.5+.5)*255;data[k+3]=Math.min(255,heights[y*size+x]/1.44*255)}
- const normal=new T.DataTexture(data,size,size);normal.wrapS=normal.wrapT=T.RepeatWrapping;normal.magFilter=T.LinearFilter;normal.minFilter=T.LinearMipmapLinearFilter;normal.generateMipmaps=true;normal.needsUpdate=true;
- const water=new Water(new T.PlaneGeometry(14000,14000),{textureWidth:512,textureHeight:512,waterNormals:normal,sunDirection:SUN,sunColor:0xfff1d4,waterColor:0x008c94,distortionScale:.72,fog:true});water.material.fragmentShader=water.material.fragmentShader.replace('sunColor * diffuseLight * 0.3','waterColor * diffuseLight * 0.12').replace('max( 0.0, dot( surfaceNormal, eyeDirection ) ) * waterColor','(0.55 + 0.45 * max( 0.0, dot( surfaceNormal, eyeDirection ) )) * waterColor').replace('reflectionSample + specularLight, reflectance','reflectionSample * 0.82 + specularLight, reflectance * 0.72');const reflect=water.onBeforeRender;water.onBeforeRender=function(...args){if(!args[1].overrideMaterial)reflect.apply(this,args)};water.material.fragmentShader=water.material.fragmentShader.replace('vec3 outgoingLight = albedo;',`
-  vec2 waveUV=worldPosition.xz*.052+vec2(time*.018,time*.007);
-  vec4 waveDetail=texture2D(normalSampler,waveUV);
-  float body=texture2D(normalSampler,worldPosition.xz*.009+vec2(time*.004,-time*.003)).a;
-  float crest=smoothstep(.52,.66,waveDetail.a)*smoothstep(.49,.64,waveDetail.g);
-  float distanceFade=1.0-smoothstep(90.0,320.0,distance);
-  vec3 outgoingLight=albedo*mix(.94,1.06,smoothstep(.28,.70,body));
-  outgoingLight+=vec3(.20,.57,.58)*crest*distanceFade*.10;
- `);water.rotation.x=-Math.PI/2;water.position.y=.025;water.material.uniforms.size.value=7.6;scene.add(water);
- const districtWater={downtown:new T.Color(0x087f8c),marina:new T.Color(0x078f99),mangrove:new T.Color(0x277e6c),cove:new T.Color(0x0eafb2),bridge:new T.Color(0x078f9f)};
- return{mesh:water,update(s,t){water.material.uniforms.time.value=t*.65;water.material.uniforms.waterColor.value.lerp(districtWater[districtAt(s).id],.025)}};
-}
+export function makeWater(scene){return makeDreamWater(scene,SUN)}

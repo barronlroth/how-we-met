@@ -1,5 +1,6 @@
 import * as T from 'three';
 import {C,mat,ball,pipe,bake,textSign} from './art.js';
+import {vegetationAsset} from './vegetation-art.js';
 
 // A small kit of reusable waterfront silhouettes. Solid geometry, shared opaque
 // materials and baked meshes keep the extra district detail inexpensive to draw.
@@ -25,7 +26,15 @@ export function boatyard(seed=0){const g=new T.Group();block(g,27,8,18,0xafd0c5,
 export function marinaClub(){const g=new T.Group();block(g,24,5.6,12,0xf1e4ca,0,2.8,0);block(g,27,.3,17,C.cream,0,5.8,1);for(let x=-10;x<=10;x+=5){block(g,3.5,3.1,.1,glass,x,2.5,6.1);pipe(g,[x,.2,11],[x,5.8,11],.13,C.cream)}label(g,'BAHIA MARINA',16,5.1,9.6);block(g,32,.45,10,C.wood,0,.25,10);for(const x of [-11,-4,4,11])shadeTable(g,x,11,0x62aba6);for(let i=0;i<6;i++)tinyPerson(g,-10+i*4,.5,8,i);return bake(g)}
 export function mangrove(seed=0){const g=new T.Group(),lean=seed%2?2.4:-1.8,trunk=0x7d7552;
  for(let i=0;i<7;i++){const a=i*Math.PI*2/7+seed,r=2.8+(i%3)*.55;curve(g,[[Math.sin(a)*r,-.4,Math.cos(a)*r],[Math.sin(a)*r*.72,1.25,Math.cos(a)*r*.72],[lean*.25,3.6,.1],[lean,6.6,0]],.13+(i%2)*.05,trunk)}
- for(let i=0;i<8;i++){const a=i*2.399+seed,r=2.4+(i%3)*1.4,y=6.4+(i%3)*1.2;curve(g,[[lean*.4,3.4,0],[lean,5.9,0],[lean+Math.sin(a)*r,y,Math.cos(a)*r]],.12,trunk);ball(g,lean+Math.sin(a)*r,y+.4,Math.cos(a)*r,2.4,1.25+(i%2)*.4,2.5,[0x355f37,0x54803f,0x7e984b][i%3],1)}return bake(g)}
+ for(let i=0;i<8;i++){const a=i*2.399+seed,r=2.4+(i%3)*1.4,y=6.4+(i%3)*1.2;curve(g,[[lean*.4,3.4,0],[lean,5.9,0],[lean+Math.sin(a)*r,y,Math.cos(a)*r]],.12,trunk)}
+ const result=bake(g),tree=vegetationAsset('HammockTree'),crown=tree.getObjectByName('HammockTree_LeafAtlas');
+ if(!crown)throw new Error('HammockTree is missing its authored foliage mesh.');
+ // Reuse only the leaf submesh above the existing mangrove root/branch network.
+ // Add it after baking so the atlas UVs, vertex colours and shared geometry stay
+ // intact; scenery instancing combines this same crown across all mangrove seeds.
+ crown.position.set(lean,.2,0);crown.rotation.y=seed*.67;crown.scale.setScalar(.98);result.add(crown);
+ return result;
+}
 export function boardwalk(){const g=new T.Group();block(g,3.5,.3,32,C.wood,0,1.6,0);for(let z=-16;z<=16;z+=4){for(const x of [-1.8,1.8])pipe(g,[x,-.5,z],[x,3.1,z],.1,0x987d4d,6);block(g,3.6,.03,.09,0xa48152,0,1.77,z)}rail(g,[-1.8,-16],[-1.8,16],3.1);rail(g,[1.8,-16],[1.8,16],3.1);return bake(g)}
 export function pelican(seed=0){const g=new T.Group();ball(g,0,0,0,.26,.19,.65,0xe5dfc8,1);ball(g,0,.2,-.47,.18,.21,.19,C.cream,1);pipe(g,[0,.18,-.53],[0,.12,-1.1],.065,0xd5ae60,5);for(const side of [-1,1]){const geo=new T.BufferGeometry();geo.setAttribute('position',new T.Float32BufferAttribute([side*.05,.05,.3,side*1.35,.22+seed*.06,.2,side*1.8,-.03,-.2,side*.5,-.08,-.25],3));geo.setIndex([0,1,2,0,2,3]);geo.computeVertexNormals();mesh(g,geo,mat(0xc2c3b0,{side:T.DoubleSide}))}return bake(g)}
 export function partyBar(){const g=new T.Group();block(g,24,.7,15,C.wood,0,.5,0);for(const side of [-1,1])block(g,24,.8,.6,0x41a3a0,0,.3,side*7.3);block(g,15,1.6,1.7,0x39a0a0,0,1.65,-2);block(g,16,.22,2.2,C.cream,0,2.55,-2);for(const x of [-8,8])for(const z of [-4,1])pipe(g,[x,.8,z],[x,5.3,z],.17,C.wood,6);mesh(g,new T.ConeGeometry(12,2,4),0xc39a52,0,6,-1.5).rotation.y=Math.PI/4;label(g,'CURRENTLY UNAVAILABLE',17,4.5,2);for(let x=-6;x<=6;x+=3){mesh(g,new T.CylinderGeometry(.45,.45,.12,8),C.coral,x,1.6,.5);pipe(g,[x,.8,.5],[x,1.6,.5],.1,C.cream,6);mesh(g,new T.CylinderGeometry(.12,.1,.35,7),C.gold,x,2.84,-1.6)}for(const x of [-8,8])shadeTable(g,x,4.5,0xf1837e);for(let i=0;i<10;i++)tinyPerson(g,-9+i*2,.86,2.5+(i%2)*2.8,i);for(let x=-11;x<12;x+=2)flag(g,x,4.8,6.8,[C.coral,C.gold,0x75c8c3][Math.abs(x)%3]);rail(g,[-12,-7.5],[12,-7.5],1.8);return bake(g)}

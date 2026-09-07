@@ -1,14 +1,20 @@
 import * as T from 'three';
 import {C,mat,box,ball,pipe,ring,bake,airboat,textSign} from './art.js';
+import {loadSurfaceTextures,applySurfaceMaps,applySurfaceUVs} from './materials.js';
 const put=(g,geo,material,x=0,y=0,z=0)=>{const m=new T.Mesh(geo,typeof material==='number'?mat(material):material);m.position.set(x,y,z);m.castShadow=true;m.receiveShadow=true;g.add(m);return m};
 const glass=mat(0x254b59,{roughness:.18,metalness:.32});
 export async function prepareMaterials(){
- const deck=await new T.TextureLoader().loadAsync('./assets/teak-v2.png');deck.colorSpace=T.SRGBColorSpace;deck.wrapS=deck.wrapT=T.RepeatWrapping;deck.repeat.set(1,2);deck.anisotropy=8;
- for(const c of [C.wood,0xaa845d,0xc99e6b]){const m=mat(c);m.color.setHex(0xffffff);m.map=deck;m.roughness=.76;m.needsUpdate=true}
- for(const c of [C.cream,C.white,0xd4dfc5]){mat(c).roughness=.44}
- for(const c of [C.coral,C.teal]){mat(c).roughness=.35;mat(c).metalness=.06}
+ const surfaces=await loadSurfaceTextures();
+ for(const c of [C.wood,0xaa845d,0xc99e6b]){const m=mat(c);m.color.setHex(0xead8bd);applySurfaceMaps(m,surfaces.teak,{roughness:.48,bumpScale:.014,tileSize:[1.8,3.6]})}
+ for(const c of [C.cream,C.white]){mat(c).roughness=.3;mat(c).metalness=.02}
+ applySurfaceMaps(mat(0xd4dfc5),surfaces.cloth,{roughness:.93,bumpScale:.006,tileSize:[.8,.8]});
+ for(const c of [0xf0e5ca,0xd9e3d7,0xe7d4be])applySurfaceMaps(mat(c),surfaces.plaster,{roughness:.84,bumpScale:.014,tileSize:[3.5,3.5]});
+ for(const c of [C.roof,0xb76040]){const m=mat(c);m.color.setHex(0xffe4cd);applySurfaceMaps(m,surfaces.tile,{roughness:.78,bumpScale:.055,tileSize:[2.6,2.7]})}
+ for(const c of [C.coral,C.teal]){mat(c).roughness=.32;mat(c).metalness=.06}
  for(const c of [C.skin,C.skinNina])mat(c).roughness=.76;
- for(const c of [0x396974,0x315c65,0x497783,0x366876]){mat(c).roughness=.2;mat(c).metalness=.32}
+ for(const c of [0x396974,0x315c65,0x497783,0x366876]){const glazing=mat(c);glazing.color.setHex(c).multiplyScalar(1.28);glazing.roughness=.23;glazing.metalness=.2;glazing.envMapIntensity=1.15}
+ glass.color.setHex(0x355d6c);glass.roughness=.22;glass.metalness=.2;glass.envMapIntensity=1.15;
+ for(const c of [0xc3d0ca,0x95aaa7,0x899f9d,0xb0bdba,0xc5cdc4]){mat(c).roughness=.3;mat(c).metalness=.86}
 }
 export function heroBoat(){
  const root=airboat(),g=new T.Group();
@@ -43,7 +49,7 @@ export function superyacht(size=1){
  for(const side of [-1,1]){for(let z=-8;z<10;z+=1.5){pipe(g,[side*3.1,2.4,z],[side*3.1,3.1,z],.033,0xc3d0ca)}pipe(g,[side*3.1,3.1,-8],[side*3.1,3.1,10],.035,0xc3d0ca);for(let z=-7;z<8;z+=2.2)box(g,.06,.38,.92,glass,side*3.65,1.35,z)}
  for(const x of [-1.5,1.5])box(g,1.15,.24,2.7,C.cream,x,2.55,-9.2);
  pipe(g,[0,6.35,1],[0,8,1],.06,C.white);box(g,2.4,.15,.23,C.white,0,7.8,1);for(const x of [-.8,.8])ball(g,x,6.75,2.6,.34,.4,.34,C.white,2);
- const b=bake(g);b.scale.setScalar(size);return b;
+ const b=bake(applySurfaceUVs(g));b.scale.setScalar(size);return b;
 }
 export function waterTaxi(){
  const g=new T.Group();box(g,3.2,.7,9.5,C.gold,0,.25,0);box(g,2.95,.28,9.2,C.cream,0,.7,0);
@@ -80,12 +86,12 @@ export function condo(seed=0){
  const g=new T.Group(),floors=5+(seed%7),w=16+(seed%3)*5,d=15,h=floors*3.15;
  box(g,w,h,d,[0xf0e5ca,0xd9e3d7,0xe7d4be][seed%3],0,h/2,0);
  for(let f=0;f<floors;f++){const y=1.7+f*3.15;for(const side of [-1,1]){box(g,w+.8,.22,2.25,C.white,0,y-1.15,side*(d/2+.5));box(g,w-1,1.65,.1,glass,0,y+.15,side*(d/2+.05));box(g,w,.6,.08,mat(0x88b7b8,{roughness:.25,metalness:.2}),0,y-.7,side*(d/2+1.5));for(let x=-w/2+1;x<w/2;x+=3.4)box(g,.22,2.2,.24,C.white,x,y,side*(d/2+.2))}}
- box(g,w+1,.45,d+1,C.white,0,h+.25,0);box(g,4,1.7,5,0xb7bbae,-w/4,h+1,1);return bake(g);
+ box(g,w+1,.45,d+1,C.white,0,h+.25,0);box(g,4,1.7,5,0xb7bbae,-w/4,h+1,1);return bake(applySurfaceUVs(g));
 }
 export function marinaPier(length=30){
  const g=new T.Group();box(g,3,.28,length,C.wood,0,.7,0);
  for(let z=-length/2;z<=length/2;z+=4){for(const x of [-1.6,1.6]){pipe(g,[x,-1,z],[x,1.4,z],.14,0x967d51,9);ball(g,x,1.46,z,.15,.08,.15,C.cream,1);if(Math.round(z)%8===0){box(g,.4,.9,.4,C.cream,x,1.25,z);box(g,.3,.22,.42,0x74aab1,x,1.58,z)}}}
- return bake(g);
+ return bake(applySurfaceUVs(g));
 }
-export function pavilion(){const g=new T.Group();box(g,12,.35,16,C.wood,0,.9,0);for(const x of [-5,5])for(const z of [-7,7])pipe(g,[x,1,z],[x,5,z],.16,C.cream);const roof=put(g,new T.ConeGeometry(10,3,4),0xb76040,0,6.2,0);roof.rotation.y=Math.PI/4;return bake(g)}
+export function pavilion(){const g=new T.Group();box(g,12,.35,16,C.wood,0,.9,0);for(const x of [-5,5])for(const z of [-7,7])pipe(g,[x,1,z],[x,5,z],.16,C.cream);const roof=put(g,new T.ConeGeometry(10,3,4),0xb76040,0,6.2,0);roof.rotation.y=Math.PI/4;return bake(applySurfaceUVs(g))}
 export function parasol(){const g=new T.Group();pipe(g,[0,0,0],[0,3.3,0],.045,0xf4e6be);put(g,new T.ConeGeometry(2.2,.6,10),mat(0xffde83,{side:T.DoubleSide}),0,3.15,0);box(g,1.7,.12,1.7,C.white,0,1,0);for(const x of [-1.2,1.2]){box(g,.65,.14,.65,C.white,x,.65,0);box(g,.65,.65,.1,C.white,x,1,.35)}return bake(g)}

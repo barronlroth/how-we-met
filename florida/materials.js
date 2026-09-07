@@ -1,11 +1,118 @@
 import * as T from 'three';
-function canvasTexture(draw,size=256){const c=document.createElement('canvas');c.width=c.height=size;draw(c.getContext('2d'),size);const t=new T.CanvasTexture(c);t.wrapS=t.wrapT=T.RepeatWrapping;t.anisotropy=8;return t}
-export function surfaceMaterials(deck){
- let seed=77321;const random=()=>((seed=(seed*1664525+1013904223)>>>0)/4294967296);
- const plaster=canvasTexture((ctx,n)=>{ctx.fillStyle='#eee7d5';ctx.fillRect(0,0,n,n);for(let i=0;i<18000;i++){const v=180+random()*65;ctx.fillStyle=`rgba(${v},${v},${v},${.08+random()*.15})`;ctx.fillRect(random()*n,random()*n,1+random()*2,1+random()*2)}});plaster.colorSpace=T.SRGBColorSpace;
- const tile=canvasTexture((ctx,n)=>{ctx.fillStyle='#b56f46';ctx.fillRect(0,0,n,n);for(let row=0;row<8;row++)for(let col=0;col<8;col++){const x=col*32,y=row*32;ctx.fillStyle=`hsl(${19+random()*9} 48% ${45+random()*13}%)`;ctx.fillRect(x+1,y+1,30,30);const grad=ctx.createLinearGradient(x,y,x+32,y);grad.addColorStop(0,'#51280d35');grad.addColorStop(.45,'#ffe0a833');grad.addColorStop(1,'#54290d55');ctx.fillStyle=grad;ctx.fillRect(x,y,32,32);ctx.fillStyle='#7b391d';ctx.fillRect(x,y+30,32,2)}});tile.colorSpace=T.SRGBColorSpace;tile.repeat.set(3,3);
- const leaves=canvasTexture((ctx,n)=>{ctx.fillStyle='#82915a';ctx.fillRect(0,0,n,n);for(let i=0;i<1000;i++){ctx.fillStyle=`hsla(${68+random()*35},${20+random()*40}%,${23+random()*38}%,.7)`;ctx.beginPath();ctx.ellipse(random()*n,random()*n,2+random()*5,1+random()*3,random()*6,0,Math.PI*2);ctx.fill()}});leaves.colorSpace=T.SRGBColorSpace;
- const cloth=canvasTexture((ctx,n)=>{ctx.fillStyle='#dedac9';ctx.fillRect(0,0,n,n);ctx.strokeStyle='#aaa08025';ctx.lineWidth=1;for(let i=0;i<n;i+=3){ctx.beginPath();ctx.moveTo(i,0);ctx.lineTo(i,n);ctx.moveTo(0,i);ctx.lineTo(n,i);ctx.stroke()}});cloth.colorSpace=T.SRGBColorSpace;
- const make=(color,options={})=>new T.MeshStandardMaterial({color,roughness:.72,...options});
- return{wall:[0xfff7e3,0xf2ceb2,0xd9e5d5,0xeacdbb].map(c=>make(c,{map:plaster,bumpMap:plaster,bumpScale:.045})),roof:make(0xffffff,{map:tile,bumpMap:tile,bumpScale:.13}),leaf:[0x719346,0x58782d,0x8c9b43].map(c=>make(c,{map:leaves,bumpMap:leaves,bumpScale:.06})),cloth:make(0xffffff,{map:cloth,bumpMap:cloth,bumpScale:.017,roughness:.85}),teak:make(0xffffff,{map:deck,bumpMap:deck,bumpScale:.028,roughness:.55}),white:make(0xfff7de,{roughness:.37}),glass:make(0x173d49,{roughness:.12,metalness:.45}),metal:make(0x9caaa5,{roughness:.3,metalness:.68}),rubber:make(0x273936,{roughness:.87}),coral:make(0xdc684b,{roughness:.36,metalness:.12}),aqua:make(0x197f81,{roughness:.36,metalness:.18})};
+
+let texturesLoading;
+
+function repeatingTexture(image, name, colorSpace = T.SRGBColorSpace, wrap = T.RepeatWrapping) {
+  const texture = new T.CanvasTexture(image);
+  texture.name = name;
+  texture.colorSpace = colorSpace;
+  texture.wrapS = texture.wrapT = wrap;
+  texture.anisotropy = 8;
+  return texture;
+}
+
+// Each cell becomes its own image before mipmaps are made. Atlas offsets with
+// RepeatWrapping would repeat the entire atlas and leak neighboring materials.
+function atlasCell(image, column, row, name, size = 512, wrap = T.MirroredRepeatWrapping) {
+  const canvas = document.createElement('canvas');
+  canvas.width = canvas.height = size;
+  const context = canvas.getContext('2d');
+  const width = image.width / 2, height = image.height / 2;
+  context.drawImage(image, column * width + 1, row * height + 1, width - 2, height - 2, 0, 0, size, size);
+  return surfaceMaps(canvas, name, wrap);
+}
+
+function surfaceMaps(image, name, wrap = T.RepeatWrapping) {
+  const map = repeatingTexture(image, `${name} color`, T.SRGBColorSpace, wrap);
+  const bump = repeatingTexture(image, `${name} relief`, T.NoColorSpace, wrap);
+  // Surface-derived, subdued roughness variation. It is linear data, not color.
+  const canvas = document.createElement('canvas');
+  canvas.width = canvas.height = 256;
+  const context = canvas.getContext('2d', { willReadFrequently: true });
+  context.drawImage(image, 0, 0, 256, 256);
+  const pixels = context.getImageData(0, 0, 256, 256);
+  for (let i = 0; i < pixels.data.length; i += 4) {
+    const luma = .2126 * pixels.data[i] + .7152 * pixels.data[i + 1] + .0722 * pixels.data[i + 2];
+    const value = Math.round(220 + luma * .13);
+    pixels.data[i] = pixels.data[i + 1] = pixels.data[i + 2] = value;
+  }
+  context.putImageData(pixels, 0, 0);
+  return { map, bump, roughness: repeatingTexture(canvas, `${name} roughness`, T.NoColorSpace, wrap) };
+}
+
+/** One shared, original texture set for procedural and Blender waterfront art. */
+export function loadSurfaceTextures() {
+  return texturesLoading ??= Promise.all([
+    new T.ImageLoader().loadAsync(new URL('./assets/textures/coastal-materials-v1.png', import.meta.url).href),
+    new T.ImageLoader().loadAsync(new URL('./assets/teak-v2.png', import.meta.url).href),
+  ]).then(([atlas, deck]) => ({
+    plaster: atlasCell(atlas, 0, 0, 'Coastal stucco'),
+    tile: atlasCell(atlas, 1, 0, 'Barrel terracotta', 1024, T.RepeatWrapping),
+    cloth: atlasCell(atlas, 0, 1, 'Ivory linen'),
+    concrete: atlasCell(atlas, 1, 1, 'Cast concrete'),
+    teak: surfaceMaps(deck, 'Varnished teak'),
+  }));
+}
+
+export function applySurfaceMaps(material, maps, { roughness = .7, bumpScale = .018, tileSize = [3, 3] } = {}) {
+  material.map = maps.map;
+  material.bumpMap = maps.bump;
+  material.bumpScale = bumpScale;
+  material.roughnessMap = maps.roughness;
+  material.roughness = roughness;
+  material.userData.surfaceTileSize = tileSize;
+  material.needsUpdate = true;
+  return material;
+}
+
+/** Generate UV seams per face without changing positions, normals or triangles. */
+export function applySurfaceUVs(root) {
+  root.updateMatrixWorld(true);
+  const a = new T.Vector3(), b = new T.Vector3(), c = new T.Vector3();
+  const ab = new T.Vector3(), ac = new T.Vector3(), normal = new T.Vector3();
+  root.traverse(mesh => {
+    const tileSize = mesh.material?.userData.surfaceTileSize;
+    if (!mesh.isMesh || !tileSize) return;
+    const geometry = mesh.geometry.index ? mesh.geometry.toNonIndexed() : mesh.geometry.clone();
+    const position = geometry.getAttribute('position');
+    const uv = new T.Float32BufferAttribute(new Float32Array(position.count * 2), 2);
+    for (let i = 0; i < position.count; i += 3) {
+      a.fromBufferAttribute(position, i).applyMatrix4(mesh.matrixWorld);
+      b.fromBufferAttribute(position, i + 1).applyMatrix4(mesh.matrixWorld);
+      c.fromBufferAttribute(position, i + 2).applyMatrix4(mesh.matrixWorld);
+      normal.crossVectors(ab.subVectors(b, a), ac.subVectors(c, a));
+      const x = Math.abs(normal.x), y = Math.abs(normal.y), z = Math.abs(normal.z);
+      for (const [j, p] of [a, b, c].entries()) {
+        const u = x > y && x > z ? p.z : p.x;
+        const v = y >= x && y >= z ? p.z : p.y;
+        uv.setXY(i + j, u / tileSize[0], v / tileSize[1]);
+      }
+    }
+    geometry.setAttribute('uv', uv);
+    mesh.geometry = geometry;
+  });
+  return root;
+}
+
+export function surfaceMaterials(textures) {
+  const make = (name, color, options = {}) => new T.MeshStandardMaterial({ name, color, roughness: .7, ...options });
+  const mapped = (name, color, maps, options) => applySurfaceMaps(make(name, color), maps, options);
+  return {
+    wall: [0xfffcf3, 0xf1d8c7, 0xe4ecdf, 0xeadace].map((color, i) => mapped(`Villa stucco ${i}`, color, textures.plaster, { roughness: .84, bumpScale: .014, tileSize: [3.5, 3.5] })),
+    roof: mapped('Sun-warmed terracotta', 0xffead7, textures.tile, { roughness: .8, bumpScale: .078, tileSize: [2.6, 2.7] }),
+    leaf: [0x719346, 0x58782d, 0x8c9b43].map((color, i) => make(`Legacy canopy ${i}`, color, { roughness: .9 })),
+    cloth: mapped('Ivory woven upholstery', 0xfffcf5, textures.cloth, { roughness: .94, bumpScale: .006, tileSize: [.8, .8] }),
+    teak: mapped('Varnished marine teak', 0xead8bd, textures.teak, { roughness: .43, bumpScale: .014, tileSize: [1.8, 3.6] }),
+    concrete: mapped('Pale cast concrete', 0xfffcf7, textures.concrete, { roughness: .86, bumpScale: .018, tileSize: [4, 4] }),
+    white: make('Warm white marine enamel', 0xfffcf2, { roughness: .27, metalness: .03 }),
+    // Opaque dielectric glazing keeps the cool reflection readable under broad
+    // overhangs; a highly metallic approximation turned shaded windows black.
+    glass: make('Blue-gray shaded glazing', 0x34515d, { roughness: .22, metalness: .2, envMapIntensity: 1.15 }),
+    trim: make('Limestone architectural trim', 0xf4ead4, { roughness: .66 }),
+    reveal: make('Window recess', 0x293c40, { roughness: .85 }),
+    metal: make('Brushed stainless steel', 0xaebbb8, { roughness: .3, metalness: .88 }),
+    rubber: make('Marine rubber', 0x25332f, { roughness: .9 }),
+    coral: make('Coral marine enamel', 0xd66c51, { roughness: .32, metalness: .06 }),
+    aqua: make('Turquoise marine enamel', 0x237b7d, { roughness: .3, metalness: .08 }),
+  };
 }

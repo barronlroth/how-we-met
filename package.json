@@ -9,7 +9,9 @@
     "preview": "python3 -m http.server 4179 --bind 127.0.0.1 --directory dist",
     "blender:smoke": "./scripts/blender-headless.sh --python scripts/blender-smoke.py",
     "blender:hero": "./scripts/blender-headless.sh --python scripts/build-florida-hero.py",
-    "blender:waterfront": "./scripts/blender-headless.sh --python scripts/build-florida-waterfront.py"
+    "blender:waterfront": "./scripts/blender-headless.sh --python scripts/build-florida-waterfront.py",
+    "blender:vegetation": "./scripts/blender-headless.sh --python scripts/build-florida-vegetation.py",
+    "blender:landmarks": "./scripts/blender-headless.sh --python scripts/build-florida-landmarks.py"
   },
   "dependencies": {
     "three": "0.185.1"

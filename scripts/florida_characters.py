@@ -71,7 +71,31 @@ def weld_cloth(a,name,objects,parent,voxel=.017):
     bpy.ops.object.modifier_apply(modifier=mod.name)
     mod=obj.modifiers.new('Soft cloth transitions','SMOOTH');mod.factor=.65;mod.iterations=4
     bpy.ops.object.modifier_apply(modifier=mod.name)
-    mod=obj.modifiers.new('Game garment topology','DECIMATE');mod.ratio=.15;mod.use_collapse_triangulate=True
+    # Broad authored compression folds at the waist and knees survive at game scale.
+    # They are deformations of the cloth surface, not overlaid string geometry.
+    is_shirt='shirt' in name.lower()
+    obj.data.update()
+    for v in obj.data.vertices:
+        x,y,z=v.co.x,v.co.z,-v.co.y
+        if is_shirt:
+            front=max(0,min(1,(-z-.025)/.105))
+            waist=math.exp(-((y-.665)/.145)**2)
+            fold=.019*math.sin((y-.535)*38+x*10)*waist
+            # Cloth draws diagonally from the tucked waist towards each shoulder.
+            fold+=.012*math.sin((y-.80)*27-abs(x)*14)*math.exp(-((y-.91)/.22)**2)*min(1,abs(x)/.23)
+            fold+=.014*math.sin((y-1.02)*54+x*14)*math.exp(-((y-1.064)/.075)**2)*min(1,abs(x)/.30)
+            v.co.y+=fold*front
+            back=max(0,min(1,(z-.07)/.09))
+            v.co.y-=.010*math.sin(y*32+x*8)*waist*back
+        else:
+            # Seated thighs compress into folds at the groin, hips and rolled hems.
+            thigh=max(0,min(1,(-z-.07)/.22))
+            fold=.014*math.sin((z+.20)*41+abs(x)*11)*math.exp(-((y-.46)/.12)**2)
+            fold+=.009*math.sin((z+.36)*58-x*6)*math.exp(-((z+.37)/.11)**2)
+            v.co.z+=fold*thigh
+    mod=obj.modifiers.new('Relax sculpted cloth folds','SMOOTH');mod.factor=.22;mod.iterations=1
+    bpy.ops.object.modifier_apply(modifier=mod.name)
+    mod=obj.modifiers.new('Game garment topology','DECIMATE');mod.ratio=.20;mod.use_collapse_triangulate=True
     bpy.ops.object.modifier_apply(modifier=mod.name)
     for face in obj.data.polygons:face.use_smooth=True
     obj.select_set(False)
@@ -201,22 +225,37 @@ def make_head(a,parent,nina):
 
 
 def hair_lock(a,head,name,controls,width,depth,mat):
-    """A broad tapered lock with integral flowing relief, never raised stripe rods."""
-    points=curve_points(controls,22);verts=[];faces=[];sides=20
+    """A layered hair ribbon with shallow recessed fibers, not an oval tube."""
+    blonde=mat in ('hairN','hairGold')
+    points=curve_points(controls,40 if blonde else 36);verts=[];faces=[];colors=[];sides=28 if blonde else 20
     for i,p in enumerate(points):
         u=i/(len(points)-1)
         tangent=(Vector(points[min(i+1,len(points)-1)])-Vector(points[max(0,i-1)])).normalized()
         right=tangent.cross(Vector((0,0,-1)))
         if right.length<.01:right=tangent.cross(Vector((0,1,0)))
         right.normalize();normal=right.cross(tangent).normalized()
-        r=width*(.38+.62*math.sin(math.pi*min(.96,u+.05))**.5)*(1-.82*u**3)
+        r=width*(.28+.72*math.sin(math.pi*min(.985,u+.03))**.4)*(1-.90*u**3)
         for k in range(sides):
-            angle=k/sides*math.tau
-            groove=1+.22*math.cos(angle*5+u*2.0)
-            verts.append(tuple(Vector(p)+right*(math.cos(angle)*r)+normal*(math.sin(angle)*r*depth*groove)))
+            angle=k/sides*math.tau;q=math.cos(angle);sn=math.sin(angle)
+            if blonde:
+                # Broad, almost flat sheets overlap into a continuous silhouette.
+                # Five millimetre-scale channels live inside the surface itself.
+                profile=max(0,1-q**4)**.5
+                groove=sum(math.exp(-((q-c-.025*math.sin(u*5))/.07)**2) for c in (-.74,-.37,0,.37,.74))
+                thickness=r*depth*.46
+                relief=math.copysign(profile*max(.002,thickness-.0028*groove),sn)
+                shade=1-.13*groove*abs(sn)
+            else:
+                relief=sn*r*depth*(1+.12*math.cos(angle*5+u*1.6));shade=1
+            verts.append(tuple(Vector(p)+right*(q*r)+normal*relief))
+            colors.append((shade,shade,shade,1))
             if i:faces.append(((i-1)*sides+k,(i-1)*sides+(k+1)%sides,i*sides+(k+1)%sides,i*sides+k))
     faces.extend([tuple(reversed(range(sides))),tuple(range((len(points)-1)*sides,len(points)*sides))])
-    return a.mesh(name,verts,faces,mat,head)
+    obj=a.mesh(name,verts,faces,mat,head)
+    if blonde:
+        attr=obj.data.color_attributes.new(name='HairFibers',type='FLOAT_COLOR',domain='POINT')
+        for v,color in zip(attr.data,colors):v.color=color
+    return obj
 
 
 def make_hair(a,head,nina):
@@ -227,7 +266,7 @@ def make_hair(a,head,nina):
             u=j/(rings-1);r=math.sin(u*math.pi/2)
             for i in range(segments):
                 angle=i/segments*math.tau;c=math.cos(angle)
-                edge=1.81+.185*max(0,c)**3+.013*math.sin(angle*7)
+                edge=1.81+.245*max(0,c)**3+.010*math.sin(angle*7)
                 x=math.sin(angle)*.300*r-.014*(1-r)
                 z=.044-c*.267*r
                 y=2.195-(2.195-edge)*(1-math.cos(u*math.pi/2))
@@ -243,7 +282,7 @@ def make_hair(a,head,nina):
             for j in range(12):
                 u=j/11;t=phase+u*math.pi*1.75;radius=.061*size*(1-u*.76)
                 pts.append((cx+math.cos(t)*radius,cy+.018+math.sin(t)*radius*.62,cz-.022+u*.025))
-            sweep(a,'Directional sculpted curl',pts,.043*size,'curlLight' if i%7==0 else 'hairB',head,depth=.80,sides=8)
+            sweep(a,'Directional sculpted curl',pts,.044*size,'curlLight' if i%6==0 else 'hairB',head,depth=.72,sides=10)
         for x,y,z,r in [(-.228,2.042,-.142,.67),(-.136,2.090,-.180,.91),(-.045,2.039,-.224,1.10),(.061,2.105,-.181,.82),(.187,2.049,-.151,.71)]:
             pts=curve_points([(x-.040*r,y+.018*r,z+.070),(x-.060*r,y+.071*r,z+.012),(x+.025*r,y+.074*r,z-.012),(x+.054*r,y+.023*r,z-.005),(x+.028*r,y-.008*r,z+.015),(x+.003*r,y+.014*r,z+.035)],18)
             sweep(a,'Swept fringe curl',pts,.037*r,'hairB',head,depth=.96,sides=8)
@@ -253,40 +292,53 @@ def make_hair(a,head,nina):
         for side in (-1,1):
             hair_lock(a,head,'Tapered sideburn',[(side*.261,1.98,.012),(side*.29,1.84,.008),(side*.279,1.76,.003)],.030,.5,'hairB')
         return
-    # Rounded crown, with a closed volumetric back and broad asymmetric waves.
-    verts=[];faces=[];columns=36;rings=19
+    # A close-fitting crown supports eight curved layers. The visible silhouette
+    # stays about 12 percent narrower than the former curtain-like sheets.
+    verts=[];faces=[];columns=40;rings=22
     for row in range(rings):
-        u=row/(rings-1);y=2.12-u*1.13
+        u=row/(rings-1);y=2.12-u*1.11
         for col in range(columns):
-            q=col/(columns-1);angle=.91+q*(math.tau-1.82)
+            q=col/(columns-1);angle=.96+q*(math.tau-1.92)
             cap=math.sin(min(1,u/.17)*math.pi/2)
-            wave=.026*math.sin(u*math.pi*3.2+q*2.5)+.006*math.cos(q*math.tau*10+u*2)
-            width=.319+.030*math.sin(u*math.pi)+wave
-            depth=.275+.046*u
+            wave=.014*math.sin(u*math.pi*4+q*3.5)+.012*math.cos(q*math.tau*6+u*3)
+            width=.292+.016*math.sin(u*math.pi)+wave
+            depth=.265+.045*u+.016*math.cos(q*math.tau*6+u*2)
             x=math.sin(angle)*width*cap
-            z=.042-math.cos(angle)*(depth+wave*.45)*cap+.055*u*u
-            yy=y+.030*math.sin(q*19)*u**6
+            z=.042-math.cos(angle)*(depth+wave*.55)*cap+.045*u*u
+            yy=y+.032*math.sin(q*19)*u**6
             verts.append((x,yy,z))
             if row and col:faces.append(((row-1)*columns+col-1,(row-1)*columns+col,row*columns+col,row*columns+col-1))
-    mantle=a.mesh('Rounded blonde hair mantle',verts,faces,'hairN',head)
-    mod=mantle.modifiers.new('Hair mass thickness','SOLIDIFY');mod.thickness=.025
+    mantle=a.mesh('Contoured blonde hair foundation',verts,faces,'hairN',head)
+    mod=mantle.modifiers.new('Hair mass thickness','SOLIDIFY');mod.thickness=.020
     bpy.context.view_layer.objects.active=mantle;bpy.ops.object.modifier_apply(modifier=mod.name)
-    for side in (-1,1):
-        # Swept away from the face, unequal lengths, narrow tapered ends, no loops.
-        front=[(side*.019,2.115,-.077),(side*.121,2.073,-.239),(side*.249,1.923,-.256),
-               (side*.287,1.73,-.236),(side*.345,1.551,-.164),(side*.321,1.368,-.139),
-               (side*.387,1.206,-.097),(side*.358,.977,-.045),(side*.287,.922,-.015)]
-        if side==1:front=[(x+(0 if y>1.8 else .02),y-(0 if y>1.8 else .055),z-.014) for x,y,z in front]
-        hair_lock(a,head,'Face framing blonde wave',front,.059,1.14,'hairGold')
-        outer=[(side*.080,2.097,-.034),(side*.252,1.968,-.102),(side*.326,1.781,-.066),
-               (side*.348,1.558,-.012),(side*.401,1.377,.010),(side*.366,1.122,.039),(side*.399,.907,.097)]
-        hair_lock(a,head,'Shoulder wave',outer,.089,.89,'hairN')
-        flowing=[(side*.085,2.080,-.045),(side*.196,1.954,-.187),(side*.263,1.779,-.226),(side*.283,1.739,-.217),(side*.300,1.559,-.243),(side*.343,1.397,-.240),(side*.373,1.210,-.211),(side*.316,1.039,-.211),(side*.356,.936,-.199)]
-        if side==1: flowing=[(x+.017,y-.067,z-.028) for x,y,z in flowing]
-        hair_lock(a,head,'Overlapping blonde S wave',flowing,.047,1.03,'hairN')
-        inner=[(side*.148,2.069,.038),(side*.29,1.923,.095),(side*.326,1.711,.117),
-               (side*.355,1.51,.155),(side*.314,1.27,.189),(side*.35,1.05,.206)]
-        hair_lock(a,head,'Layered back wave',inner,.077,.85,'hairGold')
+    # A continuous scalp-following crown closes the gaps between swept roots.
+    # It sits beneath the outer locks and keeps three-quarter views solid.
+    crown=[];cf=[];cols=40;rings=12
+    scalp=[(1.87,.285,.255,.035),(1.94,.265,.250,.035),(2.01,.202,.200,.036),
+           (2.07,.105,.120,.036),(2.115,.035,.040,.035),(2.137,.002,.003,.035)]
+    for j in range(rings):
+        u=j/(rings-1)
+        for i in range(cols):
+            angle=i/cols*math.tau;c=math.cos(angle);edge=1.87+.205*max(0,c)**3
+            y=2.137-u*(2.137-edge)
+            width,depth,center=[interpolate(scalp,y,k) for k in (1,2,3)]
+            crown.append((math.sin(angle)*width,y,center-c*depth))
+            if j:cf.append(((j-1)*cols+i,(j-1)*cols+(i+1)%cols,j*cols+(i+1)%cols,j*cols+i))
+    a.mesh('Continuous swept-root crown',crown,cf,'hairN',head)
+    locks=[
+        ('Left swept fringe',[(-.015,2.118,-.09),(-.11,2.10,-.23),(-.235,2.005,-.269),(-.272,1.84,-.279),(-.302,1.69,-.281),(-.264,1.59,-.259)],.056,.68,'hairGold'),
+        ('Left outer S wave',[(-.05,2.105,-.025),(-.233,1.99,-.13),(-.299,1.79,-.11),(-.272,1.61,-.12),(-.324,1.42,-.09),(-.278,1.23,-.07),(-.321,1.08,-.035)],.057,.60,'hairN'),
+        ('Left layered shoulder curl',[(-.23,1.97,-.18),(-.284,1.78,-.222),(-.256,1.58,-.23),(-.313,1.43,-.24),(-.278,1.25,-.20),(-.320,1.08,-.16),(-.287,.96,-.075)],.047,.63,'hairGold'),
+        ('Right swept fringe',[(.020,2.105,-.065),(.14,2.075,-.22),(.25,1.94,-.25),(.284,1.77,-.277),(.245,1.62,-.260)],.055,.65,'hairGold'),
+        ('Right outer S wave',[(.07,2.10,0),(.235,1.99,-.08),(.300,1.81,-.06),(.273,1.60,-.09),(.320,1.40,-.05),(.286,1.21,0),(.328,1.04,.06)],.058,.60,'hairN'),
+        ('Right layered shoulder curl',[(.225,1.98,-.15),(.272,1.83,-.215),(.258,1.63,-.223),(.313,1.47,-.235),(.282,1.30,-.213),(.319,1.12,-.193),(.274,1.00,-.155)],.048,.62,'hairGold'),
+        ('Left back cascade',[(.01,2.10,.09),(-.09,1.99,.28),(-.135,1.79,.32),(-.085,1.57,.35),(-.15,1.34,.36),(-.09,1.12,.35),(-.13,1.01,.32)],.083,.55,'hairN'),
+        ('Right back cascade',[(.06,2.10,.09),(.16,1.96,.23),(.21,1.76,.30),(.145,1.53,.34),(.205,1.30,.36),(.17,1.08,.35)],.082,.56,'hairGold'),
+    ]
+    for name,controls,width,depth,mat in locks:hair_lock(a,head,name,controls,width,depth,mat)
+    # Match the measured requested 10-15 percent silhouette reduction in world space.
+    for obj in head.children:
+        if obj.type=='MESH' and any(m and m.name in ('hairN','hairGold') for m in obj.data.materials):obj.scale.x*=1.11
 
 
 def make_person(nina,parent,p,a):
@@ -306,7 +358,11 @@ def make_person(nina,parent,p,a):
     else:
         a.mesh('Open neckline',[(-.100,1.283,-.091),(.100,1.283,-.091),(.061,1.165,-.180),(0,1.083,-.199),(-.061,1.165,-.180)],[(0,1,2,3,4)],skin,root,False)
         for side in (-1,1):
-            a.mesh('Soft camp collar',[(side*.089,1.273,-.099),(side*.163,1.208,-.151),(side*.128,1.121,-.200),(side*.040,1.154,-.192)],[(0,1,2,3)],shirt,root)
+            collar=a.mesh('Soft camp collar',[(side*.089,1.273,-.099),(side*.163,1.208,-.151),(side*.128,1.121,-.200),(side*.040,1.154,-.192)],[(0,1,2,3)],shirt,root)
+            mod=collar.modifiers.new('Rolled collar thickness','SOLIDIFY');mod.thickness=.009
+            bpy.context.view_layer.objects.active=collar;bpy.ops.object.modifier_apply(modifier=mod.name)
+            mod=collar.modifiers.new('Soft collar edge','BEVEL');mod.width=.005;mod.segments=2
+            bpy.ops.object.modifier_apply(modifier=mod.name)
         a.path('Gold chain',[(-.086,1.225,-.137),(0,1.145,-.187),(.086,1.225,-.137)],.004,'gold',root)
         a.path('Button placket',[(.009,.57,-.154),(.009,.83,-.182),(.009,1.075,-.185)],.0045,shirt,root)
         for y in (.67,.81,.95):a.ell('Linen button',(.012,y,-.186),(.009,.009,.005),'cream',root,10,6)
@@ -315,10 +371,10 @@ def make_person(nina,parent,p,a):
     pants=[pelvis]
     for side in (-1,1):
         pants.append(limb(a,'Seated cloth thigh',[(side*.144,.449,-.07),(side*.165,.412,-.247),(side*.176,.382,-.402)],[.158,.147,.132],shorts,root,depth=1.05,segments=16))
-        limb(a,'Shaped thigh and calf',[(side*.177,.379,-.37),(side*.178,.315,-.59),(side*.182,.221,-.650),(side*.182,-.109,-.70)],[.106 if nina else .116,.105 if nina else .113,.084,.057],skin,root,depth=.93,segments=14)
-        a.box('Sandal sole',(side*.182,-.184,-.764),(.195,.043,.34),'seam',root,.022)
-        a.ell('Foot',(side*.182,-.139,-.759),(.083,.047,.146),skin,root,16,10)
-        a.path('Sandal strap',[(side*.182-.079,-.127,-.822),(side*.182,-.090,-.817),(side*.182+.079,-.127,-.822)],.014,'cream' if nina else 'rubber',root)
+        limb(a,'Shaped thigh and calf',[(side*.177,.379,-.37),(side*.178,.315,-.59),(side*.182,.221,-.650),(side*.182,-.29 if nina else -.109,-.70)],[.106 if nina else .116,.105 if nina else .113,.084,.057],skin,root,depth=.93,segments=14)
+        a.box('Sandal sole',(side*.182,-.363 if nina else -.184,-.764),(.195,.043,.34),'seam',root,.022)
+        a.ell('Foot',(side*.182,-.318 if nina else -.139,-.759),(.083,.047,.146),skin,root,16,10)
+        a.path('Sandal strap',[(side*.182-.079,-.306 if nina else -.127,-.822),(side*.182,-.269 if nina else -.090,-.817),(side*.182+.079,-.306 if nina else -.127,-.822)],.014,'cream' if nina else 'rubber',root)
     weld_cloth(a,'Continuous seated shorts',pants,root,.016)
     a.path('Cloth waistband',[(-.238,.551,-.037),(0,.567,-.160),(.238,.551,-.037)],.009,shorts,root)
     if nina:a.ell('Shorts button',(0,.53,-.178),(.012,.012,.005),'cream',root,10,6)
