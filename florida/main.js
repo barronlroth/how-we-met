@@ -10,6 +10,7 @@ import {loadHeroArt,heroAirboat} from './hero-art.js';
 import {loadWaterfrontArt} from './waterfront-art.js';
 import {makeWorld,makeWater,makeSky,SUN} from './world.js';
 import {makeEffects,makeWaterCannon} from './effects.js';
+import {makeTargetHealth} from './target-health.js';
 import {createRace,stepRace,pilotInput,fireWater,WATER_SHOT,RIVAL_SOAK,objectX,pointAt,frameAt,angleDelta,sector,COURSE_LENGTH,MEDAL_TIMES,formatTime,loadBest,saveBest,ISLANDS} from './core.js';
 import {TRACK,routeBounds} from './course.js';
 import {GameAudio} from './audio.js';
@@ -19,7 +20,7 @@ import {graphicsProfile} from './graphics.js';
 import {createNinaBanter,CHECKPOINT_LINES} from './nina-lines.js';
 const $=id=>document.getElementById(id),reducedMotion=matchMedia('(prefers-reduced-motion: reduce)').matches;
 let storage;try{storage=localStorage}catch{storage={getItem:()=>null,setItem:()=>{}}}
-let race=createRace(),best=loadBest(storage),renderer,composer,scene,camera,boat,scenery,water,effects,sunshine,portraitFill,ambientOcclusion;
+let race=createRace(),best=loadBest(storage),renderer,composer,scene,camera,boat,scenery,water,effects,targetHealth,sunshine,portraitFill,ambientOcclusion;
 let countIn=0,pausedFrom='racing',lastTime=0,time=0,captionUntil=0,deflate=0,shake=0,cameraSnap=true,lastFocus=null,currentSpf=false;
 let captionPriority=0,banterRun=0,banter=createNinaBanter();
 const audio=new GameAudio(),pressed=new Set(),entities=new Map(),rivalModels=[],hullMaterials=[];
@@ -64,7 +65,7 @@ function pulse(color){if(reducedMotion)return;$('flash').style.borderColor=color
 function showError(error){console.error(error);resetInput();$('touch-controls').hidden=true;$('paused').hidden=true;$('pause').hidden=true;$('start').hidden=true;$('hud').hidden=true;$('error').hidden=false;document.body.classList.remove('racing')}
 $('sound').addEventListener('click',async()=>{try{await audio.enable(!audio.enabled);$('sound').querySelector('span').textContent=audio.enabled?'Sound on':'Sound off';$('sound').setAttribute('aria-pressed',String(audio.enabled));$('sound').setAttribute('aria-label',audio.enabled?'Mute sound':'Turn sound on')}catch{$('sound').querySelector('span').textContent='Unavailable'}});
 function resetRace(demo=false){
- if(!renderer)return;race=createRace();race.demo=demo;document.body.classList.toggle('demo-mode',demo);race.status='countdown';resetInput();deflate=0;shake=0;countIn=3;cameraSnap=true;effects.reset();frameProfile.reset();
+ if(!renderer)return;race=createRace();race.demo=demo;document.body.classList.toggle('demo-mode',demo);race.status='countdown';resetInput();deflate=0;shake=0;countIn=3;cameraSnap=true;effects.reset();scenery.resetDestruction();frameProfile.reset();
  banter=createNinaBanter(banterRun++);captionUntil=0;captionPriority=0;
  for(const id of ['start','paused','finish'])$(id).hidden=true;for(const id of ['hud','pause','countdown'])$(id).hidden=false;
  $('demo-note').hidden=!demo;$('countdown').textContent='3';document.body.classList.add('racing');setCaption('A little racing before dinner. What could go wrong?',5);$('world').focus({preventScroll:true});syncControls();
@@ -99,6 +100,7 @@ if(screen.orientation?.addEventListener)screen.orientation.addEventListener('cha
 function events(){
  for(const e of race.events){
   audio.effect(e.type);effects.event(e);
+  if(e.type==='destroy'){scenery.destroyTarget(e.targetId);if(!reducedMotion)shake=Math.max(shake,.055)}
   if(e.type==='checkpoint'){setCaption(CHECKPOINT_LINES[race.checkpoint-1],4.5,3);pulse('#8ef0d3')}
   else if(e.type==='finish'){
    cameraSnap=true;effects.reset();$('hud').hidden=true;$('pause').hidden=true;$('finish').hidden=false;$('countdown').hidden=true;document.body.classList.remove('racing');
@@ -106,7 +108,7 @@ function events(){
    $('medal').textContent=race.demo?'DEMO COMPLETE':`${race.rank===1?'1ST PLACE · ':''}${race.endMedal}`;$('medal').dataset.medal=race.endMedal;
    $('final-time').textContent=formatTime(race.elapsed);$('finish-best').textContent=race.demo?'Your turn. Take the wheel.':isBest?'A new personal best.':`Your best: ${formatTime(best)}`;
    $('finish-copy').textContent=race.demo?'That’s the route. Now let’s see your racing line.':`Finished ${['','1st','2nd','3rd','4th'][race.rank]}. Nina’s already picking the appetizers.`;
-   $('race-stats').replaceChildren(...[[race.jumps,'jumps'],[race.nearMisses,'close calls'],[race.hits,'bumps']].map(([n,label])=>{const el=document.createElement('span'),b=document.createElement('strong');b.textContent=n;el.append(b,label);return el}));resetInput();syncControls();$('replay').focus({preventScroll:true});
+   $('race-stats').replaceChildren(...[[race.jumps,'jumps'],[race.nearMisses,'close calls'],[race.destroyed,'targets cleared']].map(([n,label])=>{const el=document.createElement('span'),b=document.createElement('strong');b.textContent=n;el.append(b,label);return el}));resetInput();syncControls();$('replay').focus({preventScroll:true});
   }else{if(e.text)setCaption(e.text,3.5,['hit','bounce'].includes(e.type)?2:0);if(e.type==='bounce'){deflate=1;pulse('#ff9ab2')}if(e.type==='hit'){shake=.2;pulse('#ffae87')}if(e.type==='land')shake=.13}
  }race.events.length=0;
 }
@@ -115,23 +117,23 @@ function updateHud(){
  $('position').innerHTML=`${race.rank}<span>/4</span>`;$('boost-fill').style.strokeDashoffset=100-race.boost*100;$('boost-fill').style.stroke=race.boosting?'#fff9de':'#59f1e3';
  $('floatie-status').hidden=!race.flamingo;$('spf-status').hidden=race.sunscreen<=0;$('spf-status').textContent=`SPF 1000 · ${Math.ceil(race.sunscreen)}s`;$('fire-status').classList.toggle('is-firing',pressed.has('Space')||touch.state.fire);
  $('distance').textContent=`${((COURSE_LENGTH-race.s)/1000).toFixed(1)} km`;const p=mapPoint(pointAt(race.s,race.x));$('map-dot').setAttribute('cx',p.x);$('map-dot').setAttribute('cy',p.y);
- const special=race.soakFlash>0?'SPLASH!':race.drifting?'DRIFT +':race.drafting?'SLIPSTREAM':race.combo>1?`${race.combo}× CLOSE CALLS`:race.boosting?'CAFECITO!':'';$('combo').hidden=!special;$('combo').textContent=special;
+ const special=race.destructionFlash>0?'SPLASHDOWN!':race.soakFlash>0?'HIT!':race.drifting?'DRIFT +':race.drafting?'SLIPSTREAM':race.combo>1?`${race.combo}× CLOSE CALLS`:race.boosting?'CAFECITO!':'';$('combo').hidden=!special;$('combo').textContent=special;
  $('speed-lines').style.opacity=!reducedMotion&&race.status==='racing'?(race.boosting?.34:Math.max(0,(race.speed-30)/100)):0;
  $('touch-boost-fill').style.transform=`scaleX(${race.boost})`;$('touch-boost').classList.toggle('is-boosting',race.boosting);$('touch-boost').classList.toggle('is-empty',race.boost<.005);$('touch-boost-label').textContent=race.boost<.005?'DRIFT TO REFILL':race.boosting?'VAMOS!':'HOLD TO BOOST';
  $('touch-fire').classList.toggle('is-firing',race.fireFlash>0);$('touch-fire').style.setProperty('--reload',String(Math.max(0,1-race.fireCooldown/WATER_SHOT.cooldown)));
  if(time>captionUntil)$('nina').style.opacity='0';
 }
 function renderEntities(s){
- for(const o of race.objects){const mesh=entities.get(o.id);if(!mesh)continue;mesh.visible=o.s>s-80&&o.s<s+650&&!o.consumed;if(!mesh.visible)continue;const p=pointAt(o.s,objectX(o,race.elapsed));mesh.position.set(p.x,0,p.z);mesh.rotation.set(0,-p.heading,0);
+ for(const o of race.objects){const mesh=entities.get(o.id);if(!mesh)continue;mesh.visible=o.s>s-80&&o.s<s+650&&!o.consumed&&!o.destroyed;if(!mesh.visible)continue;const p=pointAt(o.s,objectX(o,race.elapsed));mesh.position.set(p.x,0,p.z);mesh.rotation.set(0,-p.heading,0);
   if(o.type==='floater'){mesh.position.y=.08+Math.sin(time*1.8+o.drift)*.11;mesh.rotation.z=Math.sin(time*1.6+o.drift)*.065;mesh.rotation.y+=.25*Math.sin(time*.3+o.drift);if(o.scared){const hitAge=4-o.scared;mesh.rotation.y+=Math.sin(hitAge*3)*Math.min(1,o.scared)*.8;mesh.rotation.z+=Math.sin(hitAge*9)*Math.exp(-hitAge*2)*.3;mesh.position.y+=Math.sin(Math.min(1,hitAge)*Math.PI)*.45}}
-  else if(o.type==='gator'){mesh.position.y=o.scared?-Math.min(1.5,o.scared):.035;mesh.rotation.y+=Math.PI/2+Math.sin(time*.7+o.drift)*.22}
+  else if(o.type==='gator'){mesh.position.y=o.scared?-.1+(reducedMotion?0:Math.sin((4-o.scared)*16)*.08):.035;mesh.rotation.y+=Math.PI/2+Math.sin(time*.7+o.drift)*.22}
   else if(o.type==='taxi'){mesh.rotation.y+=Math.cos(race.elapsed*.16+o.drift)>0?-Math.PI/2:Math.PI/2;mesh.position.y=Math.sin(time*1.2)*.04}
   else if(o.type==='yacht'){mesh.rotation.y+=o.yaw||0;mesh.position.y=reducedMotion?0:Math.sin(time*.8)*.035}
   else if(!['ramp','wake'].includes(o.type)){mesh.position.y=1.4+Math.sin(time*2+o.s)*.22;mesh.rotation.y=time*.7}
  }
  race.rivals.forEach((v,i)=>{
   const m=rivalModels[i],p=pointAt(v.s,v.x),soak=!reducedMotion&&v.soaked>0?Math.sin((RIVAL_SOAK.duration-v.soaked)*22)*.11*(v.soaked/RIVAL_SOAK.duration):0;
-  m.visible=race.status!=='ready'&&race.status!=='finished'&&Math.abs(v.s-s)<650;m.position.set(p.x,Math.sin(time*3+i)*.04,p.z);m.rotation.set(soak*.4,-v.heading,Math.sin(time*3+i)*.015+soak);
+  m.visible=!v.destroyed&&race.status!=='ready'&&race.status!=='finished'&&Math.abs(v.s-s)<650;m.position.set(p.x,Math.sin(time*3+i)*.04,p.z);m.rotation.set(soak*.4,-v.heading,Math.sin(time*3+i)*.015+soak);
  });
 }
 function frame(now){
@@ -159,18 +161,18 @@ function frame(now){
  const follow=1-Math.exp(-dt*8);if(cameraSnap){camera.position.copy(desiredCamera);smoothLook.copy(lookAt);cameraSnap=false}else{camera.position.lerp(desiredCamera,follow);smoothLook.lerp(lookAt,follow)}
  if(!reducedMotion&&race.status==='racing'){const vibrate=race.boosting?.022:.009;camera.position.y+=Math.sin(time*52)*vibrate;if(shake>0){camera.position.x+=Math.sin(time*61)*shake;camera.position.y+=Math.cos(time*43)*shake;shake=Math.max(0,shake-dt)}}camera.lookAt(smoothLook);
  const fov=staged?63:race.boosting&&!reducedMotion?84:68;camera.fov=T.MathUtils.lerp(camera.fov,fov,1-Math.exp(-dt*5));camera.updateProjectionMatrix();
- scenery.update(s,camera);water.update(s,time);renderEntities(s);effects.update(race,dt,time);
+ scenery.update(s,camera);water.update(s,time);renderEntities(s);effects.update(race,dt,time);targetHealth.update(race,camera);
  sunshine.position.set(p.x+SUN.x*130,130*SUN.y,p.z+SUN.z*130);sunshine.target.position.set(p.x,0,p.z);sunshine.target.updateMatrixWorld();
  audio.update(race.speed,race.status==='racing',race.boosting);renderer.info.reset();renderer.shadowMap.needsUpdate=true;const renderStart=performance.now();composer.render();
  if(race.status==='racing'&&race.elapsed>5&&!document.hidden&&!$('performance').hidden)frameProfile.sample(sector(race.s),realDt*1000,performance.now()-renderStart,renderer.info.render.calls,renderer.info.render.triangles);
- perfTime+=realDt;perfFrames++;if(perfTime>.5){if(!$('performance').hidden)$('performance').textContent=`${Math.round(perfFrames/perfTime)} fps · ${renderer.info.render.calls} draws · ${Math.round(renderer.info.render.triangles/1000)}k triangles\n${innerWidth}×${innerHeight} · ${graphicsMode} · DPR ${renderer.getPixelRatio()} · excludes first 5 race seconds\n${frameProfile.summary()}\nWater shots ${race.shots.length} · fired ${race.nextShotId} · soaked ${race.soaked}\nMulti-draw ${renderer.extensions.has('WEBGL_multi_draw')}`;perfTime=0;perfFrames=0}
+ perfTime+=realDt;perfFrames++;if(perfTime>.5){if(!$('performance').hidden)$('performance').textContent=`${Math.round(perfFrames/perfTime)} fps · ${renderer.info.render.calls} draws · ${Math.round(renderer.info.render.triangles/1000)}k triangles\n${innerWidth}×${innerHeight} · ${graphicsMode} · DPR ${renderer.getPixelRatio()} · excludes first 5 race seconds\n${frameProfile.summary()}\nWater shots ${race.shots.length} · fired ${race.nextShotId} · hits ${race.soaked} · destroyed ${race.destroyed}\nMulti-draw ${renderer.extensions.has('WEBGL_multi_draw')}`;perfTime=0;perfFrames=0}
 }
 async function boot(){
  await document.fonts.ready;await prepareMaterials();await Promise.all([loadArtMaterials(),loadHeroArt(),loadWaterfrontArt()]);renderer=new T.WebGLRenderer({canvas:$('world'),antialias:true,powerPreference:'high-performance'});applyGraphics();renderer.outputColorSpace=T.SRGBColorSpace;renderer.toneMapping=T.ACESFilmicToneMapping;renderer.toneMappingExposure=1.0;renderer.shadowMap.enabled=true;renderer.shadowMap.autoUpdate=false;renderer.shadowMap.type=T.PCFShadowMap;renderer.info.autoReset=false;
  scene=new T.Scene();scene.fog=new T.Fog(0xb6d5dc,460,1850);camera=new T.PerspectiveCamera(63,innerWidth/innerHeight,.15,6000);resize();scene.add(new T.HemisphereLight(0xd8edfa,0x647653,.55));
  sunshine=new T.DirectionalLight(0xfff0d3,4.3);sunshine.castShadow=true;sunshine.shadow.mapSize.set(2048,2048);Object.assign(sunshine.shadow.camera,{left:-100,right:100,top:100,bottom:-100,near:1,far:280});sunshine.shadow.normalBias=.045;sunshine.shadow.bias=-.00008;sunshine.shadow.radius=2;scene.add(sunshine,sunshine.target);
  portraitFill=new T.PointLight(0xffe3c8,90,24,2);portraitFill.visible=false;scene.add(portraitFill);
- makeSky(scene,renderer);water=makeWater(scene);scenery=makeWorld(scene,{multiDraw:renderer.extensions.has('WEBGL_multi_draw')});boat=heroAirboat();scene.add(boat);boat.userData.waterCannon=makeWaterCannon(boat);effects=makeEffects(scene);
+ makeSky(scene,renderer);water=makeWater(scene);scenery=makeWorld(scene,{multiDraw:renderer.extensions.has('WEBGL_multi_draw')});boat=heroAirboat();scene.add(boat);boat.userData.waterCannon=makeWaterCannon(boat);effects=makeEffects(scene,{reducedMotion});targetHealth=makeTargetHealth(scene);
  (boat.userData.hull||boat.children[0]).traverse(o=>{if(o.isMesh){o.material=o.material.clone();hullMaterials.push({material:o.material,roughness:o.material.roughness,metalness:o.material.metalness})}});
  const models={floater:[floater(0),floater(1),floater(2)],gator:gator(),ramp:ramp(),wake:boatWake(),coffee:pickup('coffee'),flamingo:pickup('flamingo'),sunscreen:pickup('sunscreen'),taxi:waterTaxi(),yacht:superyacht(1)};
  for(const [i,o]of race.objects.entries()){const m=(o.type==='floater'?models.floater[i%3]:models[o.type])?.clone(true);if(m){if(o.type==='yacht')m.scale.setScalar(o.scale);scene.add(m);entities.set(o.id,m)}}

@@ -61,11 +61,18 @@ Preserve the selected blonde-haired couple and waterfront assets in both quality
 
 ## September 5 shooting and character shape correction
 
-The user rejected the horn attack and requested something the boat can shoot. The current action is a deck-mounted water blaster: hold Space or the touch SOAK button and steer the boat to aim. Visible shots travel forward and splash on contact. A direct hit briefly displaces a tube rider or makes a gator duck; this replaces the horn's area effect. Racing, drift, Cafecito, and the existing protection pickups remain the core loop.
+The user rejected the horn attack and requested something the boat can shoot. The replacement action is a deck-mounted water blaster: hold Space or the touch SOAK button and steer the boat to aim. Visible shots travel forward and splash on contact. The first shooting version briefly displaced a tube rider or made a gator duck, replacing the horn's area effect. The September 7 destruction update below supersedes that temporary-only response. Racing, drift, Cafecito, and the existing protection pickups remain the core loop.
 
 The user separately rejected the character geometry: the face texture looked good, but the shapes distorted the result. Preserve the selected animated-feature art and facial atlas while correcting the actual head, face UV, body, hair, clothing, and hand geometry. Nina remains blonde. The correction targets the long lower faces, disproportionate heads and necks, rope-like hair, detached-looking sleeves, blocky shorts, and simple wrist ends. Compare the resulting meshes in front/three-quarter authoring renders and in the browser; good texture art alone does not satisfy this request.
 
 
 ## Rival water-shot hits
 
-The user accepted the updated character look and requested that competing boats can also be shot. Direct water hits briefly slow and rock rival racers, creating an overtaking opportunity. Rivals keep racing, recover naturally, and have a short protection window so held fire cannot continuously stack slowdown. Existing Space/SOAK controls, characters, course, and power-ups are preserved.
+The user accepted the updated character look and requested that competing boats can also be shot. The initial rival response briefly slowed and rocked competing boats, creating an overtaking opportunity. Rivals recovered naturally, with a short protection window against continuously stacked slowdown. The September 7 update retains the temporary slowdown but adds damage and elimination; that protection window does not protect health. Existing Space/SOAK controls, characters, course, and power-ups are preserved.
+
+
+## September 7 shootable destruction
+
+The user explicitly requested that objects hit by the water blaster become destructible. Repeated direct hits now clear every previously shootable target type: tube riders, gators, rivals, water taxis, moored boats, and the departing yacht. Tubes pop and boats break into colorful pieces and spray; gators leave beneath a splash without fragments. Durability is one hit for tubes, two for gators, three for rivals, four for taxis and moored boats, and six for the departing yacht. Damaged nearby targets show health bars. Every direct hit damages a rival even during its slowdown recovery window.
+
+A cleared target disappears for that run and no longer blocks shots, collides with the player, awards near misses, or contributes to drafting/ranking. Destroyed rivals stop racing. SPLASHDOWN! confirms a clear, and the finish statistics count targets cleared. Replay restores full health, scenery visibility, and a clean count. Buildings, bridges, docks, landmarks, pickups, ramps, and island banks are outside the destruction scope. Preserve the current dense five-district scene, Blender models, approved couple, and keyboard/touch controls. The added effects use bounded pools; browser performance must be checked separately from those allocation limits. See [destruction validation](docs/florida-destruction-validation.md).

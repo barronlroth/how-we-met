@@ -40,8 +40,8 @@ test('a nearer swimmer or traffic boat blocks a shot from reaching a competing b
   const race=playing(),boat=rival(3718,1.2,0,0),blocker=obstacle(3710,type);
   race.rivals=[boat];race.objects=[blocker];fastShot(race);stepRace(race,{},tick);
   assert.equal(race.shots.length,0);assert.equal(boat.soaked,0);assert.equal(boat.soakImmunity,0);
-  assert.equal(race.soaked,type==='floater'?1:0);assert.equal(race.events.some(e=>e.rival),false);
-  assert.equal(blocker.scared>0,type==='floater');
+  assert.equal(race.soaked,1);assert.equal(race.events.some(e=>e.rival),false);
+  assert.equal(blocker.destroyed,type==='floater');assert.equal(blocker.hp,type==='floater'?0:3);
  }
 });
 
@@ -53,7 +53,7 @@ test('the closest competing boat blocks farther rivals and course hazards in the
  assert.equal(race.events.filter(e=>e.type==='splash'&&e.rival&&e.hit).length,1);
 });
 
-test('repeated hits during immunity splash without refreshing the penalty or stacking slowdown',()=>{
+test('repeated hits during immunity damage the hull without refreshing the penalty or stacking slowdown',()=>{
  const race=playing(),boat=rival();race.rivals=[boat];fastShot(race);stepRace(race,{},tick);
  assert.ok(boat.soaked>0);advance(race,.3);
  // Put the next real shot behind the moving boat; compare the same simulation
@@ -62,20 +62,20 @@ test('repeated hits during immunity splash without refreshing the penalty or sta
  const control=structuredClone(race),beforeSoaked=boat.soaked,beforeImmunity=boat.soakImmunity;
  const priorSplashes=race.events.filter(e=>e.type==='splash').length;
  fastShot(race);stepRace(race,{},tick);stepRace(control,{},tick);
- assert.equal(race.shots.length,0);assert.equal(race.soaked,1);
+ assert.equal(race.shots.length,0);assert.equal(race.soaked,2);assert.equal(boat.hp,1);
  assert.ok(boat.soaked<beforeSoaked);assert.ok(boat.soakImmunity<beforeImmunity);
  assert.ok(Math.abs(boat.speed-control.rivals[0].speed)<1e-10,'another impact cannot multiply the slowdown again');
  assert.equal(race.events.filter(e=>e.type==='splash').length,priorSplashes+1);
 });
 
-test('the recovery window prevents another penalty until immunity expires',()=>{
+test('the recovery window prevents refreshed slowdown but does not make a damaged hull invulnerable',()=>{
  const race=playing(),boat=rival();race.rivals=[boat];fastShot(race);stepRace(race,{},tick);
  advance(race,RIVAL_SOAK.duration+.1);
  assert.equal(boat.soaked,0);assert.ok(boat.soakImmunity>0);
  const shootBehind=()=>{race.s=boat.s-12;race.x=boat.x-1.2;race.heading=frameAt(race.s).heading;fastShot(race);stepRace(race,{},tick)};
- shootBehind();assert.equal(race.shots.length,0);assert.equal(boat.soaked,0);assert.equal(race.soaked,1);
+ shootBehind();assert.equal(race.shots.length,0);assert.equal(boat.soaked,0);assert.equal(race.soaked,2);assert.equal(boat.hp,1);
  advance(race,RIVAL_SOAK.immunity-RIVAL_SOAK.duration+.1);assert.equal(boat.soakImmunity,0);
- shootBehind();assert.ok(boat.soaked>0);assert.equal(race.soaked,2);assert.equal(race.shots.length,0);
+ shootBehind();assert.equal(boat.destroyed,true);assert.equal(boat.hp,0);assert.equal(race.soaked,3);assert.equal(race.destroyed,1);assert.equal(race.shots.length,0);
 });
 
 test('soaked rivals remain slower briefly, then resume normal racing pace',()=>{
@@ -88,6 +88,14 @@ test('soaked rivals remain slower briefly, then resume normal racing pace',()=>{
  assert.equal(boat.soaked,0);assert.equal(boat.soakImmunity,0);
  assert.ok(boat.speed>penalizedSpeed+8);assert.ok(boat.speed>healthy.rivals[0].speed*.85);
  assert.equal(race.rivals.length,1);assert.equal(race.rivals[0],boat);
+});
+
+test('a surviving rival can be slowed again after its recovery immunity expires',()=>{
+ const race=playing(),boat=rival();race.rivals=[boat];fastShot(race);stepRace(race,{},tick);advance(race,RIVAL_SOAK.immunity+.1);
+ assert.equal(boat.soakImmunity,0);assert.equal(boat.hp,2);
+ race.s=boat.s-12;race.x=boat.x-1.2;race.heading=frameAt(race.s).heading;const recoveredSpeed=boat.speed;
+ fastShot(race);stepRace(race,{},tick);assert.equal(boat.hp,1);assert.equal(boat.destroyed,false);
+ assert.ok(boat.soaked>0);assert.ok(boat.speed<recoveredSpeed*.7);assert.equal(race.soaked,2);
 });
 
 test('pause freezes rival penalties, and finish or a new race clears their transient state',()=>{

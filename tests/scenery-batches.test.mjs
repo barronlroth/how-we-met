@@ -58,3 +58,30 @@ test('distant scenery spans bends beyond detail culling and skips shadows and AO
     batch.update(1700); assert.deepEqual(visible(), [false, true, true]);
   }
 });
+
+test('destroying a batched hull hides only its parts through culling and AO, and restart restores exact transforms', () => {
+  for (const multiDraw of [false, true]) {
+    const chunks = [chunk(0, [[1, 2, 3], [4, 5, 6], [7, 8, 9]]), chunk(200, [[10, 11, 12]])];
+    chunks[0].children[0].userData.targetIds = ['boat-a', null, 'boat-a'];
+    chunks[1].children[0].userData.targetIds = ['boat-b'];
+    const batch = batchScenery(chunks, {multiDraw}), matrix = new T.Matrix4();
+    const visible = i => {
+      if (multiDraw) return batch.root.children[0].getVisibleAt(i);
+      const c = chunks[i === 3 ? 1 : 0], mesh = c.children[0];
+      mesh.getMatrixAt(i === 3 ? 0 : i, matrix);
+      return c.visible && matrix.determinant() !== 0;
+    };
+    batch.update(0); batch.setDestroyed('boat-a');
+    assert.deepEqual([0, 1, 2, 3].map(visible), [false, true, false, true]);
+    batch.setAO(true);
+    assert.deepEqual([0, 1, 2, 3].map(visible), [false, true, false, false]);
+    batch.setAO(false); batch.update(1000); batch.update(0);
+    assert.deepEqual([0, 1, 2, 3].map(visible), [false, true, false, true]);
+    batch.setDestroyed('boat-b'); batch.update(1000); batch.resetDestruction();
+    assert.deepEqual([0, 1, 2, 3].map(visible), [false, false, false, false]);
+    batch.update(0);
+    assert.deepEqual([0, 1, 2, 3].map(visible), [true, true, true, true]);
+    (multiDraw ? batch.root.children[0] : chunks[0].children[0]).getMatrixAt(2, matrix);
+    assert.deepEqual(new T.Vector3().setFromMatrixPosition(matrix).toArray(), [7, 8, 9]);
+  }
+});

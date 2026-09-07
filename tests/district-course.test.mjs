@@ -60,17 +60,17 @@ test('departing yacht traverses the marina smoothly with an open escape gap at e
  assert.equal(objectX(boat,boat.departureAt),before);assert.equal(objectX(boat,boat.departureAt+boat.departureDuration),after);
 });
 
-test('shooting a departing yacht bow splashes and blocks the swimmer behind without a penalty',()=>{
+test('shooting a departing yacht bow damages its hull and blocks the swimmer behind',()=>{
  const r=playing(),boat=yacht(),swimmer={id:'behind',type:'floater',s:3732,x:18.2,drift:0,radius:2.3,scared:0};
  r.x=17;r.objects=[swimmer,boat];assert.ok(fireWater(r));advance(r,.25);
- assert.equal(r.shots.length,0);assert.equal(r.soaked,0);assert.equal(r.hits,0);assert.equal(boat.scared,0);assert.equal(swimmer.scared,0);
- assert.ok(r.events.some(e=>e.type==='splash'&&!e.hit));assert.equal(boat.consumed,undefined);
+ assert.equal(r.shots.length,0);assert.equal(r.soaked,1);assert.equal(boat.hp,5);assert.equal(boat.destroyed,false);assert.equal(r.hits,0);assert.equal(boat.scared,0);assert.equal(swimmer.scared,0);
+ assert.ok(r.events.some(e=>e.type==='splash'&&e.hit));assert.equal(boat.consumed,undefined);
 });
 
 test('a long moored hull blocks shots at the bow before a closer centre-point target',()=>{
  const r=playing(),boat={...yacht(3740),type:'mooring',x:1.2,yaw:0},swimmer={id:'behind-bow',type:'floater',s:3734,x:1.2,drift:0,radius:2.3,scared:0};
  r.objects=[swimmer,boat];assert.ok(fireWater(r));advance(r,.25);
- assert.equal(r.shots.length,0);assert.equal(r.soaked,0);assert.equal(swimmer.scared,0);assert.ok(r.events.some(e=>e.type==='splash'&&!e.hit));
+ assert.equal(r.shots.length,0);assert.equal(r.soaked,1);assert.equal(boat.hp,3);assert.equal(boat.destroyed,false);assert.equal(swimmer.scared,0);assert.ok(r.events.some(e=>e.type==='splash'&&e.hit));
 });
 
 test('player contact uses the transverse yacht bow as well as its centre and gaps remain passable',()=>{
@@ -97,12 +97,14 @@ test('real steering completes all districts and checkpoints with gold at 30, 60,
   const r=createRace(),seen=new Set(),passedYacht=new Set(),boat=r.objects.find(o=>o.type==='yacht');r.status='racing';
   while(r.status==='racing'&&r.elapsed<140){
    seen.add(districtAt(r.s).id);stepRace(r,{...pilotInput(r),fire},dt);
-   for(const [i,v]of r.rivals.entries())if(Math.abs(v.s-boat.s)<boat.radius+2.5){
-    assert.ok(Math.abs(v.x-objectX(boat,r.elapsed))>boat.halfLength+2.5,'rivals steer around the visible yacht hull');passedYacht.add(i);
+   for(const [i,v]of r.rivals.entries())if(!v.destroyed&&Math.abs(v.s-boat.s)<boat.radius+2.5){
+    if(!boat.destroyed)assert.ok(Math.abs(v.x-objectX(boat,r.elapsed))>boat.halfLength+2.5,'rivals steer around the visible yacht hull');passedYacht.add(i);
    }
   }
   assert.equal(r.status,'finished',`${dt}, firing ${fire}`);assert.equal(r.endMedal,'GOLD');assert.equal(r.rank,1);assert.equal(r.checkpoint,4);assert.equal(seen.size,5);
-  assert.equal(passedYacht.size,3);
+  for(const [i,v]of r.rivals.entries())assert.ok(v.destroyed||passedYacht.has(i),'every surviving rival passes the marina');
+  if(fire)assert.ok(r.destroyed>0,'held fire destroys targets during a complete run');
+  assert.equal(r.destroyed,r.events.filter(e=>e.type==='destroy').length);
  }
 });
 

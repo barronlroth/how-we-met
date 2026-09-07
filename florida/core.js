@@ -7,6 +7,14 @@ const pickupTypes=['coffee','flamingo','sunscreen'];
 const waterTargetTypes=new Set(['gator','floater','taxi','mooring','yacht']),waterTargetFrames=new WeakMap();
 export const WATER_SHOT=Object.freeze({cooldown:.24,lifetime:1.3,speed:102,radius:.52,muzzleSide:1.2,muzzleForward:2.95,muzzleHeight:1.14});
 export const RIVAL_SOAK=Object.freeze({duration:1.8,immunity:2.8,speedMultiplier:.62,radius:2.5,height:2.5});
+export const DESTRUCTION=Object.freeze({floater:1,gator:2,rival:3,taxi:4,mooring:4,yacht:6});
+const destructionLines={floater:'Floatie popped. Swim break!',gator:'Gator’s calling it a day.',rival:'One less boat between us and dinner.',taxi:'Water taxi: out of service.',mooring:'Dockside demolition. Very subtle.',yacht:'Big yacht. Bigger splash.'};
+function targetHealth(target,type=target.type,id){
+ const maxHp=DESTRUCTION[type];if(!maxHp)return target;
+ target.maxHp??=maxHp;target.hp??=target.maxHp;target.damageFlash??=0;target.destroyed??=false;
+ if(id!==undefined)target.id??=id;
+ return target;
+}
 export function courseObjects(){
  const objects=MOORINGS.map(m=>({...m,type:'mooring'}));let seed=920441;const rand=()=>((seed=(seed*1664525+1013904223)>>>0)/4294967296);
  for(let s=170,i=0;s<COURSE_LENGTH-170;s+=95+rand()*70,i++){
@@ -32,8 +40,9 @@ export function courseObjects(){
  for(let s=520,i=0;s<COURSE_LENGTH-150;s+=310,i++)objects.push({id:`wake-${i}`,type:'wake',s,x:racingLine(s),radius:17});
  return objects.sort((a,b)=>a.s-b.s);
 }
-export function createRace(){return{status:'ready',demo:false,s:0,x:0,heading:frameAt(0).heading,turn:0,vx:0,speed:0,elapsed:0,y:0,vy:0,boost:.55,boosting:false,drifting:false,driftCharge:0,driftTotal:0,drafting:false,combo:0,comboTime:0,flamingo:false,sunscreen:0,immunity:0,fireCooldown:0,fireFlash:0,soakFlash:0,soaked:0,shots:[],nextShotId:0,lastShotCallout:-4,checkpoint:0,hits:0,jumps:0,nearMisses:0,pickups:0,rank:4,events:[],objects:courseObjects().map(o=>({...o,consumed:false,passed:false,scared:0})),rivals:[{s:20,x:-7,heading:frameAt(20).heading,speed:0,pace:39.8,lane:-1,soaked:0,soakImmunity:0},{s:35,x:6,heading:frameAt(35).heading,speed:0,pace:42.5,lane:1,soaked:0,soakImmunity:0},{s:52,x:-2,heading:frameAt(52).heading,speed:0,pace:44.7,lane:-1,soaked:0,soakImmunity:0}],lastCallout:-10,endMedal:null}};
+export function createRace(){return{status:'ready',demo:false,s:0,x:0,heading:frameAt(0).heading,turn:0,vx:0,speed:0,elapsed:0,y:0,vy:0,boost:.55,boosting:false,drifting:false,driftCharge:0,driftTotal:0,drafting:false,combo:0,comboTime:0,flamingo:false,sunscreen:0,immunity:0,fireCooldown:0,fireFlash:0,soakFlash:0,soaked:0,destroyed:0,destructionFlash:0,shots:[],nextShotId:0,lastShotCallout:-4,checkpoint:0,hits:0,jumps:0,nearMisses:0,pickups:0,rank:4,events:[],objects:courseObjects().map(o=>targetHealth({...o,consumed:false,passed:false,scared:0})),rivals:[{s:20,x:-7,heading:frameAt(20).heading,speed:0,pace:39.8,lane:-1,soaked:0,soakImmunity:0,color:0xf27e54},{s:35,x:6,heading:frameAt(35).heading,speed:0,pace:42.5,lane:1,soaked:0,soakImmunity:0,color:0x539cb0},{s:52,x:-2,heading:frameAt(52).heading,speed:0,pace:44.7,lane:-1,soaked:0,soakImmunity:0,color:0xe1ba49}].map((v,i)=>targetHealth(v,'rival',`rival-${i}`)),lastCallout:-10,endMedal:null}};
 export function objectX(o,t){
+ if(o.destroyed)return o.destroyedX??o.x;
  if(o.type==='yacht'){
   const u=clamp((t-o.departureAt)/o.departureDuration,0,1),ease=u*u*(3-2*u);
   return (halfWidth(o.s)-o.halfLength-2)*(1-2*ease);
@@ -72,6 +81,18 @@ export function fireWater(r){
  r.shots.push(shot);r.fireCooldown=WATER_SHOT.cooldown;r.fireFlash=.14;
  r.events.push({type:'shot',x:shot.x,y:shot.y,z:shot.z,vx:fx,vz:fz});return true;
 }
+function destroyTarget(r,target,isRival){
+ const type=isRival?'rival':target.type,lane=isRival?target.x:objectX(target,r.elapsed),p=pointAt(target.s,lane),scale=target.scale??1;
+ let heading=isRival?(target.heading??p.heading):p.heading-(target.yaw||0);
+ if(type==='taxi')heading=p.heading+(Math.cos(r.elapsed*.16+(target.drift||0))>0?Math.PI/2:-Math.PI/2);
+ if(type==='gator')heading=p.heading-Math.PI/2;
+ target.hp=0;target.destroyed=true;target.destroyedAt=r.elapsed;target.destroyedX=lane;
+ target.scared=0;target.soaked=0;target.soakImmunity=0;if(isRival)target.speed=0;
+ r.destroyed++;r.destructionFlash=.9;
+ r.drafting=r.rivals.some(v=>!v.destroyed&&v.s>r.s+6&&v.s<r.s+40&&Math.abs(v.x-r.x)<5.5);
+ r.lastShotCallout=r.elapsed;
+ r.events.push({type:'destroy',targetId:target.id,targetType:type,s:target.s,x:p.x,y:({gator:.25,floater:.8,rival:.85,taxi:1.4,mooring:1.6,yacht:2.2}[type])*scale,z:p.z,heading,radius:target.radius??(isRival?RIVAL_SOAK.radius:2.3),halfLength:target.halfLength??({rival:3.6,taxi:4.75,gator:3.4,floater:2.3,mooring:13.5,yacht:15.4}[type])*scale,scale,color:target.color??({floater:0xff8cac,gator:0x648b49,rival:0xf27e54,taxi:0xffd648,mooring:0xf1f0de,yacht:0xf1f0de}[type]),text:destructionLines[type]});
+}
 function advanceWaterShots(r,dt){
  for(let i=r.shots.length-1;i>=0;i--){
   const shot=r.shots[i],x=shot.x,z=shot.z,y=shot.y;
@@ -81,7 +102,7 @@ function advanceWaterShots(r,dt){
   // boat or hazard. Iterating both collections avoids a new array per shot.
   for(let j=0;j<r.objects.length+r.rivals.length;j++){
    const rival=j>=r.objects.length,o=rival?r.rivals[j-r.objects.length]:r.objects[j];
-   if((!rival&&(!waterTargetTypes.has(o.type)||o.consumed||o.scared))||Math.abs(o.s-shot.s)>190)continue;
+   if(o.destroyed||(!rival&&(!waterTargetTypes.has(o.type)||o.consumed))||Math.abs(o.s-shot.s)>190)continue;
    // Static targets reuse their course frame; moving rivals refresh it when
    // their progress changes. Restarted races release these weak cache keys.
    let frame=waterTargetFrames.get(o);if(!frame||frame.s!==o.s){frame={s:o.s,...frameAt(o.s)};waterTargetFrames.set(o,frame)}
@@ -101,20 +122,22 @@ function advanceWaterShots(r,dt){
   for(let pass=0;pass<2;pass++){const frame=frameAt(shot.courseS);shot.courseS=clamp(shot.courseS+(shot.x-frame.x)*frame.fx+(shot.z-frame.z)*frame.fz,0,COURSE_LENGTH+100)}
   const frame=frameAt(shot.courseS),lateral=(shot.x-frame.x)*frame.nx+(shot.z-frame.z)*frame.nz,island=islandAt(shot.courseS),land=Math.abs(lateral)>halfWidth(shot.courseS)-.5||(island&&Math.abs(lateral-island.x)<island.radius);
   if(target){
-   const hazard=target.type==='gator'||target.type==='floater',rivalHit=targetIsRival&&!(target.soakImmunity>0);let text;
-   if(rivalHit){
-    target.soaked=RIVAL_SOAK.duration;target.soakImmunity=RIVAL_SOAK.immunity;target.speed*=RIVAL_SOAK.speedMultiplier;r.soaked++;r.soakFlash=.7;
-    if(r.elapsed-r.lastShotCallout>3){r.lastShotCallout=r.elapsed;text='Rival soaked. Go, go, go!'}
-   }else if(hazard){
-    target.scared=4;target.scaredSide=Math.sign(objectX(target,r.elapsed)-r.x)||Math.sign(target.x)||1;r.soaked++;r.soakFlash=.7;
-    if(r.elapsed-r.lastShotCallout>3){r.lastShotCallout=r.elapsed;text=target.type==='gator'?'Gator says absolutely not.':['Water fight. Florida rules.','Consider that a refreshing detour.','Sorry! Complimentary boat wash.'][r.soaked%3]}
+   targetHealth(target,targetIsRival?'rival':target.type,targetIsRival?`rival-${r.rivals.indexOf(target)}`:`${target.type}-${r.objects.indexOf(target)}`);
+   target.hp=Math.max(0,target.hp-1);target.damageFlash=.22;r.soaked++;r.soakFlash=.7;
+   if(target.hp===0)destroyTarget(r,target,targetIsRival);
+   else{
+    const hazard=target.type==='gator'||target.type==='floater',rivalSlow=targetIsRival&&!(target.soakImmunity>0);let text;
+    if(rivalSlow){target.soaked=RIVAL_SOAK.duration;target.soakImmunity=RIVAL_SOAK.immunity;target.speed*=RIVAL_SOAK.speedMultiplier}
+    else if(hazard){const side=Math.sign(objectX(target,r.elapsed)-r.x)||Math.sign(target.x)||1;target.scared=4;target.scaredSide=side}
+    if(r.elapsed-r.lastShotCallout>3){r.lastShotCallout=r.elapsed;text=targetIsRival?'Hull hit. Keep spraying!':target.type==='gator'?'Gator says absolutely not.':'That boat’s taking on water!'}
+    r.events.push({type:'splash',x:x+dx*contact,y:y+(shot.y-y)*contact,z:z+dz*contact,hit:true,rival:targetIsRival,targetId:target.id,targetType:targetIsRival?'rival':target.type,hp:target.hp,maxHp:target.maxHp,text});
    }
-   r.events.push({type:'splash',x:x+dx*contact,y:y+(shot.y-y)*contact,z:z+dz*contact,hit:hazard||rivalHit,rival:targetIsRival,text});r.shots.splice(i,1);
+   r.shots.splice(i,1);
   }else if(land||shot.age>=WATER_SHOT.lifetime||shot.y<.12){r.events.push({type:'splash',x:shot.x,y:.12,z:shot.z,hit:false});r.shots.splice(i,1)}
  }
 }
 function trafficLine(r,s,speed,line){
- for(const o of r.objects)if(o.type==='yacht'&&o.s-s<145&&o.s-s>-14){
+ for(const o of r.objects)if(o.type==='yacht'&&!o.destroyed&&o.s-s<145&&o.s-s>-14){
   const arrival=r.elapsed+Math.max(0,o.s-s)/Math.max(25,speed),stern=objectX(o,arrival)+o.halfLength+8;
   const weight=clamp((145-(o.s-s))/65,0,1);return line+(clamp(stern,-halfWidth(o.s)+8,halfWidth(o.s)-8)-line)*weight;
  }
@@ -128,23 +151,24 @@ export function pilotInput(r){
  return{steer:clamp(error*3.7-r.turn*.44,-1,1),brake:bend>.009&&r.speed>27,boost:bend<.005&&Math.abs(error)<.22};
 }
 function advanceRivals(r,dt){
- for(const v of r.rivals){
+ for(const [i,v]of r.rivals.entries()){
+  targetHealth(v,'rival',`rival-${i}`);v.damageFlash=Math.max(0,v.damageFlash-dt);if(v.destroyed)continue;
   v.soaked=Math.max(0,(v.soaked||0)-dt);v.soakImmunity=Math.max(0,(v.soakImmunity||0)-dt);
   const target=v.pace*(1-Math.min(.22,Math.abs(curvature(v.s+28))*12))*(v.soaked>0?RIVAL_SOAK.speedMultiplier:1);v.speed+=(target-v.speed)*(1-Math.exp(-dt*1.4));v.s=Math.min(COURSE_LENGTH+40,v.s+v.speed*dt);
   const oldX=v.x,line=trafficLine(r,v.s,v.speed,racingLine(v.s+24,v.lane));v.x+=(line+Math.sin(v.s*.012+v.pace)*2-v.x)*(1-Math.exp(-dt*2.2));v.heading=frameAt(v.s).heading+Math.atan2((v.x-oldX)/dt,v.speed);
   if(Math.abs(v.s-r.s)<5&&Math.abs(v.x-r.x)<3.8&&r.y<1.5)hit(r,Math.sign(r.x-v.x)||1);
  }
- const rank=1+r.rivals.filter(v=>v.s>r.s).length;if(rank<r.rank&&r.elapsed>3)r.events.push({type:'overtake',text:rank===1?'There we go. Lead the way!':'See you at Fisheries!'});r.rank=rank;
+ const rank=1+r.rivals.filter(v=>!v.destroyed&&v.s>r.s).length;if(rank<r.rank&&r.elapsed>3)r.events.push({type:'overtake',text:rank===1?'There we go. Lead the way!':'See you at Fisheries!'});r.rank=rank;
 }
 export function stepRace(r,input,dt){
  if(r.status!=='racing')return;dt=clamp(dt,0,1/30);r.elapsed+=dt;
- for(const f of ['sunscreen','immunity','fireCooldown','fireFlash','soakFlash','comboTime'])r[f]=Math.max(0,r[f]-dt);if(!r.comboTime)r.combo=0;
+ for(const f of ['sunscreen','immunity','fireCooldown','fireFlash','soakFlash','destructionFlash','comboTime'])r[f]=Math.max(0,r[f]-dt);if(!r.comboTime)r.combo=0;
  if(input.fire)fireWater(r);
  r.boosting=!!input.boost&&r.boost>.005&&!input.brake;if(r.boosting){r.boost=Math.max(0,r.boost-dt*.145);if(r.boost<.005)r.boost=0}
  const steer=clamp(input.steer||0,-1,1),wasDrifting=r.drifting;r.drifting=!!input.brake&&Math.abs(steer)>.25&&r.speed>17&&r.y<.3;
  if(r.drifting){r.driftCharge=Math.min(1,r.driftCharge+dt*.36);r.driftTotal+=dt}
  if(wasDrifting&&!r.drifting){if(r.driftCharge>.17){r.boost=Math.min(1,r.boost+r.driftCharge*.42);r.events.push({type:'drift',text:'Beautiful turn. Free cafecito!'})}r.driftCharge=0}
- r.drafting=r.rivals.some(v=>v.s>r.s+6&&v.s<r.s+40&&Math.abs(v.x-r.x)<5.5);if(r.drafting)r.boost=Math.min(1,r.boost+dt*.09);
+ r.drafting=r.rivals.some(v=>!v.destroyed&&v.s>r.s+6&&v.s<r.s+40&&Math.abs(v.x-r.x)<5.5);if(r.drafting)r.boost=Math.min(1,r.boost+dt*.09);
  const target=input.brake?(r.drifting?27:15):r.boosting?54:37.5+(r.drafting?3:0);r.speed+=(target-r.speed)*(1-Math.exp(-dt*(input.brake?2.6:1.65)));
  const turnTarget=steer*(r.drifting?1.15:r.boosting?.64:.84)*(r.y>1?.5:1);r.turn+=(turnTarget-r.turn)*(1-Math.exp(-dt*(r.drifting?4.8:7)));r.heading+=r.turn*dt;
  const frame=frameAt(r.s),error=angleDelta(r.heading,frame.heading),metric=clamp(1-curvature(r.s)*r.x,.5,1.7),previousS=r.s;
@@ -154,7 +178,7 @@ export function stepRace(r,input,dt){
  const island=islandAt(r.s);if(island&&Math.abs(r.x-island.x)<island.radius+2.8){const side=Math.sign(r.x-island.x)||-1;r.x=island.x+side*(island.radius+3);hit(r,side);r.heading=frameAt(r.s).heading+side*.23;r.speed=Math.min(r.speed,19)}
  advanceWaterShots(r,dt);
  for(const o of r.objects){
-  o.scared=Math.max(0,o.scared-dt);if(o.consumed||o.passed||o.s>r.s+110||o.s<Math.min(previousS,r.s)-32)continue;
+  o.damageFlash=Math.max(0,(o.damageFlash||0)-dt);o.scared=Math.max(0,(o.scared||0)-dt);if(o.destroyed||o.consumed||o.passed||o.s>r.s+110||o.s<Math.min(previousS,r.s)-32)continue;
   const dx=Math.abs(objectX(o,r.elapsed)-r.x),dz=o.s-r.s,inRange=dz<4.8&&dz>-5.5;
   if(o.type==='mooring'||o.type==='yacht'){
    const lateral=r.x-objectX(o,r.elapsed),along=-dz,c=Math.cos(o.yaw||0),s=Math.sin(o.yaw||0),u=lateral*c+along*s,v=-lateral*s+along*c;
@@ -183,7 +207,7 @@ export function stepRace(r,input,dt){
  }
  advanceRivals(r,dt);
  if(r.checkpoint<CHECKPOINTS.length&&r.s>=CHECKPOINTS[r.checkpoint]){r.checkpoint++;r.events.push({type:'checkpoint'})}
- if(r.s>=COURSE_LENGTH){r.status='finished';r.shots.length=0;for(const v of r.rivals){v.soaked=0;v.soakImmunity=0}r.endMedal=medal(r.elapsed);r.events.push({type:'finish'})}
+ if(r.s>=COURSE_LENGTH){r.status='finished';r.shots.length=0;r.fireFlash=0;r.soakFlash=0;r.destructionFlash=0;for(const o of r.objects){o.damageFlash=0;o.scared=0}for(const v of r.rivals){v.soaked=0;v.soakImmunity=0;v.damageFlash=0}r.endMedal=medal(r.elapsed);r.events.push({type:'finish'})}
 }
 const STORAGE_KEY='howwemet_florida_best_v2';
 export function loadBest(storage){try{const n=Number(storage.getItem(STORAGE_KEY));return Number.isFinite(n)&&n>0?n:null}catch{return null}}

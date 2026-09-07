@@ -9,7 +9,7 @@ function advance(r,seconds,input={}){for(let i=0;i<Math.round(seconds*120);i++)s
 function hazard(s,x=1.2,type='floater'){return{id:`${type}-${s}-${x}`,type,s,x,drift:0,radius:type==='gator'?2.8:2.3,scared:0}}
 
 test('water shots visibly travel before impact and only soak an aimed hazard',()=>{
- const r=playing();r.objects=[hazard(3725),hazard(3725,15),hazard(3780)];
+ const r=playing();r.objects=[hazard(3725,1.2,'gator'),hazard(3725,15),hazard(3780)];
  assert.equal(fireWater(r),true);assert.equal(r.shots.length,1);
  assert.deepEqual(r.objects.map(o=>o.scared),[0,0,0]);
  advance(r,.35);assert.ok(r.objects[0].scared>3);assert.equal(r.objects[1].scared,0);assert.equal(r.objects[2].scared,0);
@@ -29,17 +29,17 @@ test('holding fire repeats at the short cooldown, stays bounded, and release sto
 test('swept collision catches a fast shot between ticks and chooses the first target regardless of array order',()=>{
  const r=playing(),near=hazard(3710,1.2),far=hazard(3716,1.2);r.objects=[far,near];fireWater(r);
  const shot=r.shots[0],speed=Math.hypot(shot.vx,shot.vz);shot.vx*=2500/speed;shot.vz*=2500/speed;
- stepRace(r,{},1/120);assert.ok(near.scared>0);assert.equal(far.scared,0);assert.equal(r.soaked,1);assert.equal(r.shots.length,0);
+ stepRace(r,{},1/120);assert.equal(near.destroyed,true);assert.equal(far.scared,0);assert.equal(r.soaked,1);assert.equal(r.destroyed,1);assert.equal(r.shots.length,0);
 });
-test('boats block shots without being removed and water does not collect power-ups',()=>{
+test('one hit damages a traffic boat without removing it, blocks shots, and does not collect power-ups',()=>{
  const r=playing(),boat={...hazard(3715,1.2,'taxi'),drift:0},behind=hazard(3727,1.2),coffee={...hazard(3710,1.2,'coffee'),radius:4};r.objects=[behind,boat,coffee];
- fireWater(r);advance(r,.2);assert.equal(r.soaked,0);assert.equal(behind.scared,0);assert.equal(boat.scared,0);assert.equal(r.pickups,0);assert.equal(r.shots.length,0);
- assert.ok(r.events.some(e=>e.type==='splash'&&!e.hit));
+ fireWater(r);advance(r,.2);assert.equal(r.soaked,1);assert.equal(boat.hp,3);assert.equal(boat.destroyed,false);assert.equal(behind.scared,0);assert.equal(boat.scared,0);assert.equal(r.pickups,0);assert.equal(r.shots.length,0);
+ assert.ok(r.events.some(e=>e.type==='splash'&&e.hit));
 });
-test('gators duck and tube knockback returns smoothly after a short recovery',()=>{
+test('a nonlethal gator hit ducks and recovers smoothly',()=>{
  const r=playing(),gator=hazard(3725,1.2,'gator');r.objects=[gator];fireWater(r);advance(r,.3);assert.ok(gator.scared>3);assert.equal(r.soaked,1);
- const floater=hazard(3725,0);floater.scared=2;floater.scaredSide=-1;assert.ok(objectX(floater,0)<-11);
- floater.scared=.0001;const returning=objectX(floater,0);floater.scared=0;assert.ok(Math.abs(returning-objectX(floater,0))<.002);
+ const returningGator=hazard(3725,0,'gator');returningGator.scared=2;returningGator.scaredSide=-1;assert.ok(objectX(returningGator,0)<-11);
+ returningGator.scared=.0001;const returning=objectX(returningGator,0);returningGator.scared=0;assert.ok(Math.abs(returning-objectX(returningGator,0))<.002);
  advance(r,4);assert.equal(gator.scared,0);assert.equal(gator.consumed,undefined);
 });
 test('shots splash at the canal bank instead of flying through houses',()=>{

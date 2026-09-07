@@ -37,6 +37,7 @@ export class GameAudio {
   effect(type){
     if(type==='shot'){this.tone(620,.10,'sine',.085,0,170);this.noise(.12,1100,.1)}
     if(type==='splash'){this.tone(260,.12,'sine',.045,0,80);this.noise(.24,1900,.1)}
+    if(type==='destroy'){this.noise(.48,750,.24);this.tone(150,.3,'triangle',.18,0,38);this.tone(480,.18,'sine',.1,.08,210)}
     if(type==='coffee'||type==='checkpoint'){[523,659,784].forEach((f,i)=>this.tone(f,.17,'sine',.25,i*.065))}
     if(type==='flamingo'){this.tone(380,.25,'sine',.18,0,640);this.tone(780,.2,'sine',.12,.14,980)}
     if(type==='sunscreen'){this.tone(880,.4,'triangle',.13,0,1320)}

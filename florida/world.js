@@ -16,8 +16,8 @@ function frontage(g,template,s,side,scale=1,setback=.8){
 }
 function instance(group){
  group.updateMatrixWorld(true);const buckets=new Map();
- group.traverse(o=>{if(!o.isMesh)return;const key=o.geometry.uuid+o.material.uuid;let b=buckets.get(key);if(!b){b={geo:o.geometry,mat:o.material,matrices:[]};buckets.set(key,b)}b.matrices.push(o.matrixWorld.clone())});
- const result=new T.Group();for(const b of buckets.values()){const m=new T.InstancedMesh(b.geo,b.mat,b.matrices.length);b.matrices.forEach((matrix,i)=>m.setMatrixAt(i,matrix));m.castShadow=true;m.receiveShadow=true;m.computeBoundingSphere();result.add(m)}return result;
+ group.traverse(o=>{if(!o.isMesh)return;const key=o.geometry.uuid+o.material.uuid;let b=buckets.get(key);if(!b){b={geo:o.geometry,mat:o.material,matrices:[],targetIds:[]};buckets.set(key,b)}let parent=o;while(parent&&!parent.userData.targetId)parent=parent.parent;b.matrices.push(o.matrixWorld.clone());b.targetIds.push(parent?.userData.targetId||null)});
+ const result=new T.Group();for(const b of buckets.values()){const m=new T.InstancedMesh(b.geo,b.mat,b.matrices.length);b.matrices.forEach((matrix,i)=>m.setMatrixAt(i,matrix));m.userData.targetIds=b.targetIds;m.castShadow=true;m.receiveShadow=true;m.computeBoundingSphere();result.add(m)}return result;
 }
 function terrain(scene){
  const shape=new T.Shape();shape.moveTo(-1800,-1300);shape.lineTo(-1800,4500);shape.lineTo(1800,4500);shape.lineTo(1800,-1300);shape.closePath();
@@ -114,7 +114,7 @@ export function makeWorld(scene,{multiDraw=false}={}){
   }
   // Hull visuals and physics share the exact same mooring transforms.
   for(const m of MOORINGS)if(m.s>=s-50&&m.s<s+50){
-   place(g,boats[m.model],m.s,m.x,0,m.yaw,m.scale);
+   place(g,boats[m.model],m.s,m.x,0,m.yaw,m.scale).userData.targetId=m.id;
    const side=Math.sign(m.x);place(g,pier,m.s+(m.halfLength||12)*.65,side*(halfWidth(m.s)+1.5),0,Math.PI/2,.85);
   }
   g.add(bake(fixed));const chunk=instance(g);chunk.userData.s=s;chunk.userData.district=district;chunks.push(chunk);
@@ -156,7 +156,7 @@ export function makeWorld(scene,{multiDraw=false}={}){
  for(const side of [-1,1]){const sh=new T.Shape();sh.moveTo(0,16);sh.lineTo(64,16);sh.lineTo(64,1);sh.quadraticCurveTo(32,22,0,1);sh.closePath();const m=new T.Mesh(new T.ExtrudeGeometry(sh,{depth:12,bevelEnabled:false}),mat(0xd5ddc6,{side:T.DoubleSide}));m.position.set(side*31,0,-6);m.scale.x=side;m.castShadow=true;m.receiveShadow=true;bridgeGroup.add(m)}
  const b=place(decorative,bridgeGroup,COURSE_LENGTH,0);landmarks.push(b);
  scene.add(decorative);
- return{update(s,camera){batches.update(s,camera);horizonBatches.update(s,camera);for(const l of landmarks)l.visible=s>COURSE_LENGTH-850},setAO(enabled){batches.setAO(enabled);horizonBatches.setAO(enabled);decorative.visible=!enabled},landmarks};
+ return{update(s,camera){batches.update(s,camera);horizonBatches.update(s,camera);for(const l of landmarks)l.visible=s>COURSE_LENGTH-850},setAO(enabled){batches.setAO(enabled);horizonBatches.setAO(enabled);decorative.visible=!enabled},destroyTarget(id){batches.setDestroyed(id)},resetDestruction(){batches.resetDestruction()},landmarks};
 }
 export function makeSky(scene,renderer){
  const sky=new T.Mesh(new T.SphereGeometry(5200,32,18),new T.ShaderMaterial({side:T.BackSide,depthWrite:false,uniforms:{top:{value:new T.Color(0x078ece)},horizon:{value:new T.Color(0x88cce0)},sunDirection:{value:SUN}},vertexShader:`varying vec3 direction;void main(){direction=position;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);}`,fragmentShader:`uniform vec3 top;uniform vec3 horizon;uniform vec3 sunDirection;varying vec3 direction;void main(){vec3 d=normalize(direction);float h=pow(max(0.0,d.y),.26);vec3 color=mix(horizon,top,h);float glow=pow(max(0.0,dot(d,sunDirection)),24.0);color+=vec3(.10,.065,.025)*glow;gl_FragColor=vec4(color,1.0);
