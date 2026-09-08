@@ -1,4 +1,5 @@
 import * as T from 'three';
+import {indexExactGeometry} from './index-geometry.js';
 
 let texturesLoading;
 
@@ -89,7 +90,10 @@ export function applySurfaceUVs(root) {
       }
     }
     geometry.setAttribute('uv', uv);
-    mesh.geometry = geometry;
+    // UV projection temporarily splits triangle corners. Restore exact sharing
+    // afterward, keeping every UV seam and hard normal as its own vertex.
+    mesh.geometry = indexExactGeometry(geometry);
+    if (mesh.geometry !== geometry) geometry.dispose();
   });
   return root;
 }

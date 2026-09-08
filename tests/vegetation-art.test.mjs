@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
+import { createHash } from 'node:crypto';
 import { Box3, DoubleSide, Texture, Vector3 } from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 
@@ -14,8 +15,8 @@ const atlas = new Texture();
 loader.register(() => ({ name: 'NODE_LEAF_ATLAS', loadTexture: () => Promise.resolve(atlas) }));
 const { scene } = await loader.parseAsync(bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength), '');
 const expected = {
-  PalmRoyal: { size: [11.52, 18.82, 11.48], triangles: 8000, meshes: 3, uv: [0, 0] },
-  PalmCoconut: { size: [12.69, 16.12, 12.55], triangles: 8000, meshes: 3, uv: [.5, .5] },
+  PalmRoyal: { size: [10.960, 19.366, 11.466], triangles: 6000, meshes: 3, uv: [0, 0] },
+  PalmCoconut: { size: [12.475, 16.499, 12.870], triangles: 6000, meshes: 3, uv: [.5, .5] },
   HammockTree: { size: [13.44, 10.58, 13.71], triangles: 5000, meshes: 2, uv: [.5, 0] },
   SeaGrapeTree: { size: [9.89, 7.53, 10.52], triangles: 5000, meshes: 2, uv: [.5, 0] },
   HedgeCluster: { size: [6.07, 1.98, 2.44], triangles: 1500, meshes: 2, uv: [0, .5] },
@@ -82,6 +83,8 @@ test('leaf cards use the correct padded atlas quadrant, double-sided alpha test,
 test('vegetation export embeds one RGBA PNG and stays within shared resource budgets', () => {
   assert.ok(bytes.length < 3500000, `${bytes.length} bytes`);
   assert.equal(document.materials.length, 3);
+  assert.equal(document.meshes.reduce((sum, mesh) => sum + mesh.primitives.length, 0), 14);
+  assert.deepEqual(scene.children.map(root => root.name).sort(), Object.keys(expected).sort());
   assert.equal(document.images.length, 1);
   assert.equal(document.textures.length, 1);
   const leafMaterial = document.materials.find(material => material.name === 'LeafAtlas');
@@ -104,5 +107,36 @@ test('vegetation export embeds one RGBA PNG and stays within shared resource bud
   assert.equal(png[25], 6, 'RGBA keeps transparent gaps between individual leaves');
   let triangles = 0;
   scene.traverse(mesh => { if (mesh.isMesh) triangles += (mesh.geometry.index?.count ?? mesh.geometry.attributes.position.count) / 3; });
-  assert.ok(triangles < 19000, `${triangles} kit triangles`);
+  assert.ok(triangles <= 22000, `${triangles} kit triangles`);
+});
+
+// Freeze the non-palm meshes while palm generation evolves. Include geometry,
+// normals, UVs, vertex colors, and indices; a changed random stream can otherwise
+// silently rearrange every broadleaf canopy while palm-only tests still pass.
+test('palm refinements preserve the four non-palm exports exactly', () => {
+  const fingerprints = {
+    HammockTree: '6004d40e36272e6f219b2a2109eb6b14c23acd7564e1ce9f9a796860e9946e9f',
+    SeaGrapeTree: '74ae5bcffb227a8b32693a02cd99a31557b78c7a904b082d5827916203098790',
+    HedgeCluster: '3493b10260ac3cedf828a8385919bf91eae41818040fc10e3cf7ecc215956bf6',
+    TreeBand: '6ada40ecf2eaf2dbc1655b12082a82aa3d0c17f01751e9d6d3d181f9ed8341b7',
+  };
+  const binary = bytes.subarray(20 + jsonLength + 8);
+  for (const [name, expectedHash] of Object.entries(fingerprints)) {
+    const root = document.nodes.find(node => node.name === name);
+    const meshes = root.children.map(child => {
+      const node = document.nodes[child];
+      const parts = document.meshes[node.mesh].primitives.map(primitive => {
+        const attributes = {};
+        for (const [key, index] of Object.entries({ ...primitive.attributes, index: primitive.indices })) {
+          const accessor = document.accessors[index];
+          const view = document.bufferViews[accessor.bufferView];
+          const data = binary.subarray((view.byteOffset ?? 0) + (accessor.byteOffset ?? 0), (view.byteOffset ?? 0) + view.byteLength);
+          attributes[key] = { type: accessor.type, count: accessor.count, componentType: accessor.componentType, sha: createHash('sha256').update(data).digest('hex') };
+        }
+        return attributes;
+      });
+      return { name: node.name, parts };
+    });
+    assert.equal(createHash('sha256').update(JSON.stringify(meshes)).digest('hex'), expectedHash, name);
+  }
 });

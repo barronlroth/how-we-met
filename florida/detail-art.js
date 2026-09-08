@@ -1,4 +1,5 @@
 import * as T from 'three';
+import {yachtAsset} from './yacht-art.js';
 import {C,mat,box,ball,pipe,ring,bake,airboat,textSign} from './art.js';
 import {loadSurfaceTextures,applySurfaceMaps,applySurfaceUVs} from './materials.js';
 const put=(g,geo,material,x=0,y=0,z=0)=>{const m=new T.Mesh(geo,typeof material==='number'?mat(material):material);m.position.set(x,y,z);m.castShadow=true;m.receiveShadow=true;g.add(m);return m};
@@ -42,15 +43,8 @@ export function raceBoat(color=C.coral){
  for(const x of [-.45,.45])box(g,.35,.85,.35,0x344d54,x,.33,2.7);
  return bake(g);
 }
-export function superyacht(size=1){
- const g=new T.Group(),s=new T.Shape();s.moveTo(-3.3,10.5);s.lineTo(3.3,10.5);s.lineTo(3.35,-6.5);s.quadraticCurveTo(3,-13,0,-15);s.quadraticCurveTo(-3,-13,-3.35,-6.5);s.closePath();
- const geo=new T.ExtrudeGeometry(s,{depth:2.1,bevelEnabled:true,bevelSize:.32,bevelThickness:.3,bevelSegments:3});geo.rotateX(Math.PI/2);put(g,geo,C.white,0,2.1,0);
- box(g,5.65,.12,18,C.wood,0,2.4,1);box(g,5.7,1.1,13,glass,0,3.08,1);box(g,6.1,.3,14.6,C.white,0,3.77,.7);box(g,4.6,1.1,8.4,glass,0,4.46,1);box(g,5.6,.35,10.8,C.white,0,5.15,1.1);box(g,3.8,.75,5.1,C.cream,0,5.7,1.7);box(g,4.2,.25,6.4,C.white,0,6.2,1.2);
- for(const side of [-1,1]){for(let z=-8;z<10;z+=1.5){pipe(g,[side*3.1,2.4,z],[side*3.1,3.1,z],.033,0xc3d0ca)}pipe(g,[side*3.1,3.1,-8],[side*3.1,3.1,10],.035,0xc3d0ca);for(let z=-7;z<8;z+=2.2)box(g,.06,.38,.92,glass,side*3.65,1.35,z)}
- for(const x of [-1.5,1.5])box(g,1.15,.24,2.7,C.cream,x,2.55,-9.2);
- pipe(g,[0,6.35,1],[0,8,1],.06,C.white);box(g,2.4,.15,.23,C.white,0,7.8,1);for(const x of [-.8,.8])ball(g,x,6.75,2.6,.34,.4,.34,C.white,2);
- const b=bake(applySurfaceUVs(g));b.scale.setScalar(size);return b;
-}
+export function superyacht(size=1){const yacht=yachtAsset();yacht.scale.multiplyScalar(size);return yacht;}
+
 export function waterTaxi(){
  const g=new T.Group();box(g,3.2,.7,9.5,C.gold,0,.25,0);box(g,2.95,.28,9.2,C.cream,0,.7,0);
  for(const side of [-1,1]){for(let z=-3.6;z<=3.6;z+=1.8)pipe(g,[side*1.3,.75,z],[side*1.3,2.85,z],.055,C.white);box(g,.15,.6,8.4,C.gold,side*1.5,1.15,0)}

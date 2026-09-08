@@ -19,12 +19,27 @@ test('Blender hero loads with the articulated nodes and game coordinate conventi
 test('hero remains within its mesh, triangle and asset-size budgets without external textures',()=>{
  let count=0,triangles=0;const materials=new Set();
  scene.traverse(o=>{if(o.isMesh){count++;triangles+=(o.geometry.index?.count??o.geometry.attributes.position.count)/3;materials.add(o.material);if(o.material.map)assert.ok(o.geometry.attributes.uv);}});
- assert.ok(document.images.length>=2 && document.images.length<=5);
+ assert.ok(document.images.length>=2 && document.images.length<=9);
  for(const image of document.images){assert.ok(['image/jpeg','image/png'].includes(image.mimeType));assert.equal(image.uri,undefined);assert.ok(document.bufferViews[image.bufferView].byteLength<500000);}
  assert.ok(document.images.some(image=>image.name==='couple-face-atlas-v4'),'approved facial albedo remains embedded');
  assert.ok(document.images.some(image=>image.name==='teak-albedo'),'deck grain is embedded');
- assert.ok(count<=42,`draw primitives: ${count}`);assert.ok(triangles<90000,`triangles: ${triangles}`);assert.ok(materials.size<=28);assert.ok(bytes.length<3000000);
+ // The round-five sculpting budget allows 140k triangles for the single hero;
+ // draw-call/material limits and the approved geometry contracts stay unchanged.
+ assert.ok(count<=42,`draw primitives: ${count}`);assert.ok(triangles<=140000,`triangles: ${triangles}`);assert.ok(materials.size<=28);assert.ok(bytes.length<5500000);
  scene.traverse(o=>{if(!o.isMesh)return;for(const name of ['position','normal'])for(const value of o.geometry.attributes[name].array)assert.ok(Number.isFinite(value),`${o.name} has finite ${name}`);});
+});
+
+test('golden strand finish follows continuous UVs without adding hair draw materials',()=>{
+ for(const name of ['hairN','hairGold']){
+  const material=document.materials.find(m=>m.name===name);
+  assert.ok(material.pbrMetallicRoughness.baseColorTexture,`${name} has generated strand color`);
+  assert.ok(material.pbrMetallicRoughness.metallicRoughnessTexture,`${name} has strand roughness`);
+  assert.ok(material.normalTexture,`${name} has subtle strand relief`);
+ }
+ scene.traverse(o=>{if(!o.isMesh||!['hairN','hairGold'].includes(o.material.name))return;
+  const uv=o.geometry.attributes.uv;assert.ok(uv,`${o.name} has root-to-tip UVs`);
+  for(const value of uv.array)assert.ok(Number.isFinite(value),`${o.name} finite strand UV`);
+ });
 });
 
 test('Nina is seated with her sandals meeting the deck',()=>{

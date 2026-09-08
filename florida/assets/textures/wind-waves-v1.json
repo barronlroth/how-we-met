@@ -1,0 +1,43 @@
+{
+  "version": 1,
+  "size": 128,
+  "frames": 64,
+  "period": 4,
+  "format": "RGBA8: world normal X/Z/up and normalized height",
+  "bands": [
+    {
+      "length": 22,
+      "windSpeed": 1.35,
+      "wind": [
+        0.42,
+        0.91
+      ],
+      "slopeRms": 0.27,
+      "chop": 1.3,
+      "seed": 9137,
+      "heightRms": 0.0531590287585176
+    },
+    {
+      "length": 9.7,
+      "windSpeed": 0.85,
+      "wind": [
+        -0.89,
+        0.46
+      ],
+      "slopeRms": 0.22,
+      "chop": 1,
+      "seed": 42019,
+      "heightRms": 0.01841895376839448
+    }
+  ],
+  "bytes": 8388608,
+  "sha256": "fac90b386e6422a964704267bc5d6b5b2752b99a97e7b6a7a6aa4ad4ae64d2cc",
+  "displacement": {
+    "file": "wind-displacement-v1.bin",
+    "format": "RGBA8: signed world X/Y/Z offset and unused alpha",
+    "scale": 0.6379083451022112,
+    "bytes": 4194304,
+    "sha256": "95603e827e1b67a19c76f29564edea9af65767f997eecb7ebe8f7ddb5f6f235f"
+  },
+  "source": "Original implementation of Tessendorf, Simulating Ocean Water (2001), equations 23–26 and choppy displacement."
+}

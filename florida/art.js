@@ -1,6 +1,7 @@
 import * as T from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
+import { indexExactGeometry } from './index-geometry.js';
 
 // Original game art. Every scene object is real geometry, built in a shared
 // palette and baked by material so a richly dressed waterfront stays light.
@@ -47,7 +48,9 @@ export function bake(group) {
   for (const [material, geometries] of buckets) {
     const merged = mergeGeometries(geometries, false);
     if (!merged) throw new Error('Could not bake game geometry');
-    const mesh = new T.Mesh(merged, material); mesh.castShadow = true; mesh.receiveShadow = true; result.add(mesh);
+    const packed = indexExactGeometry(merged);
+    if (packed !== merged) merged.dispose();
+    const mesh = new T.Mesh(packed, material); mesh.castShadow = true; mesh.receiveShadow = true; result.add(mesh);
     for (const geometry of geometries) geometry.dispose();
   }
   return result;

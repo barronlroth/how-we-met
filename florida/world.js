@@ -10,8 +10,15 @@ import {C,mat,box,ball,pipe,bake,buoy,fisheries,bridge,textSign} from './art.js'
 import {superyacht,lushPalm,shrub,marinaPier,pavilion,parasol} from './detail-art.js';
 import {waterfrontCrowd,promenadeFurniture,riverfrontBlock,riverBridge,sailboat,boatyard,marinaClub,mangrove,boardwalk,pelican,partyBar,partyPontoon,finishTerrace,beachSlipway} from './district-art.js';
 import {pointAt,halfWidth,curvature,districtAt,DISTRICTS,MOORINGS,COURSE_LENGTH,CHECKPOINTS,ISLANDS} from './course.js';
-export const SUN=new T.Vector3(-.62,.72,.31).normalize();
-const place=(g,template,s,x,y=0,rot=0,scale=1)=>{const p=pointAt(s,x),m=template.clone(true);m.position.set(p.x,y,p.z);m.rotation.y=-p.heading+rot;m.scale.multiplyScalar(scale);g.add(m);return m};
+export const SUN=new T.Vector3(.38,.84,.12).normalize();
+const place=(g,template,s,x,y=0,rot=0,scale=1)=>{
+ const p=pointAt(s,x),m=template.clone(true);m.position.set(p.x,y,p.z);m.rotation.y=-p.heading+rot;m.scale.multiplyScalar(scale);
+ if(template.name==='PalmRoyal'||template.name==='PalmCoconut'){
+  const variation=Math.sin(s*.139+x*.041),width=1.14+variation*.15;
+  m.scale.x*=width;m.scale.z*=width;m.scale.y*=1+variation*.07;m.rotation.y+=Math.sin(s*.073-x*.025)*.65;
+ }
+ g.add(m);return m;
+};
 const fronts=new WeakMap();
 function frontage(g,template,s,side,scale=1,setback=.8){
  let front=fronts.get(template);if(front===undefined){front=new T.Box3().setFromObject(template).max.z;fronts.set(template,front)}
@@ -160,8 +167,8 @@ export function makeWorld(scene,{multiDraw=false}={}){
  // the canonical collision-backed moorings without altering their transforms.
  const openingBerths=new T.Group(),openingS=COURSE_LENGTH-165;
  place(openingBerths,boats.super,openingS+14.4,-34,0,.4,.80);
- place(openingBerths,boats.super,openingS+48.7,-34.5,0,.25,.80);
- place(openingBerths,boats.super,openingS+72.1,-34.5,0,.25,1.30);
+ place(openingBerths,boats.super,openingS+48.7,-34.5,0,Math.PI+.25,.80);
+ place(openingBerths,boats.super,openingS+72.1,-34.5,0,Math.PI+.25,1.30);
  scene.add(openingBerths);
  // A distant harbor continues through the bridge opening beyond the race route.
  for(let i=0;i<16;i++){

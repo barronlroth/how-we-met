@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
+import { createHash } from 'node:crypto';
 import { Box3, Vector3, Raycaster, Texture } from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 
@@ -58,7 +59,8 @@ test('causeway leaves the central navigation channel open and carries its road o
 
 test('landmark kit stays within the browser geometry and material budget', () => {
   assert.ok(bytes.length < 5800000, `${bytes.length} bytes`);
-  assert.ok(document.materials.length <= 12);
+  assert.equal(document.materials.length, 12);
+  assert.equal(document.meshes.reduce((sum, mesh) => sum + mesh.primitives.length, 0), 21);
   assert.equal(document.images.length, 8, 'four embedded albedo and tangent-normal tiles');
   for (const image of document.images) {
     assert.equal(image.uri, undefined);
@@ -68,6 +70,58 @@ test('landmark kit stays within the browser geometry and material budget', () =>
   scene.traverse(object => {
     if (object.isMesh) triangles += (object.geometry.index?.count ?? object.geometry.attributes.position.count) / 3;
   });
-  assert.ok(triangles < 80000, `${triangles} triangles`);
+  assert.ok(triangles < 72000, `${triangles} triangles`);
   for (const material of document.materials) assert.ok(!material.alphaMode || material.alphaMode === 'OPAQUE');
+});
+
+
+test('restaurant openings have real wall depth, separate inner frames, and unchanged outer bounds', () => {
+  const root = scene.getObjectByName('FisheriesRestaurant');
+  const bounds = new Box3().setFromObject(root);
+  assert.deepEqual(bounds.min.toArray(), [-17.5, 0, -15.506402969360352]);
+  assert.deepEqual(bounds.max.toArray(), [17.5, 15.350000381469727, 17.228254318237305]);
+  const masonry = root.getObjectByName('FisheriesRestaurant_stucco');
+  const timber = root.getObjectByName('FisheriesRestaurant_teak');
+  const hit = (mesh, x) => new Raycaster(new Vector3(x, 4.1, 3.8), new Vector3(0, 0, -1), 0, 12).intersectObject(mesh)[0];
+  for (const x of [-10.5, -6.4, -2.3, 1.8, 5.9, 10]) {
+    assert.ok(hit(masonry, x)?.point.z < -1, `bay ${x}: open through front wall to interior`);
+    const pier = hit(masonry, x + 1.78);
+    const frame = hit(timber, x + 1.48);
+    assert.ok(pier && frame && pier.point.z - frame.point.z > .65, `bay ${x}: recessed inner frame behind masonry reveal`);
+  }
+});
+
+test('restaurant refinement leaves all bridge surface geometry exactly unchanged', () => {
+  const binary = bytes.subarray(28 + bytes.readUInt32LE(12));
+  const hash = data => createHash('sha256').update(data).digest('hex');
+  const root = document.nodes.find(node => node.name === 'BridgeCauseway');
+  const meshes = root.children.map(child => {
+    const node = document.nodes[child];
+    const parts = document.meshes[node.mesh].primitives.map(primitive => {
+      const attributes = {};
+      for (const [key, index] of Object.entries({ ...primitive.attributes, index: primitive.indices })) {
+        const accessor = document.accessors[index];
+        const view = document.bufferViews[accessor.bufferView];
+        const data = binary.subarray((view.byteOffset ?? 0) + (accessor.byteOffset ?? 0), (view.byteOffset ?? 0) + view.byteLength);
+        attributes[key] = { type: accessor.type, count: accessor.count, componentType: accessor.componentType, sha: hash(data) };
+      }
+      return attributes;
+    });
+    return { name: node.name, parts };
+  });
+  assert.equal(hash(JSON.stringify(meshes)), 'e88c77bd03a8056955545264283a376426a5ea802a88a23b6a512f1aafdafea5');
+});
+
+test('Fisheries sign retains every original letter surface and UV', () => {
+  const geometry = scene.getObjectByName('FisheriesRestaurant_navy').geometry;
+  const { position, normal, uv } = geometry.attributes;
+  const index = geometry.index;
+  const triangles = [];
+  for (let i = 0; i < index.count; i += 3) {
+    const ids = [index.getX(i), index.getX(i + 1), index.getX(i + 2)];
+    if (!ids.every(id => position.getY(id) > 6.4 && position.getY(id) < 7.7 && position.getZ(id) > 12.43 && position.getZ(id) < 12.60)) continue;
+    triangles.push(ids.map(id => [position.getX(id), position.getY(id), position.getZ(id), normal.getX(id), normal.getY(id), normal.getZ(id), uv.getX(id), uv.getY(id)].join(',')).sort().join(';'));
+  }
+  assert.equal(triangles.length, 4589);
+  assert.equal(createHash('sha256').update(triangles.sort().join('\n')).digest('hex'), 'a43e764ba65aad64e49925e81498923dae021b6ece5c69403bfe686ebfa5f1fd');
 });

@@ -165,7 +165,7 @@ class Asset:
         faces.extend((r*4+i,r*4+(i+1)%4,(r+1)*4+(i+1)%4,(r+1)*4+i) for r in range(len(points)-1) for i in range(4))
         self.mesh(material,verts,faces)
 
-    def hip_roof(self, x, y, z, w, d, rise, seam=.42):
+    def hip_roof(self, x, y, z, w, d, rise, seam=.42, tile_ends=False):
         # Four continuous roof planes, raised hip caps, regular standing tile seams.
         ridge = max(0, (w-d) / 2)
         verts = [(x-w/2,y,z-d/2),(x+w/2,y,z-d/2),(x+w/2,y,z+d/2),(x-w/2,y,z+d/2),
@@ -181,14 +181,53 @@ class Asset:
             # The top endpoint lands on either ridge or diagonal hip.
             rise_at=rise*reach/(d/2)
             for side in (-1,1):
-                self.tube([(x+xx,y+.028,z+side*d/2),
-                           (x+xx,y+rise_at+.028,z+side*(d/2-reach))],.035,'terracotta',5)
+                if tile_ends and side==1:
+                    # The restaurant's exposed lower courses replace the old
+                    # continuous ribs rather than accumulating hidden geometry.
+                    skip=min(reach,1.32)
+                    if reach>skip+.02:
+                        self.tube([(x+xx,y+rise*skip/(d/2)+.028,z+d/2-skip),
+                                   (x+xx,y+rise_at+.028,z+d/2-reach)],.035,'terracotta',5)
+                else:
+                    self.tube([(x+xx,y+.028,z+side*d/2),
+                               (x+xx,y+rise_at+.028,z+side*(d/2-reach))],.035,'terracotta',5)
         # Tile courses break up the large continuous roof without a texture atlas.
         courses=max(2,math.ceil(d/2/.72))
         for row in range(1,courses):
             t=row/courses; yy=y+rise*t+.035; zz=d/2*(1-t)
             half=w/2-(w/2-ridge)*t
-            for side in (-1,1): self.tube([(x-half,yy,z+side*zz),(x+half,yy,z+side*zz)],.024,'terracotta',5)
+            for side in (-1,1):
+                if not (tile_ends and side==1 and d/2-zz<1.32):
+                    self.tube([(x-half,yy,z+side*zz),(x+half,yy,z+side*zz)],.024,'terracotta',5)
+        if tile_ends:
+            self.overlapping_eave_tiles(x,y,z,w,d,rise,seam)
+
+    def overlapping_eave_tiles(self,x,y,z,w,d,rise,pitch):
+        # Two actual barrel-tile courses at the waterfront eaves: curved top,
+        # thick exposed nose, and a .12m shingle overlap. Undersides are omitted
+        # because the continuous roof below already seals the interior.
+        count=max(4,round(w/pitch));step=w/count
+        ridge=max(0,(w-d)/2)
+        def roof_y(xx,depth):
+            hip=(w/2-abs(xx))/max(.01,w/2-ridge)
+            return y+rise*max(0,min(depth/(d/2),hip))
+        for row in range(2):
+            depth0=row*.60-.025;depth1=depth0+.72
+            for i in range(count):
+                cx=-w/2+(i+.5)*step
+                if w/2-abs(cx)<depth1*.45: continue
+                verts=[]
+                for depth in (depth0,depth1):
+                    for k in range(5):
+                        xx=cx+(k/4-.5)*(step-.018)
+                        roll=.10*math.sin(k*math.pi/4)
+                        verts.append((x+xx,roof_y(xx,max(0,depth))+.035+roll,z+d/2-depth))
+                # Open profile ends are backed by a thin terracotta lip. It
+                # gives a dark underside and individually rounded tile ends.
+                verts.extend((vx,vy-.055,vz) for vx,vy,vz in verts[:5])
+                faces=[(k,k+1,6+k,5+k) for k in range(4)]
+                faces.extend((k,10+k,11+k,k+1) for k in range(4))
+                self.mesh('terracotta',verts,faces,True)
 
     def text(self, text, center, width, material='navy'):
         font=bpy.data.curves.new(self.name+'Sign',type='FONT')
@@ -322,17 +361,56 @@ def restaurant():
     for z in (-13,-7,-1,5,11,16.5): b.box((0,.78,z),(34.8,.5,.4),'teak')
     for i in range(125):
         x=-17.3+i*.278
-        b.box((x,1.14,1.25),(.26,.22,31.2),'teak')
+        front=16.85;back=-14.35;lo=x-.13;hi=x+.13
+        verts=[(lo,1.25,back),(hi,1.25,back),(hi,1.25,front),(lo,1.25,front),
+               (lo,1.03,back),(hi,1.03,back),(hi,1.03,front),(lo,1.03,front)]
+        # Top, exposed board ends, and the two outer perimeter sides only.
+        faces=[(0,1,2,3),(3,2,6,7),(4,5,1,0)]
+        if i==0:faces.append((0,3,7,4))
+        if i==124:faces.append((1,5,6,2))
+        b.mesh('teak',verts,faces)
     b.box((0,1.06,16.93),(35,.5,.2),'teak')
     for x in (-17,-11,-5,1,7,13,17):
         for z in (-13,0,9,16.5):
             b.tube([(x,0,z),(x,1.25,z)],.2,'teak',10)
             b.tube([(x,.9,z),(x,1.03,z)],.212,'metal',9)
     # Warm low main volume, a broad terracotta roof, and a glazed central cupola.
-    b.box((.5,4.34,-5.3),(27,6.12,16.9),'stucco',.075)
+    # A real wall shell replaces glazing stickers on the former solid block.
+    # Keep the outer wall coordinates and roof envelope exactly where they were.
+    # Front piers are .87m deep, with a second frame behind their shaded reveals.
+    front_centers=(-10.5,-6.4,-2.3,1.8,5.9,10.0)
+    b.box((.5,4.34,-13.40),(27,6.12,.70),'stucco')
+    for y,h in ((1.54,.52),(7.03,.74)):
+        b.box((.5,y,2.715),(27,h,.87),'stucco')
+    edges=[-13]
+    for x in front_centers:edges.extend((x-1.575,x+1.575))
+    edges.append(14)
+    for a,c in zip(edges[::2],edges[1::2]):
+        b.box(((a+c)/2,4.23,2.715),(c-a,4.86,.87),'stucco')
+    # Side windows also have full wall-depth reveals instead of surface planes.
+    for side in (-1,1):
+        xx=.5+side*13.065
+        for yy,hh in ((2.015,1.47),(7.025,.75)):
+            b.box((xx,yy,-5.3),(.87,hh,16.9),'stucco')
+        edges=[-13.75]
+        for zz in (-11.6,-7.6,-3.6,.4):edges.extend((zz-1.45,zz+1.45))
+        edges.append(3.15)
+        for a,c in zip(edges[::2],edges[1::2]):
+            b.box((xx,4.7,(a+c)/2),(.87,3.9,c-a),'stucco')
+    # Occupied interior planes sit several metres behind the frontage. Broad
+    # warm surfaces and timber structure remain legible through the openings.
+    b.box((.5,4.08,-2.25),(25.5,5.6,.22),'stucco')
+    b.box((.5,2.08,-2.10),(25.2,1.56,.12),'teak')
+    b.box((.5,2.84,-1.85),(24.3,.15,.63),'teak')
+    b.box((.5,6.62,.15),(25.7,.14,4.75),'teak')
+    for xx in (-10.2,-2.1,6.0,11.4):
+        b.box((xx,5.97,.3),(.21,.26,4.4),'teak')
+    for xx in (-9.4,-3.2,3.0,9.2):
+        b.box((xx,4.6,-2.085),(3.45,1.38,.065),'navy')
+        b.box((xx,3.86,-1.99),(3.8,.12,.19),'teak')
     for y,h,w,d in ((1.55,.48,27.3,17.2),(7.31,.28,27.7,17.55),(7.57,.26,28.1,17.8)):
         b.box((.5,y,-5.3),(w,h,d),'trim',.035)
-    b.hip_roof(.5,7.72,-5.3,30,20.3,3.2,.37)
+    b.hip_roof(.5,7.72,-5.3,30,20.3,3.2,.37,tile_ends=True)
     b.box((.5,10.62,-5.3),(6.7,1.15,6.5),'stucco',.04)
     b.box((.5,11.8,-5.3),(6.2,1.72,6),'glazing',.025)
     for dx in (-3.14,3.14):
@@ -342,29 +420,47 @@ def restaurant():
     for dz in (-1,1):
         for dx in (-3.15,3.15): b.box((.5+dx,11.88,-5.3+dz),(.14,1.85,.13),'trim')
     b.box((.5,12.84,-5.3),(7.05,.23,6.95),'trim')
-    b.hip_roof(.5,13.0,-5.3,8.2,7.8,1.8,.32)
+    b.hip_roof(.5,13.0,-5.3,8.2,7.8,1.8,.32,tile_ends=True)
     b.tube([(.5,14.8,-5.3),(.5,15.35,-5.3)],.055,'brass')
-    # Inset window glazing, slender divided lights, doors and wood shutters.
-    for x in (-10.5,-6.4,-2.3,1.8,5.9,10.0):
-        b.box((x,4.45,3.2),(3.15,4.42,.11),'glazing')
-        for dx in (-1.65,0,1.65): b.box((x+dx,4.45,3.31),(.13,4.7,.16),'trim')
-        b.box((x,3.1,3.31),(3.4,.13,.16),'trim')
+    # Recessed inner timber frames, projected outer trim and open French-door
+    # leaves provide three visibly separate planes under the verandah.
+    for i,x in enumerate(front_centers):
+        for dx in (-1.67,1.67):b.box((x+dx,4.23,3.245),(.20,5.19,.25),'trim')
         b.box((x,6.85,3.4),(3.6,.19,.35),'trim')
+        b.box((x,1.77,3.20),(3.48,.12,.40),'trim')
+        for dx in (-1.48,1.48):b.box((x+dx,4.23,2.32),(.12,4.66,.16),'teak')
+        for yy in (1.92,6.54):b.box((x,yy,2.32),(3.08,.12,.16),'teak')
+        b.box((x,5.68,2.31),(3.00,.10,.14),'teak')
+        # Narrow folded glass leaves flank an unobstructed central aperture;
+        # diners and bar structure behind it can receive real window shadows.
+        for side in (-1,1):
+            b.box((x+side*1.19,3.81,1.97),(.52,3.64,.085),'glazing')
+            for dx in (-.30,.30):b.box((x+side*1.19+dx,3.81,2.035),(.09,3.83,.11),'trim')
+            for yy in (1.92,5.69):b.box((x+side*1.19,yy,2.035),(.68,.10,.11),'trim')
     for side in (-1,1):
-        x=.5+side*13.57
+        face=.5+side*13.57
+        inner=.5+side*12.58
         for z in (-11.6,-7.6,-3.6,.4):
-            b.box((x,4.7,z),(.12,3.9,2.9),'glazing')
-            for dz in (-1.56,0,1.56): b.box((x+side*.08,4.7,z+dz),(.18,4.14,.14),'trim')
-            b.box((x+side*.12,2.55,z),(.34,.22,3.4),'trim')
-        for z in (-13.55,3.0): b.box((x+side*.03,4.54,z),(.3,6.2,.35),'trim')
+            b.box((inner,4.7,z),(.08,3.68,2.68),'glazing')
+            for dz in (-1.53,1.53):b.box((face,4.7,z+dz),(.22,4.14,.19),'trim')
+            b.box((face,6.77,z),(.29,.19,3.36),'trim')
+            b.box((face,2.55,z),(.34,.22,3.4),'trim')
+            for dz in (-1.36,0,1.36):b.box((inner+side*.10,4.7,z+dz),(.14,3.83,.10),'teak')
+            for yy in (2.83,6.57):b.box((inner+side*.10,yy,z),(.14,.11,2.83),'teak')
+        for z in (-13.55,3.0):b.box((face+side*.03,4.54,z),(.3,6.2,.35),'trim')
     # Two-level deep shaded dining canopy: main cover and green canvas valances.
-    b.hip_roof(0,6.07,7.36,33.2,9.8,1.28,.39)
+    b.hip_roof(0,6.07,7.36,33.2,9.8,1.28,.39,tile_ends=True)
     b.box((0,6.12,12.22),(33.3,.44,.25),'trim')
     for x in (-16,-12,-8,-4,0,4,8,12,16):
         b.box((x,3.68,11.55),(.22,4.85,.22),'trim',.025)
         b.box((x,1.57,11.55),(.36,.6,.36),'stucco',.025)
         b.beam((x,5.55,11.55),(x+.7,6.0,11.55),.14,.18,'trim')
         b.beam((x,5.55,11.55),(x-.7,6.0,11.55),.14,.18,'trim')
+    # Deeper lintel and cross-rafters make the verandah ceiling a shaded room.
+    b.box((0,5.73,11.32),(32.3,.32,.42),'teak')
+    b.box((0,5.70,4.60),(31.5,.26,.36),'teak')
+    for xx in (-14,-9.3,-4.7,0,4.7,9.3,14):
+        b.box((xx,5.78,7.9),(.17,.20,6.55),'teak')
     for x in (-13.8,-9.2,-4.6,0,4.6,9.2,13.8):
         verts=[(x-2.25,5.84,11.87),(x+2.25,5.84,11.87),(x+2.25,5.19,13.15),(x-2.25,5.19,13.15)]
         verts.extend((xx,yy-.025,zz) for xx,yy,zz in verts[:4])
@@ -431,6 +527,25 @@ def restaurant():
                     a,c=verts[j+1],verts[(j+1)%10+1]
                     b.mesh('linen',[a,c,(c[0],c[1]-.14,c[2]),(a[0],a[1]-.14,a[2])],[(0,1,2,3)])
                     b.tube([(x,4.69,z),a],.022,'teak',5)
+    # Three occupied interior tables read through alternating open bays. Their
+    # occupants are only 3–5px high in the intro, so use a lean silhouette rather
+    # than the detailed limbs/fingers of the exterior dining figures.
+    for i,xx in enumerate((-10.5,-2.3,5.9)):
+        zz=.42
+        b.tube([(xx,1.25,zz),(xx,2.03,zz)],.065,'metal',6)
+        b.tube([(xx,2.04,zz),(xx,2.13,zz)],.69,'linen',12)
+        for side in (-1,1):
+            cx=xx+side*.91
+            b.box((cx,1.82,zz),(.48,.11,.47),'teak')
+            b.box((cx+side*.23,2.12,zz),(.09,.64,.48),'linen')
+            for dz in (-.19,.19):
+                b.tube([(cx-side*.17,1.25,zz+dz),(cx-side*.17,1.79,zz+dz)],.035,'metal',4)
+        cx=xx-.91
+        b.tube([(cx,1.93,zz),(cx,2.40,zz)], [.20,.23], 'linen' if i==1 else 'canvas',7)
+        b.ellipsoid((cx,2.75,zz),(.16,.21,.15),'skin',8,4)
+        b.ellipsoid((cx,2.90,zz-.025),(.16,.08,.15),'navy',8,3)
+        b.tube([(cx+.03,2.35,zz-.18),(cx+.37,2.10,zz-.26)],.072,'skin',5)
+        b.tube([(cx+.03,2.35,zz+.18),(cx+.37,2.10,zz+.26)],.072,'skin',5)
     # Warm lamps under the canopy and planted pots at each corner.
     for x in (-14,-7,0,7,14):
         b.tube([(x,5.87,9.2),(x,5.15,9.2)],.02,'metal',6)
@@ -495,11 +610,18 @@ for root in templates:
     for other in templates:
         for obj in other.children_recursive: obj.hide_render=other!=root
     if root.name=='BridgeCauseway':
+        if '--restaurant-proofs' in sys.argv:continue
         render('bridge-front.png',(39,40,138),(0,9,0),201)
         render('bridge-tower-detail.png',(48,28,54),(30.7,12,6),34)
     else:
         render('fisheries-front.png',(35,24,58),(0,5,1),47)
         render('fisheries-deck-detail.png',(20,11,36),(0,4,10),36)
+        # A 320px source render puts the restaurant at the intro's apparent
+        # 250px width; do not use enlarged authoring detail as live-scale proof.
+        scene.render.resolution_x=320;scene.render.resolution_y=220
+        render('fisheries-game-scale.png',(17,9,72),(0,5,2),44)
+        scene.render.resolution_x=1600;scene.render.resolution_y=1050
+if '--restaurant-proofs' in sys.argv:sys.exit(0)
 for root in templates:
     for obj in root.children_recursive: obj.hide_render=False
 templates[1].location=xyz((63,0,25))

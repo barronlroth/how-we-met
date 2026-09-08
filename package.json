@@ -11,7 +11,10 @@
     "blender:hero": "./scripts/blender-headless.sh --python scripts/build-florida-hero.py",
     "blender:waterfront": "./scripts/blender-headless.sh --python scripts/build-florida-waterfront.py",
     "blender:vegetation": "./scripts/blender-headless.sh --python scripts/build-florida-vegetation.py",
-    "blender:landmarks": "./scripts/blender-headless.sh --python scripts/build-florida-landmarks.py"
+    "blender:landmarks": "./scripts/blender-headless.sh --python scripts/build-florida-landmarks.py",
+    "blender:yacht": "./scripts/blender-headless.sh --python scripts/build-florida-yacht.py",
+    "blender:villas": "./scripts/blender-headless.sh --python scripts/build-florida-villas.py",
+    "art:water": "node scripts/build-florida-water.mjs"
   },
   "dependencies": {
     "three": "0.185.1"

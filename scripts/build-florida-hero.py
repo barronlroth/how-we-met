@@ -35,11 +35,11 @@ def material(name, color, rough=.5, metal=0):
 
 M = {k:material(k,*v) for k,v in {
     'cream':('eee3cb',.39), 'coral':('d97c5d',.39,.18), 'teal':('387f80',.36,.3),
-    'chrome':('c4c9c0',.33,.82), 'rubber':('273b3b',.8), 'teak':('ffffff',.58),
+    'chrome':('c4c9c0',.22,.88), 'rubber':('273b3b',.8), 'teak':('ffffff',.58),
     'linen':('e8dcc1',.87), 'seam':('71543b',.8), 'canvas':('ded5be',.73),
     'skinB':('e4a16e',.64), 'skinN':('de9d6c',.64), 'lipsB':('bf796b',.72),
     'lipsN':('bf735e',.62), 'hairB':('24170e',.67), 'curlLight':('39251a',.67),
-    'hairN':('ba914e',.61), 'hairGold':('cba45f',.59), 'eyes':('718e4c',.3),
+    'hairN':('f7f6f2',.65), 'hairGold':('fffdfa',.51), 'eyes':('718e4c',.3),
     'ink':('263632',.65), 'white':('fff7e4',.5), 'shirt':('7c8b69',.92),
     'ninaShirt':('df795c',.9), 'shorts':('427e83',.8), 'gold':('d9ae61',.35,.65),
 }.items()}
@@ -53,6 +53,9 @@ for name,rough in [('faceB',.66),('faceN',.66),('eyeB',.28),('eyeN',.28)]:
     m=material(name,'ffffff',rough);M[name]=m
     tex=m.node_tree.nodes.new('ShaderNodeTexImage');tex.image=face_image
     m.node_tree.links.new(tex.outputs['Color'],m.node_tree.nodes['Principled BSDF'].inputs['Base Color'])
+for suffix in ('B','N'):
+    mat=M['face'+suffix].copy();mat.name='faceRim'+suffix;M[mat.name]=mat
+    mat.node_tree.nodes['Principled BSDF'].inputs['Roughness'].default_value=.60
 # Per-character exposed skin is sampled from non-blushed facial paint regions.
 skin_palette=json.loads((ROOT/'art/characters/skin-palette-v4.json').read_text())
 for key in ('skinB','skinN'):
@@ -71,11 +74,20 @@ def image_material(name,source,size=(1024,1024)):
     tex=M[name].node_tree.nodes.new('ShaderNodeTexImage');tex.image=img
     M[name].node_tree.links.new(tex.outputs['Color'],M[name].node_tree.nodes['Principled BSDF'].inputs['Base Color'])
     return img
-image_material('teak',ROOT/'florida/assets/teak-v2.png')
+teak_image=image_material('teak',ROOT/'florida/assets/teak-v2.png')
+# The six source planks retain their grain, with modest board-to-board tone.
+# No new image or material is needed for this embedded atlas variation.
+import numpy as np
+tw,th=teak_image.size
+teak_pixels=np.array(teak_image.pixels[:],dtype=np.float32).reshape((th,tw,4))
+for board,tone in enumerate((.86,1.06,.94,1.10,.91,1.025)):
+    left=round(board*tw/6);right=round((board+1)*tw/6)
+    teak_pixels[:,left:right,:3]*=np.array((.92,.84,.70))*tone
+teak_pixels[:,:,:3]=np.clip(teak_pixels[:,:,:3],0,1)
+teak_image.pixels.foreach_set(teak_pixels.flatten());teak_image.save()
 
 # Reuse only the linen quadrant from the generated shared coastal atlas. Extracting
 # the tile allows true repeat UVs without texture bleeding from adjacent materials.
-import numpy as np
 # A compact tangent-space detail atlas adds subtle anatomical light response while
 # preserving every approved facial/eye vertex and UV. Heights are millimetre-scale
 # lid folds, smiling cheek planes and lip rolls, evaluated in the existing atlas.
@@ -137,7 +149,10 @@ for name in CLOTH:
     # Keep the dye as an explicit glTF baseColorFactor multiplied by shared linen.
     mix=nodes.new('ShaderNodeMix');mix.data_type='RGBA';mix.blend_type='MULTIPLY';mix.inputs[0].default_value=1
     mix.inputs[7].default_value=mat.diffuse_color
-    mat.node_tree.links.new(tex.outputs['Color'],mix.inputs[6])
+    shade=nodes.new('ShaderNodeVertexColor');shade.layer_name='ClothShade'
+    shade_mix=nodes.new('ShaderNodeMix');shade_mix.data_type='RGBA';shade_mix.blend_type='MULTIPLY';shade_mix.inputs[0].default_value=1
+    mat.node_tree.links.new(tex.outputs['Color'],shade_mix.inputs[6]);mat.node_tree.links.new(shade.outputs['Color'],shade_mix.inputs[7])
+    mat.node_tree.links.new(shade_mix.outputs[2],mix.inputs[6])
     mat.node_tree.links.new(mix.outputs[2],shader.inputs['Base Color'])
     # glTF exports Sheen Tint but ignores Blender's nonzero Sheen Weight amount.
     shader.inputs['Sheen Weight'].default_value=1
@@ -148,15 +163,62 @@ for name in CLOTH:
     mat.node_tree.links.new(normal_map.outputs['Normal'],shader.inputs['Normal'])
 
 
-# Vertex fiber shading reinforces the recessed sculpted channels without a new
-# texture or draw call. The explicit RGBA multiply preserves the golden dye.
+def data_image(name,pixels):
+    h,w=pixels.shape[:2];image=bpy.data.images.new(name,width=w,height=h)
+    image.colorspace_settings.name='Non-Color';image.pixels.foreach_set(pixels.astype(np.float32).flatten())
+    image.file_format='PNG';image.filepath_raw=str(WORK/(name+'.png'));image.save()
+    result=bpy.data.images.load(image.filepath_raw);result.colorspace_settings.name='Non-Color';return result
+
+# Low-frequency variation changes only the painted finish's roughness. Filtering
+# removes the source linen weave, so the hull never acquires fabric or gritty bump.
+paint_height=height.copy()
+for _ in range(9):paint_height=(paint_height+np.roll(paint_height,2,axis=0)+np.roll(paint_height,-2,axis=0)+np.roll(paint_height,2,axis=1)+np.roll(paint_height,-2,axis=1))/5
+paint_height=(paint_height-paint_height.mean())/max(.001,float(paint_height.std()))
+paint_pixels=np.ones((256,256,4),dtype=np.float32);paint_pixels[:,:,1]=.42+np.clip(paint_height,-1.5,1.5)*.042;paint_pixels[:,:,2]=0
+paint_rough=data_image('painted-fiberglass-roughness',paint_pixels)
+nodes=M['cream'].node_tree.nodes;paint_tex=nodes.new('ShaderNodeTexImage');paint_tex.image=paint_rough
+channels=nodes.new('ShaderNodeSeparateColor');channels.mode='RGB'
+M['cream'].node_tree.links.new(paint_tex.outputs['Color'],channels.inputs['Color'])
+M['cream'].node_tree.links.new(channels.outputs['Green'],nodes['Principled BSDF'].inputs['Roughness'])
+
+# Native golden color from the generated strand source replaces the old flat dye.
+# The two near-neutral factors preserve subtle lock variation without multiplying
+# the already-golden source by a second dark gold layer.
+hair_image=bpy.data.images.load(str(ROOT/'florida/assets/textures/golden-hair-v1.png'));hair_image.scale(1024,1024)
+hair_image.file_format='JPEG';hair_image.filepath_raw=str(WORK/'golden-hair-v1.jpg');hair_image.save()
+hair_image=bpy.data.images.load(str(WORK/'golden-hair-v1.jpg'))
+hair_detail=bpy.data.images.load(str(WORK/'golden-hair-v1.jpg'));hair_detail.scale(512,512)
+hair_pixels=np.array(hair_detail.pixels[:],dtype=np.float32).reshape((512,512,4))
+strand_height=(hair_pixels[:,:,:3]*np.array((.2126,.7152,.0722))).sum(axis=2)
+du=(np.roll(strand_height,-1,axis=1)-np.roll(strand_height,1,axis=1))*1.10
+dv=(np.roll(strand_height,-1,axis=0)-np.roll(strand_height,1,axis=0))*1.10
+strand_normals=np.stack((-du,-dv,np.ones_like(du)),axis=-1);strand_normals/=np.linalg.norm(strand_normals,axis=-1,keepdims=True)
+normal_pixels=np.ones((512,512,4),dtype=np.float32);normal_pixels[:,:,:3]=strand_normals*.5+.5
+hair_normal=data_image('golden-hair-normal',normal_pixels)
+hair_detail.scale(256,256)
+hair_pixels=np.array(hair_detail.pixels[:],dtype=np.float32).reshape((256,256,4))
+strand_value=(hair_pixels[:,:,:3]*np.array((.2126,.7152,.0722))).sum(axis=2)
+lo,hi=np.percentile(strand_value,(5,95));strand_value=np.clip((strand_value-lo)/max(.001,hi-lo),0,1)
+rough_pixels=np.ones((256,256,4),dtype=np.float32);rough_pixels[:,:,1]=.48+.16*(1-strand_value);rough_pixels[:,:,2]=0
+hair_rough=data_image('golden-hair-roughness',rough_pixels)
+
 for name in ('hairN','hairGold'):
     mat=M[name];nodes=mat.node_tree.nodes
+    tex=nodes.new('ShaderNodeTexImage');tex.image=hair_image
     fiber=nodes.new('ShaderNodeVertexColor');fiber.layer_name='HairFibers'
+    strand_mix=nodes.new('ShaderNodeMix');strand_mix.data_type='RGBA';strand_mix.blend_type='MULTIPLY';strand_mix.inputs[0].default_value=1
+    mat.node_tree.links.new(tex.outputs['Color'],strand_mix.inputs[6]);mat.node_tree.links.new(fiber.outputs['Color'],strand_mix.inputs[7])
     mix=nodes.new('ShaderNodeMix');mix.data_type='RGBA';mix.blend_type='MULTIPLY';mix.inputs[0].default_value=1
     mix.inputs[7].default_value=mat.diffuse_color
-    mat.node_tree.links.new(fiber.outputs['Color'],mix.inputs[6])
+    mat.node_tree.links.new(strand_mix.outputs[2],mix.inputs[6])
     mat.node_tree.links.new(mix.outputs[2],nodes['Principled BSDF'].inputs['Base Color'])
+    normal_tex=nodes.new('ShaderNodeTexImage');normal_tex.image=hair_normal
+    normal_map=nodes.new('ShaderNodeNormalMap');normal_map.inputs['Strength'].default_value=.42
+    mat.node_tree.links.new(normal_tex.outputs['Color'],normal_map.inputs['Color']);mat.node_tree.links.new(normal_map.outputs['Normal'],nodes['Principled BSDF'].inputs['Normal'])
+    rough_tex=nodes.new('ShaderNodeTexImage');rough_tex.image=hair_rough
+    channels=nodes.new('ShaderNodeSeparateColor');channels.mode='RGB';mat.node_tree.links.new(rough_tex.outputs['Color'],channels.inputs['Color'])
+    rough_factor=nodes.new('ShaderNodeMath');rough_factor.operation='MULTIPLY';rough_factor.inputs[1].default_value=.98 if name=='hairN' else .90
+    mat.node_tree.links.new(channels.outputs['Green'],rough_factor.inputs[0]);mat.node_tree.links.new(rough_factor.outputs[0],nodes['Principled BSDF'].inputs['Roughness'])
 
 def group(name,parent=None,p=(0,0,0)):
     o=bpy.data.objects.new(name,None);bpy.context.collection.objects.link(o)
@@ -246,6 +308,31 @@ def hull_shape(parent):
     for loop in deck.data.loops:
         x,z,y=deck.data.vertices[loop.vertex_index].co
         uv.data[loop.index].uv=((x+1.26)/1.68,(-z+3.6)/2.8)
+    def clip_x(points,edge,keep_greater):
+        result=[]
+        for start,end in zip(points,points[1:]+points[:1]):
+            inside_start=start[0]>=edge if keep_greater else start[0]<=edge
+            inside_end=end[0]>=edge if keep_greater else end[0]<=edge
+            if inside_start:result.append(start)
+            if inside_start!=inside_end:
+                t=(edge-start[0])/(end[0]-start[0])
+                result.append((edge,start[1]+t*(end[1]-start[1])))
+        return result
+    deck_outline=[(x*.917,z*.946) for x,z in outline]
+    for board in range(-1,10):
+        left=-1.26+board*.28;right=left+.28
+        edge=clip_x(clip_x(deck_outline,left+.006,True),right-.006,False)
+        if len(edge)<3:continue
+        # Six-millimeter relief and a shallow chamfer catch light along each
+        # existing caulk line. Their UVs retain the original generated wood grain.
+        nedge=len(edge)
+        pv=[(x,.7255,z) for x,z in edge]+[(max(left+.015,min(right-.015,x)),.731,z) for x,z in edge]
+        pf=[tuple(range(nedge,2*nedge))]
+        pf.extend((i,(i+1)%nedge,nedge+(i+1)%nedge,nedge+i) for i in range(nedge))
+        plank=mesh('Individually edged teak board',pv,pf,'teak',parent,False)
+        layer=plank.data.uv_layers.new(name='DeckUV')
+        for loop in plank.data.loops:
+            x,y,z=pv[loop.vertex_index];layer.data[loop.index].uv=((x+1.26)/1.68,(z+3.6)/2.8)
     path('Teak deck border seam',[(x*.918,.729,z*.947) for x,z in outline],.007,'seam',parent,True)
     # Sparse joinery is geometry, while grain and caulking stay in the texture.
     for i in range(-4,5):
@@ -256,7 +343,7 @@ def hull_shape(parent):
             path('Staggered plank end',[(x-.123,.729,z),(x+.123,.729,z)],.004,'seam',parent)
     for i in range(0,n,5):
         x,z=outline[i]
-        ell('Flush gunwale fastener',(x*.973,.82,z*.973),(.014,.004,.014),'chrome',parent,10,6)
+        ell('Flush gunwale fastener',(x*.973,.82,z*.973),(.020,.006,.020),'chrome',parent,10,6)
     for x,z in [(-.92,-2.84),(.97,.72),(-.93,2.46)]:
         ell('Recessed deck fitting',(x,.731,z),(.069,.008,.069),'chrome',parent,20,8)
         path('Deck fitting slot',[(x-.034,.741,z),(x+.034,.741,z)],.006,'rubber',parent)
@@ -264,21 +351,52 @@ def hull_shape(parent):
 
 
 def cushion(parent,name,center,size):
-    # Superellipsoid upholstery: softly rounded corners and broad loaded surfaces.
-    x,y,z=center;w,h,d=size;verts=[];faces=[];cols=32;rows=16
-    power=lambda v,e:math.copysign(abs(v)**e,v)
-    for j in range(rows+1):
-        lat=-math.pi/2+math.pi*j/rows
-        for i in range(cols):
-            a=math.tau*i/cols
-            xx=power(math.cos(lat),.53)*power(math.cos(a),.53)*w/2
-            zz=power(math.cos(lat),.53)*power(math.sin(a),.53)*d/2
-            yy=power(math.sin(lat),.53)*h/2
-            # Seat surfaces compress subtly below the thighs instead of doming.
-            if yy>0:yy-=.017*math.exp(-(xx/(w*.34))**4-(zz/(d*.33))**4)
-            verts.append((x+xx,y+yy,z+zz))
+    # Straight panel edges and small corner arcs replace the uniformly swollen
+    # superellipse. The face remains softly padded above a firmer side wall.
+    x,y,z=center;w,h,d=size;verts=[];faces=[];colors=[]
+    upright='backrest' in name.lower()
+    bolster='bolster' in name.lower();occupied='loaded' in name.lower()
+    if bolster:w*=.84;d*=.84
+    length=h if upright else d;thickness=d if upright else h
+    def place(u,v,padding):return (x+u,y+v,z-padding) if upright else (x+u,y+padding,z+v)
+    radius=min(w,length)*(.19 if bolster else .14 if upright else .115)
+    outline=[]
+    for cx,cv,start in ((w/2-radius,length/2-radius,0),(-w/2+radius,length/2-radius,math.pi/2),(-w/2+radius,-length/2+radius,math.pi),(w/2-radius,-length/2+radius,math.pi*1.5)):
+        for i in range(8):
+            angle=start+i/7*math.pi/2
+            outline.append((cx+math.cos(angle)*radius,cv+math.sin(angle)*radius))
+    cols=len(outline)
+    def load(u,v):
+        if occupied:return .017*math.exp(-(u/(w*.34))**4-((v+.065)/(length*.39))**4)
+        return (.003 if bolster else .008)*math.exp(-(u/(w*.36))**4-(v/(length*.38))**4)
+    sections=[(.90,-.50),(.985,-.48),(1,-.39),(1,.10),(.979,.17),(.981,.21),
+              (1,.25),(.997,.32),(.97,.41),(.87,.49),(.52,.49)]
+    for j,(scale,height) in enumerate(sections):
+        for i,(u,v) in enumerate(outline):
+            xx=u*scale;vv=v*scale
+            yy=height*thickness
+            depression=load(xx,vv) if yy>0 else 0
+            yy-=depression
+            verts.append(place(xx,vv,yy))
+            shade=.87 if height<-.35 else .90 if height<=.10 else .86 if height<.22 else .98 if height<.40 else 1-depression*2.5
+            colors.append((shade,shade,shade,1))
             if j:faces.append(((j-1)*cols+i,j*cols+i,j*cols+(i+1)%cols,(j-1)*cols+(i+1)%cols))
-    return mesh(name,verts,faces,'canvas',parent)
+    for row,height in ((0,-.5),(len(sections)-1,.49)):
+        center_index=len(verts);depression=load(0,0) if height>0 else 0
+        verts.append(place(0,0,height*thickness-depression));shade=1-depression*2.5 if height>0 else .87
+        colors.append((shade,shade,shade,1))
+        for i in range(cols):faces.append((center_index,row*cols+i,row*cols+(i+1)%cols))
+    pad=mesh(name,verts,faces,'canvas',parent)
+    color=pad.data.color_attributes.new(name='ClothShade',type='FLOAT_COLOR',domain='POINT')
+    for datum,value in zip(color.data,colors):datum.color=value
+    # A narrow fabric join sits inside the modeled recess, not on the padded face.
+    sv=[];sf=[]
+    for j,height in enumerate((.18*thickness-.004,.18*thickness+.004)):
+        for i,(u,v) in enumerate(outline):
+            sv.append(place(u*.982,v*.982,height))
+            if j:sf.append((i,(i+1)%cols,cols+(i+1)%cols,cols+i))
+    mesh('Recessed upholstery joining seam',sv,sf,'seam',parent)
+    return pad
 
 
 def seat(parent,x,y,z,w):
@@ -289,9 +407,8 @@ def seat(parent,x,y,z,w):
         cushion(parent,'Contoured side bolster',(x+side*(w*.46),y+.22,z+.10),(.16,.35,.64))
         path('Seat tubular frame',[(x+side*w*.34,.75,z-.25),(x+side*w*.34,y-.12,z-.25),(x+side*w*.34,y-.12,z+.27),(x+side*w*.34,.75,z+.27)],.027,'chrome',parent)
         path('Backrest frame',[(x+side*w*.35,y-.1,z+.3),(x+side*w*.35,y+.61,z+.46)],.021,'chrome',parent)
-    path('Seat cushion welting',[(x-w*.43,y+.065,z-.409),(x+w*.43,y+.065,z-.409),(x+w*.46,y+.065,z+.29),(x-w*.46,y+.065,z+.29)],.009,'cream',parent,True)
     for dx in (-.22,.22):
-        path('Upholstery channel',[(x+dx*w,y+.18,z+.235),(x+dx*w,y+.37,z+.233),(x+dx*w,y+.67,z+.25)],.004,'cream',parent)
+        path('Upholstery channel',[(x+dx*w,y+.18,z+.235),(x+dx*w,y+.37,z+.233),(x+dx*w,y+.67,z+.25)],.004,'seam',parent)
     box('Seat base shell',(x,y-.105,z+.06),(w*.92,.09,.73),'cream',parent,.042)
 
 def console_shell(parent):
@@ -309,11 +426,17 @@ def console_shell(parent):
     faces.extend([tuple(reversed(range(segments))),tuple(range((len(stations)-1)*segments,len(stations)*segments))])
     mesh('Molded tapered steering console',verts,faces,'teal',parent)
     front=lambda y:-1.54-(y-.8)*.092
+    panel_verts=[(x,y,front(y)+offset) for offset in (.004,-.014) for x,y in ((-.675,.881),(-.245,.881),(-.245,1.539),(-.675,1.539))]
+    panel=mesh('Beveled service access panel',panel_verts,[(0,3,2,1),(4,5,6,7),(0,1,5,4),(1,2,6,5),(2,3,7,6),(3,0,4,7)],'teal',parent)
+    bpy.context.view_layer.objects.active=panel
+    mod=panel.modifiers.new('Pressed access-panel edge','BEVEL');mod.width=.010;mod.segments=2
+    bpy.ops.object.modifier_apply(modifier=mod.name)
     for side in (-1,1):
         x=-.46+side*.22
         path('Console service panel seam',[(x,.87,front(.87)-.003),(x,1.55,front(1.55)-.003)],.0045,'rubber',parent)
         for y in (.91,1.51):
-            ell('Console flush screw',(x,y,front(y)-.008),(.013,.013,.004),'chrome',parent,10,6)
+            ell('Console screw countersink',(x,y,front(y)-.020),(.023,.023,.003),'rubber',parent,8,4)
+            ell('Console flush screw',(x,y,front(y)-.024),(.018,.018,.005),'chrome',parent,10,6)
     for y in (.87,1.55):path('Console service panel seam',[(-.68,y,front(y)-.003),(-.24,y,front(y)-.003)],.0045,'rubber',parent)
     for x in (-.86,-.06):
         ell('Dashboard flush screw',(x,1.959,-1.20),(.012,.005,.012),'chrome',parent,10,6)
@@ -325,6 +448,7 @@ def boat():
     for x in (-.74,-.18):path('Footrest support',[(x,.75,-1.22),(x,1.12,-1.22)],.023,'chrome',fixed)
     console_shell(fixed)
     box('Dashboard',(-.46,1.88,-1.37),(.99,.14,.59),'cream',fixed,.08)
+    path('Dashboard rolled metal lip',[(-.865,1.917,-1.616),(-.46,1.923,-1.638),(-.055,1.917,-1.616)],.022,'chrome',fixed)
     for x in (-.75,-.46,-.18):
         ell('Gauge face',(x,1.962,-1.37),(.078,.008,.078),'rubber',fixed)
         ring('Gauge bezel',(x,1.965,-1.37),.079,.009,'chrome',fixed,'xz',24)
@@ -363,6 +487,12 @@ def boat():
         pts=[(r*math.cos(i*math.tau/n),max(.765,2.15+r*math.sin(i*math.tau/n)),z) for i in range(n)]
         path(name,pts,thick,'chrome',fixed,True)
     for z in (2.1,2.48):cage_ring('Formed stainless safety cage',z,1.51,.032,64)
+    # Sparse rounded clamp saddles interrupt the long tubing with manufactured
+    # joins; the tiny bolts share the existing metal material and draw primitive.
+    for theta in (.22,1.18,2.16,2.98,4.02,5.18):
+        x=math.cos(theta)*1.51;y=max(.765,2.15+math.sin(theta)*1.51)
+        ell('Cage clamp saddle',(x,y,2.10),(.045,.045,.043),'chrome',fixed,12,8)
+        ell('Cage clamp screw',(x,y,2.057),(.019,.019,.006),'rubber',fixed,8,4)
     for r in (.495,.826,1.168,1.486):cage_ring('Cage ring',2.49,r,.011,48)
     for i in range(20):
         a=i*math.tau/20;x=math.cos(a)*1.50;y=max(.765,2.15+math.sin(a)*1.50)
@@ -399,6 +529,15 @@ for hand in [o for o in list(bpy.data.objects) if o.type=='EMPTY' and 'hand' in 
 for obj in [o for o in bpy.data.objects if o.type=='MESH' and any(m and m.name in ('hairN','hairGold') for m in o.data.materials)]:
     if obj.data.color_attributes.get('HairFibers') is None:
         attr=obj.data.color_attributes.new(name='HairFibers',type='FLOAT_COLOR',domain='POINT')
+        for datum in attr.data:datum.color=(.72,.67,.58,1)
+    if not obj.data.uv_layers:
+        uv=obj.data.uv_layers.new(name='HairUV')
+        for loop in obj.data.loops:
+            v=obj.data.vertices[loop.vertex_index].co
+            uv.data[loop.index].uv=((math.atan2(v.x,-v.y-.035)/math.tau)%1,(v.z-1.05)/1.10)
+for obj in [o for o in bpy.data.objects if o.type=='MESH' and any(m and m.name in CLOTH for m in o.data.materials)]:
+    if obj.data.color_attributes.get('ClothShade') is None:
+        attr=obj.data.color_attributes.new(name='ClothShade',type='FLOAT_COLOR',domain='POINT')
         for datum in attr.data:datum.color=(1,1,1,1)
 # Merge fixed geometry by shared material within each articulation node.
 # This keeps the authored details cheap to submit in Three.js.
@@ -429,11 +568,16 @@ for obj in [o for o in bpy.data.objects if o.type=='MESH' and any(m and m.name i
         else:
             coords=(v.x*4,(v.z-v.y)*2.8)
         uv.data[loop.index].uv=coords
+for obj in [o for o in bpy.data.objects if o.type=='MESH' and any(m and m.name=='cream' for m in o.data.materials)]:
+    uv=obj.data.uv_layers.new(name='PaintUV')
+    for loop in obj.data.loops:
+        v=obj.data.vertices[loop.vertex_index].co;uv.data[loop.index].uv=(v.x*.28,(v.z-v.y)*.20)
 
 # Hair is a continuous silhouette at game scale; remove redundant curve tessellation.
 for obj in [o for o in bpy.data.objects if o.type=='MESH' and any(m and m.name in ('hairB','curlLight','hairN','hairGold') for m in o.data.materials)]:
     bpy.context.view_layer.objects.active=obj
-    mod=obj.modifiers.new('Compact sculpted hair','DECIMATE');mod.ratio=.68
+    mod=obj.modifiers.new('Compact sculpted hair','DECIMATE')
+    mod.ratio=.90 if any(m and m.name in ('hairN','hairGold') for m in obj.data.materials) else .68
     bpy.ops.object.modifier_apply(modifier=mod.name)
 bpy.ops.object.select_all(action='SELECT')
 asset=OUT/'airboat-couple-v6.glb'
@@ -462,7 +606,19 @@ scene.render.filepath=str(WORK/'hero-front.png');bpy.ops.render.render(write_sti
 camera.location=xyz((4,4,8));camera.rotation_euler=(xyz((0,1.5,0))-camera.location).to_track_quat('-Z','Y').to_euler()
 scene.render.filepath=str(WORK/'hero-rear.png');bpy.ops.render.render(write_still=True)
 
+# The actual desktop staged camera, transformed into the scaled boat's local
+# coordinates, makes the crown and cloth accountable at their in-game pixel size.
+angle=math.pi+.18;c=math.cos(angle);s=math.sin(angle);scale=1.18
+camera.location=xyz(((c*3.8-s*9)/scale,6/scale,(s*3.8+c*9)/scale))
+target=xyz((s*12/scale,-.8/scale,-c*12/scale))
+camera.rotation_euler=(target-camera.location).to_track_quat('-Z','Y').to_euler()
+camera.data.type='PERSP';camera.data.sensor_fit='VERTICAL';camera.data.sensor_height=24
+camera.data.lens=24/(2*math.tan(math.radians(63)/2));camera.data.shift_x=-.30
+scene.render.resolution_x=1536;scene.render.resolution_y=1024
+scene.render.filepath=str(WORK/'hero-staged-game.png');bpy.ops.render.render(write_still=True)
+
 # Front portrait of the actual seated mesh, in the same authoring scene.
+camera.data.type='ORTHO';camera.data.shift_x=0
 camera.location=xyz((.45,3.4,-9))
 camera.rotation_euler=(xyz((.05,2.65,-1.6))-camera.location).to_track_quat('-Z','Y').to_euler()
 camera.data.ortho_scale=3.25

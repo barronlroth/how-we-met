@@ -20,6 +20,10 @@ WORK.mkdir(parents=True, exist_ok=True)
 OUT.parent.mkdir(parents=True, exist_ok=True)
 bpy.ops.wm.read_factory_settings(use_empty=True)
 random.seed(9037)
+BALCONY_PROJECTION=1.7
+SLAB_THICKNESS=.7
+RAIL_BOTTOM=1.65
+RAIL_TOP=1.71
 
 def xyz(p): return (p[0], -p[2], p[1])
 def linear(v): return v / 12.92 if v <= .04045 else ((v + .055) / 1.055) ** 2.4
@@ -27,8 +31,8 @@ def linear(v): return v / 12.92 if v <= .04045 else ((v + .055) / 1.055) ** 2.4
 M = {}
 for name, color, rough, metallic in [
     ('ivory', 'efe8d5', .68, 0), ('porcelain', 'fff8e5', .48, 0),
-    ('sandstone', 'c8ae8c', .82, 0), ('lagoon_glass', '488e9c', .22, .38),
-    ('deep_glass', '244959', .24, .32), ('coral_canvas', 'd7785b', .84, 0),
+    ('sandstone', 'c8ae8c', .82, 0), ('lagoon_glass', '6b899a', .14, .20),
+    ('deep_glass', '5b7588', .16, .22), ('coral_canvas', 'd7785b', .84, 0),
     ('teak', '9c6b45', .81, 0), ('palm_green', '3f6748', .86, 0),
     ('sunlit_leaf', '7d9954', .89, 0), ('bronze', '685548', .43, .55),
     ('pool_water', '63c6bd', .26, .16), ('linen', 'd8d7ba', .87, 0),
@@ -50,14 +54,16 @@ class Building:
         self.name = name
         self.parts = {}
 
-    def mesh(self, mat, verts, faces, smooth=False):
-        bucket = self.parts.setdefault(mat, [[], [], []])
+    def mesh(self, mat, verts, faces, smooth=False, occlusion=None, face_occlusion=None):
+        bucket = self.parts.setdefault(mat, [[], [], [], []])
         offset = len(bucket[0])
         bucket[0].extend(verts)
         bucket[1].extend(tuple(i + offset for i in f) for f in faces)
         bucket[2].extend([smooth] * len(faces))
+        shades=occlusion if occlusion is not None else [1.0]*len(verts)
+        bucket[3].extend(face_occlusion if face_occlusion is not None else [[shades[i] for i in face] for face in faces])
 
-    def box(self, p, size, mat, bevel=0):
+    def box(self, p, size, mat, bevel=0, faces=None, occlusion=None):
         x, y, z = p; w, h, d = size
         if bevel:
             profile = rounded(w, d, min(bevel * 1.8, min(w, d) / 3), 2)
@@ -66,7 +72,49 @@ class Building:
         verts = [(x+dx*w/2, y+dy*h/2, z+dz*d/2)
                  for dx, dy, dz in [(-1,-1,-1),(1,-1,-1),(1,-1,1),(-1,-1,1),
                                    (-1,1,-1),(1,1,-1),(1,1,1),(-1,1,1)]]
-        self.mesh(mat, verts, [(0,3,2,1),(4,5,6,7),(0,1,5,4),(1,2,6,5),(2,3,7,6),(3,0,4,7)])
+        shell=[(0,3,2,1),(4,5,6,7),(0,1,5,4),(1,2,6,5),(2,3,7,6),(3,0,4,7)]
+        self.mesh(mat, verts, shell if faces is None else [shell[i] for i in faces],occlusion=occlusion)
+
+    def occluded_glazing(self,profile,low,high,z=0):
+        """Apartment-sized sky reflections with a shaded upper reveal.
+
+        The connected shell is subdivided at existing 3.5 m apartment fins. Corner
+        colors permit a clean pane boundary without extra materials, while the
+        upper height ring retains the shadow below each projecting floor plate.
+        """
+        subdivided=[]
+        for i,(x,dz) in enumerate(profile):
+            nx,nz=profile[(i+1)%len(profile)];cuts=[0.0]
+            # Only split the straight facade runs; rounded corner segments are
+            # already narrow enough to be individual curtain-wall panels.
+            axis=0 if abs(nz-dz)<1e-5 else 1 if abs(nx-x)<1e-5 else None
+            if axis is not None:
+                a,b=(x,nx) if axis==0 else (dz,nz)
+                for k in range(math.ceil(min(a,b)/3.5),math.floor(max(a,b)/3.5)+1):
+                    t=(k*3.5-a)/(b-a)
+                    if 1e-5<t<1-1e-5:cuts.append(t)
+            subdivided.extend((x+(nx-x)*t,dz+(nz-dz)*t) for t in sorted(cuts))
+        profile=subdivided
+        n=len(profile)
+        rows=[(low,.92),(low+(high-low)*.72,1.0),(high,.5)]
+        verts=[(x,y,z+dz) for y,shade in rows for x,dz in profile]
+        # Floor plates enclose the shell, so invisible top/bottom glass caps
+        # would only add thousands of triangles across the skyline instances.
+        faces=[];shades=[]
+        palette=[.80,1.0,.87,.98,.83,.94]
+        for r in range(2):
+            for i,(x,dz) in enumerate(profile):
+                j=(i+1)%n;nx,nz=profile[j]
+                along=(x+nx)/2 if abs(nx-x)>abs(nz-dz) else (dz+nz)/2
+                bay=math.floor(along/3.5)
+                side=(1 if x+nx>0 else 3) if abs(nx-x)<abs(nz-dz) else (0 if dz+nz>0 else 2)
+                brightness=palette[(bay+side*2+math.floor(low/11))%len(palette)]
+                colors=[]
+                for row in (r,r,r+1,r+1):
+                    sky=(.72,.82,.88) if row==0 else (.87,.96,1.0)
+                    colors.append(tuple(channel*rows[row][1]*brightness for channel in sky))
+                faces.append((r*n+i,r*n+j,(r+1)*n+j,(r+1)*n+i));shades.append(colors)
+        self.mesh('deep_glass',verts,faces,face_occlusion=shades)
 
     def solid(self, profile, low, high, mat, x=0, z=0, bevel=0):
         n = len(profile)
@@ -186,7 +234,7 @@ class Building:
     def finish(self):
         root = bpy.data.objects.new(self.name,None)
         bpy.context.collection.objects.link(root)
-        for mat,(verts,faces,smooth) in self.parts.items():
+        for mat,(verts,faces,smooth,occlusion) in self.parts.items():
             mesh = bpy.data.meshes.new(self.name+'_'+mat)
             mesh.from_pydata([xyz(p) for p in verts],[],faces)
             mesh.update()
@@ -194,6 +242,19 @@ class Building:
             bmesh.ops.recalc_face_normals(bm,faces=list(bm.faces)); bm.to_mesh(mesh); bm.free()
             # Polygon topology is preserved by recalc_face_normals.
             for face,flag in zip(mesh.polygons,smooth): face.use_smooth=flag
+            if mat in ('deep_glass','ivory'):
+                # Every mesh sharing either material gets this attribute, with
+                # neutral white elsewhere. GLTFLoader can therefore retain one
+                # shared material per name instead of cloning colored variants.
+                colors=mesh.color_attributes.new(name='ArchitecturalAO',type='FLOAT_COLOR',domain='CORNER')
+                for polygon,source,shades in zip(mesh.polygons,faces,occlusion):
+                    # Normal correction may reverse winding, so associate each
+                    # face corner by its original vertex rather than loop order.
+                    by_vertex=dict(zip(source,shades))
+                    for loop_index in polygon.loop_indices:
+                        shade=by_vertex[mesh.loops[loop_index].vertex_index]
+                        rgb=(shade,shade,shade) if isinstance(shade,(float,int)) else shade
+                        colors.data[loop_index].color=(*rgb,1)
             obj=bpy.data.objects.new(self.name+'_'+mat,mesh)
             bpy.context.collection.objects.link(obj); obj.parent=root
             obj.data.materials.append(M[mat])
@@ -208,6 +269,67 @@ def rounded(w,d,r,segments=3):
             angle=math.radians(start+i*90/segments)
             points.append((cx+r*math.cos(angle),cz+r*math.sin(angle)))
     return points
+
+
+def balcony_storey(b, y, width, depth, height, z=0, radius=0, detailed=True):
+    """A usable balcony section, not an opaque glass band over a tower box.
+
+    The slab projects 1.7 m beyond recessed glazing. Open, 60 mm rails let the
+    floor, dark soffit and full-height glazed doors remain visible from below.
+    All parts still join the kit's existing shared opaque material meshes.
+    """
+    projection = BALCONY_PROJECTION
+    if radius:
+        outer = rounded(width, depth, radius, 2 if detailed else 1)
+        inner = rounded(width-2*projection, depth-2*projection, max(.12,radius-projection), 2 if detailed else 1)
+        rail_outer = rounded(width-.14, depth-.14, max(.1,radius-.07), 2 if detailed else 1)
+        rail_inner = rounded(width-.26, depth-.26, max(.06,radius-.13), 2 if detailed else 1)
+    else:
+        outer = [(width/2,depth/2),(-width/2,depth/2),(-width/2,-depth/2),(width/2,-depth/2)]
+        inner = [(math.copysign(abs(x)-projection,x),math.copysign(abs(dz)-projection,dz)) for x,dz in outer]
+        rail_outer = [(math.copysign(abs(x)-.07,x),math.copysign(abs(dz)-.07,dz)) for x,dz in outer]
+        rail_inner = [(math.copysign(abs(x)-.13,x),math.copysign(abs(dz)-.13,dz)) for x,dz in outer]
+    b.solid(outer,y,y+SLAB_THICKNESS,'porcelain',0,z)
+    b.occluded_glazing(inner,y+SLAB_THICKNESS+.02,y+height-.06,z)
+    # Dark underside is a physical horizontal soffit, never a painted facade
+    # strip. This also preserves the recess at horizon LOD (no shadow map).
+    n=len(outer)
+    vertices=[(x,y-.012,z+dz) for profile in (outer,inner) for x,dz in profile]
+    b.mesh('ivory',vertices,[(i,(i+1)%n,n+(i+1)%n,n+i) for i in range(n)],
+           occlusion=[(.032,.047,.060)]*len(vertices))
+    b.ring(rail_outer,rail_inner,y+RAIL_BOTTOM,y+RAIL_TOP,'porcelain',0,z)
+    # Individual handrail supports stay light; apartment dividers are authored
+    # separately as continuous fins spanning multiple storeys.
+    for side in (-1,1):
+        if radius:
+            face_half=width/2-radius
+            for x in (-face_half*.7,face_half*.7):
+                b.box((x,y+1.18,z+side*(depth/2-.1)),(.055,1,.065),'porcelain',faces=[2,3,4,5])
+            for dz in (-max(.25,depth/2-radius)*.68,max(.25,depth/2-radius)*.68):
+                b.box((side*(width/2-.1),y+1.18,z+dz),(.065,1,.055),'porcelain',faces=[2,3,4,5])
+        else:
+            # Low-cost flat-sided skyline keeps a three-material draw budget.
+            for dz in (-depth/2+.12,depth/2-.12):
+                b.box((side*(width/2-.12),y+1.18,z+dz),(.06,1,.06),'porcelain')
+
+
+def facade_fins(b,low,high,width,depth,z=0,radius=0):
+    """Apartment bays with 80 mm fins and 300 mm relief from the glazing.
+
+    Long fins cross the floor plates, so a twenty-storey facade costs the same
+    geometry as one storey. Each setback starts a new run inside its own slab.
+    """
+    spacing=3.5
+    count_x=math.floor((width/2-max(radius,BALCONY_PROJECTION)-.3)/spacing)
+    count_z=math.floor((depth/2-max(radius,BALCONY_PROJECTION)-.3)/spacing)
+    corners=[(-1,-1,-1),(1,-1,-1),(1,-1,1),(-1,-1,1),(-1,1,-1),(1,1,-1),(1,1,1),(-1,1,1)]
+    for side in (-1,1):
+        for i in range(-count_x,count_x+1):
+            shades=[1.0 if dz*side>0 else .68 for dx,dy,dz in corners]
+            b.box((i*spacing,(low+high)/2,z+side*(depth/2-BALCONY_PROJECTION+.13)),(.08,high-low,.34),'ivory',occlusion=shades)
+        for i in range(-count_z,count_z+1):
+            shades=[1.0 if dx*side>0 else .68 for dx,dy,dz in corners]
+            b.box((side*(width/2-BALCONY_PROJECTION+.13),(low+high)/2,z+i*spacing),(.34,high-low,.08),'ivory',occlusion=shades)
 
 
 def residence():
@@ -257,20 +379,14 @@ def hotel():
     b.solid(rounded(37.9,27.9,4.5),1.5,5.8,'deep_glass',0,-1)
     for x in (-16,-12,-8,-4,0,4,8,12,16): b.box((x,3.4,12.9),(.24,4.8,.35),'ivory')
     b.solid(rounded(40,31,5),6.15,6.75,'porcelain',0,-1,.13)
-    b.solid(rounded(31,17,6),7,82.6,'lagoon_glass',0,-3)
     # The ribbons widen subtly toward the sun-facing front and step back at the crown.
     for i in range(24):
         y=7+i*3.1
         shrink=max(0,i-18)*.55
         w,d=35.2-shrink,22-shrink*.32
-        outer=rounded(w,d,6); inner=rounded(w-.27,d-.27,5.85)
-        b.solid(outer,y,y+.29,'porcelain',0,-2.5,.065)
-        b.ring(outer,inner,y+.32,y+.96,'lagoon_glass',0,-2.5)
-        b.ring(outer,inner,y+.95,y+1.08,'porcelain',0,-2.5)
-        # Window piers are recessed behind the balconies, visible in oblique views.
-        for x in (-10,-5,0,5,10): b.box((x,y+1.73,5.55),(.13,2.6,.17),'ivory')
-        for x in (-15.48,15.48):
-            for z in (-7,-3,1): b.box((x,y+1.73,z),(.16,2.6,.12),'ivory')
+        balcony_storey(b,y,w,d,3.1,z=-2.5,radius=6)
+        if i==0 or i>=19:
+            facade_fins(b,y+SLAB_THICKNESS,y+(19*3.1 if i==0 else 3.1),w,d,z=-2.5,radius=6)
     for x in (-9,9): b.box((x,44,-11.63),(1.6,74,1.0),'ivory',.08)
     b.solid(rounded(24,15,5),81.6,84.4,'ivory',0,-3,.1)
     b.solid(rounded(22,13,4),84.4,86.6,'deep_glass',0,-3)
@@ -300,11 +416,10 @@ def skyline():
         y=6.5+i*3.4
         stage=0 if i<18 else 1 if i<23 else 2
         width=24-stage*4; depth=18-stage*2.6
-        b.solid(rounded(width-1,depth-1,3),y+.3,y+3.25,'deep_glass',0,-stage*.5)
-        b.solid(rounded(width,depth,3),y,y+.3,'ivory',0,-stage*.5,.045)
-        # Alternating inset blue panels and light balcony edges make a ribbed silhouette.
-        b.box((0,y+1.25,depth/2-stage*.5-.18),(width-5,.7,.16),'lagoon_glass')
-        for x in (-width*.31,0,width*.31): b.box((x,y+1.8,depth/2-stage*.5+.04),(.2,2.95,.22),'porcelain')
+        balcony_storey(b,y,width,depth,3.4,z=-stage*.5,radius=3,detailed=False)
+        if i in (0,18,23):
+            storeys=(18,5,4)[stage]
+            facade_fins(b,y+SLAB_THICKNESS,y+storeys*3.4,width,depth,z=-stage*.5,radius=3)
     for x in (-10.7,10.7): b.box((x,35,-8.1),(1.3,58,1.8),'porcelain',.075)
     b.solid(rounded(16,13,3),98.3,101,'ivory',0,-1,.1)
     b.solid(rounded(13,10,2),101,103.8,'lagoon_glass',0,-1)
@@ -369,13 +484,13 @@ def club():
 def skyline_far():
     b=Building('SkylineFar')
     b.box((0,2,0),(30,4,25),'ivory')
-    b.box((0,38,-1),(21,68,17),'lagoon_glass')
     for i in range(17):
-        b.box((0,5+i*4,-1),(23,.38,19),'porcelain')
+        balcony_storey(b,5+i*4,23,19,4,z=-1,detailed=False)
+    facade_fins(b,5+SLAB_THICKNESS,73,23,19,z=-1)
     b.box((-6,37,-9.8),(1.8,65,.65),'porcelain')
     b.box((6,37,-9.8),(1.8,65,.65),'porcelain')
     b.box((0,74,-1),(17,4,13),'ivory')
-    b.box((0,77,-1),(12,2,10),'lagoon_glass')
+    b.box((0,77,-1),(12,2,10),'deep_glass')
     b.box((0,78.5,-1),(14,1,12),'porcelain')
     return b.finish()
 
@@ -398,7 +513,18 @@ for root in templates:
     for obj in root.children_recursive: obj.select_set(True)
 if '--render-only' not in sys.argv:
     bpy.ops.export_scene.gltf(filepath=str(OUT),export_format='GLB',use_selection=True,export_yup=True,
-                              export_normals=True,export_texcoords=False,export_animations=False)
+                              export_normals=True,export_texcoords=False,export_animations=False,
+                              export_vertex_color='NAME',export_vertex_color_name='ArchitecturalAO',export_all_vertex_colors=False)
+# Keep the editable Blender material in parity with glTF COLOR_0. Export is
+# first so the material's existing baseColorFactor remains unchanged. Render-
+# only runs use the same nodes without modifying the published GLB.
+for key in ('ivory','deep_glass'):
+    nodes=M[key].node_tree.nodes;links=M[key].node_tree.links;shader=nodes['Principled BSDF']
+    color=nodes.new('ShaderNodeVertexColor');color.layer_name='ArchitecturalAO'
+    multiply=nodes.new('ShaderNodeMixRGB');multiply.name='Architectural occlusion';multiply.blend_type='MULTIPLY'
+    multiply.inputs[0].default_value=1;multiply.inputs[1].default_value=shader.inputs['Base Color'].default_value
+    links.new(color.outputs['Color'],multiply.inputs[2]);links.new(multiply.outputs['Color'],shader.inputs['Base Color'])
+if '--render-only' not in sys.argv:
     bpy.ops.wm.save_as_mainfile(filepath=str(WORK/'waterfront-v1.blend'))
 report={'blender':bpy.app.version_string,'asset_bytes':OUT.stat().st_size,
         'materials':len(M),'templates':{},'source':'Original Blender-authored native geometry; opaque shared PBR materials; no textures.'}
@@ -412,6 +538,14 @@ for root in templates:
     report['templates'][root.name]={'triangles':triangles,'meshes':len(root.children),
                                   'dimensions_xyz':[round(hi[0]-lo[0],3),round(hi[2]-lo[2],3),round(hi[1]-lo[1],3)]}
 report['triangles']=sum(x['triangles'] for x in report['templates'].values())
+report['balconies']={'projection_m':BALCONY_PROJECTION,'floor_plate_m':SLAB_THICKNESS,'rail_section_m':RAIL_TOP-RAIL_BOTTOM,
+                     'apartment_bay_m':3.5,'fin_width_m':.08,'fin_relief_m':.3,
+                     'storeys':{'MarinaHotel':24,'SkylineTower':27,'SkylineFar':17}}
+report['architectural_ao']={'channel':'COLOR_0','glass_bottom':.92,'glass_middle':1,'glass_top':.5,
+                            'fin_rear':.68,'fin_front':1,'soffit_material':'ivory'}
+report['glazing']={'pane_spacing_m':3.5,'pane_brightness_linear':[.8,1],
+                   'lower_sky_rgb':[.72,.82,.88],'upper_sky_rgb':[.87,.96,1],
+                   'glass_env_intensity':.95,'specular_occlusion_exponent':1.35,'material_count_unchanged':True}
 (WORK/'report.json').write_text(json.dumps(report,indent=2)+'\n')
 print('WATERFRONT_ASSET '+json.dumps(report),flush=True)
 
@@ -434,7 +568,118 @@ ground=bpy.context.object
 ground.data.materials.append(M['pool_water'])
 bpy.ops.object.camera_add();camera=bpy.context.object;scene.camera=camera
 camera.data.type='ORTHO'
-for i,root in enumerate(templates[:4]):
+if '--game-scale-proof' in sys.argv:
+    from bpy_extras.object_utils import world_to_camera_view
+    scene.render.resolution_x=1536;scene.render.resolution_y=1024;scene.cycles.samples=12
+    camera.data.type='PERSP';camera.data.sensor_fit='VERTICAL';camera.data.sensor_height=32
+    camera.data.lens=32/(2*math.tan(math.radians(63)/2))
+    camera.location=xyz((0,12,150));target=(0,-20,0)
+    camera.rotation_euler=(Vector(xyz(target))-camera.location).to_track_quat('-Z','Y').to_euler()
+    layout=[(templates[4],(-55,0,0),(1,.75,1),.2,33,8.5),
+            (templates[1],(0,0,-25),(.95,.8,.95),-.12,31.8,8.5),
+            (templates[2],(55,0,-50),(1.25,.75,1.2),-.22,30.3,9)]
+    new_roots=[row[0] for row in layout];before_roots=[];before_materials=[]
+    if '--compare-glb' in sys.argv:
+        before_path=sys.argv[sys.argv.index('--compare-glb')+1]
+        existing=set(bpy.data.objects);existing_materials=set(bpy.data.materials)
+        bpy.ops.import_scene.gltf(filepath=before_path)
+        imported=[obj for obj in bpy.data.objects if obj not in existing]
+        imported_roots=[obj for obj in imported if obj.type=='EMPTY']
+        before_roots=[next(obj for obj in imported_roots if obj.name.split('.')[0]==root.name) for root in new_roots]
+        before_materials=[mat for mat in bpy.data.materials if mat not in existing_materials]
+        for obj in imported:
+            if obj.type=='MESH':obj.hide_render=True
+    for root in templates:
+        for obj in root.children_recursive:obj.hide_render=root not in new_roots
+    for i,(root,position,scale,rotation,y,z) in enumerate(layout):
+        root.location=xyz(position);root.scale=(scale[0],scale[2],scale[1]);root.rotation_euler.z=rotation
+        if before_roots:
+            before_roots[i].rotation_mode='XYZ'
+            before_roots[i].location=root.location;before_roots[i].scale=root.scale;before_roots[i].rotation_euler=root.rotation_euler
+    bpy.context.view_layer.update()
+    metrics={}
+    for root,position,scale,rotation,y,z in layout:
+        bottom=world_to_camera_view(scene,camera,root.matrix_world@Vector(xyz((0,y,z))))
+        top=world_to_camera_view(scene,camera,root.matrix_world@Vector(xyz((0,y+SLAB_THICKNESS,z))))
+        inner=world_to_camera_view(scene,camera,root.matrix_world@Vector(xyz((0,y,z-BALCONY_PROJECTION))))
+        metrics[root.name]={'slab_pixels':round(abs(top.y-bottom.y)*1024,2),
+                            'walkway_depth_pixels':round(math.hypot((inner.x-bottom.x)*1536,(inner.y-bottom.y)*1024),2)}
+    (WORK/'game-scale-proof.json').write_text(json.dumps({'vertical_fov':63,'resolution':[1536,1024],'geometry_readability':metrics},indent=2)+'\n')
+    # The strict ambient image isolates the modeled slab/rail spacing and baked
+    # occlusion. The lit image uses normal lighting with all cast shadows off.
+    outputs=[]
+    for material in list(M.values())+before_materials:
+        nodes=material.node_tree.nodes;links=material.node_tree.links
+        shader=next(node for node in nodes if node.type=='BSDF_PRINCIPLED');output=next(node for node in nodes if node.type=='OUTPUT_MATERIAL')
+        original=output.inputs['Surface'].links[0].from_socket
+        emission=nodes.new('ShaderNodeEmission');emission.inputs['Strength'].default_value=1
+        if shader.inputs['Base Color'].is_linked:links.new(shader.inputs['Base Color'].links[0].from_socket,emission.inputs['Color'])
+        else:emission.inputs['Color'].default_value=shader.inputs['Base Color'].default_value
+        links.new(emission.outputs[0],output.inputs['Surface']);outputs.append((material,output,original))
+    scene.view_settings.view_transform='Standard';scene.cycles.samples=8
+    scene.render.filepath=str(WORK/'towers-game-scale-ambient.png');bpy.ops.render.render(write_still=True)
+    if before_roots:
+        for root in new_roots:
+            for obj in root.children_recursive:obj.hide_render=True
+        for root in before_roots:
+            for obj in root.children_recursive:obj.hide_render=False
+        scene.render.filepath=str(WORK/'towers-game-scale-before.png');bpy.ops.render.render(write_still=True)
+        for root in new_roots:
+            for obj in root.children_recursive:obj.hide_render=False
+        for root in before_roots:
+            for obj in root.children_recursive:obj.hide_render=True
+    for material,output,original in outputs:material.node_tree.links.new(original,output.inputs['Surface'])
+    for root in new_roots:
+        for obj in root.children_recursive:obj.visible_shadow=False
+    # The game uses this same generated sky through a shared PMREM. Cycles is
+    # an authoring proof only, but the actual sky produces meaningful glass
+    # reflections; a uniform studio world would conceal their finish entirely.
+    nodes=scene.world.node_tree.nodes;links=scene.world.node_tree.links
+    environment=nodes.new('ShaderNodeTexEnvironment')
+    environment.image=bpy.data.images.load(str(ROOT/'florida/assets/textures/florida-sky-v2.png'))
+    coordinates=nodes.new('ShaderNodeTexCoord');mapping=nodes.new('ShaderNodeMapping')
+    mapping.inputs['Rotation'].default_value[2]=1.2
+    links.new(coordinates.outputs['Generated'],mapping.inputs['Vector'])
+    links.new(mapping.outputs['Vector'],environment.inputs['Vector'])
+    diffuse=nodes['Background'];diffuse.inputs['Strength'].default_value=.3
+    links.new(environment.outputs['Color'],diffuse.inputs['Color'])
+    reflected=nodes.new('ShaderNodeBackground');reflected.inputs['Strength'].default_value=.95
+    links.new(environment.outputs['Color'],reflected.inputs['Color'])
+    rays=nodes.new('ShaderNodeLightPath');mix=nodes.new('ShaderNodeMixShader')
+    links.new(rays.outputs['Is Glossy Ray'],mix.inputs[0])
+    links.new(diffuse.outputs[0],mix.inputs[1]);links.new(reflected.outputs[0],mix.inputs[2])
+    links.new(mix.outputs[0],nodes['World Output'].inputs['Surface'])
+    scene.view_settings.view_transform='AgX';scene.cycles.samples=20
+    scene.render.filepath=str(WORK/'towers-game-scale-lit.png');bpy.ops.render.render(write_still=True)
+    sys.exit(0)
+if '--ao-proof' in sys.argv:
+    # Emission is a strict ambient-only diagnostic: no normal lighting, shadow
+    # maps or path-traced contact shadows can fake the baked gradient here.
+    scene.view_settings.view_transform='Standard';scene.cycles.samples=8
+    scene.render.resolution_x=1280;scene.render.resolution_y=960
+    for material in M.values():
+        nodes=material.node_tree.nodes;links=material.node_tree.links;shader=nodes['Principled BSDF']
+        emission=nodes.new('ShaderNodeEmission');emission.inputs['Strength'].default_value=1
+        multiply=nodes.get('Architectural occlusion')
+        if multiply:links.new(multiply.outputs['Color'],emission.inputs['Color'])
+        else:emission.inputs['Color'].default_value=shader.inputs['Base Color'].default_value
+        links.new(emission.outputs[0],nodes['Material Output'].inputs['Surface'])
+    for root in [templates[i] for i in (4,1,2)]:
+        for other in templates:
+            for obj in other.children_recursive:obj.hide_render=other!=root
+        camera.location=xyz((33,18,48));target=(0,30,0);camera.data.ortho_scale=38
+        camera.rotation_euler=(Vector(xyz(target))-camera.location).to_track_quat('-Z','Y').to_euler()
+        scene.render.filepath=str(WORK/(root.name+'-ambient-ao.png'));bpy.ops.render.render(write_still=True)
+        if root.name=='SkylineFar':
+            for key in ('ivory','deep_glass'):M[key].node_tree.nodes['Architectural occlusion'].inputs[0].default_value=0
+            scene.render.filepath=str(WORK/'SkylineFar-ambient-unoccluded.png');bpy.ops.render.render(write_still=True)
+            for key in ('ivory','deep_glass'):M[key].node_tree.nodes['Architectural occlusion'].inputs[0].default_value=1
+    sys.exit(0)
+tower_proof='--tower-proof' in sys.argv
+render_roots=[templates[i] for i in (1,2,4)] if tower_proof else templates[:4]
+if tower_proof:
+    scene.render.resolution_x=1280;scene.render.resolution_y=960;scene.cycles.samples=20
+for root in render_roots:
     for other in templates:
         for obj in other.children_recursive: obj.hide_render=other!=root
     height=report['templates'][root.name]['dimensions_xyz'][1]
@@ -447,6 +692,18 @@ for i,root in enumerate(templates[:4]):
     camera.rotation_euler=(Vector(xyz(target))-camera.location).to_track_quat('-Z','Y').to_euler()
     scene.render.filepath=str(WORK/(root.name+'.png'))
     bpy.ops.render.render(write_still=True)
+
+if tower_proof:
+    for root in render_roots:
+        for other in templates:
+            for obj in other.children_recursive: obj.hide_render=other!=root
+        # Low, oblique views expose real rail/door separation and slab undersides.
+        camera.location=xyz((33,18,48));target=(0,30,0)
+        camera.data.ortho_scale=38
+        camera.rotation_euler=(Vector(xyz(target))-camera.location).to_track_quat('-Z','Y').to_euler()
+        scene.render.filepath=str(WORK/(root.name+'-facade.png'))
+        bpy.ops.render.render(write_still=True)
+    sys.exit(0)
 
 for root in templates:
     for obj in root.children_recursive: obj.hide_render=root not in templates[:4]

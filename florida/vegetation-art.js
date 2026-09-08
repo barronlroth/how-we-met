@@ -1,4 +1,4 @@
-import { DoubleSide } from 'three';
+import { DoubleSide, Vector3 } from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 
 export const VEGETATION_NAMES = Object.freeze([
@@ -25,6 +25,19 @@ export function loadVegetationArt() {
             // MSAA smooths the alpha-tested leaflet edges; no sorting or blend
             // overdraw is needed in the repeated shoreline vegetation batches.
             object.material.alphaToCoverage = true;
+            // Thin leaves transmit a little warm sunlight through their backs.
+            // Reuse the existing masked material and draw; no transparency pass.
+            object.material.onBeforeCompile=shader=>{
+              shader.uniforms.leafSun={value:new Vector3(.38,.84,.12).normalize()};
+              shader.fragmentShader=shader.fragmentShader
+                .replace('#include <common>','#include <common>\nuniform vec3 leafSun;')
+                .replace('#include <lights_fragment_end>',`#include <lights_fragment_end>
+                  vec3 leafLight=normalize(mat3(viewMatrix)*leafSun);
+                  float leafTransmission=pow(max(0.0,dot(normal,-leafLight)),1.6);
+                  reflectedLight.indirectDiffuse+=diffuseColor.rgb*vec3(.72,.85,.25)*leafTransmission;
+                `);
+            };
+            object.material.customProgramCacheKey=()=> 'sun-through-leaf-v1';
             if (object.material.map) object.material.map.anisotropy = 4;
           }
         });

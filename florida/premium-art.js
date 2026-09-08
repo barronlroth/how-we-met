@@ -1,4 +1,5 @@
 import * as T from 'three';
+import {villaAsset} from './villa-art.js';
 import {box,ball,pipe,ring,bake,person,flamingo,textSign,C} from './art.js';
 import {surfaceMaterials,loadSurfaceTextures,applySurfaceUVs} from './materials.js';
 let M;
@@ -29,70 +30,7 @@ export function craftedAirboat(){
  const label=textSign('BARRON + NINA',1.8,.23,{font:'900 80px Nunito',bg:'#f7eac9',color:'#1c6566',border:null});label.position.set(0,.39,3.12);root.add(label);
  const hull=bake(g);root.add(hull,fan);const barron=person(false);barron.position.set(-.46,1.4,-.58);barron.rotation.y=.06;root.add(barron);const nina=person(true);nina.position.set(.58,1.06,-2.27);nina.rotation.y=-.18;root.add(nina);const floatie=flamingo(true);floatie.visible=false;root.add(floatie);root.userData={fan,nina,barron,floatie,hull};return root;
 }
-function hipRoof(g,w,d,y,material){
- const points=[[-w/2,y,-d/2],[w/2,y,-d/2],[w/2,y,d/2],[-w/2,y,d/2],[-w*.3,y+2.35,0],[w*.3,y+2.35,0]],indices=[0,4,1,1,4,5,1,5,2,2,5,3,3,5,4,3,4,0];
- const base=new T.BufferGeometry();base.setAttribute('position',new T.Float32BufferAttribute(points.flat(),3));base.setIndex(indices);
- // Hard planes keep tiled roof normals from rounding across the hip edges.
- const geo=base.toNonIndexed();geo.computeVertexNormals();mesh(g,geo,material);base.dispose();
- pipe(g,points[4],points[5],.13,material,10);
- for(const [a,b]of [[0,4],[3,4],[1,5],[2,5]])pipe(g,[points[a][0]*.98,points[a][1],points[a][2]*.99],[points[b][0]*.98,points[b][1],points[b][2]*.99],.075,material,6);
- // Convex tile caps catch the key light and break the eave silhouette. Six
- // triangles per cap keep the broad roof relief cheap and in one material draw.
- const vertices=[],faces=[],spacing=.42;
- for(let x=-w/2+spacing/2;x<w/2-spacing/4;x+=spacing){
-  const reach=Math.min(1,(w/2-Math.abs(x))/(w*.2));
-  for(const side of [-1,1]){
-   const start=vertices.length/3;
-   for(const t of [0,reach])for(let i=0;i<4;i++){
-    const angle=i*Math.PI/3;vertices.push(x+Math.cos(angle)*.063,y+2.35*t+Math.sin(angle)*.06+.012,side*d/2*(1-t));
-   }
-   for(let i=0;i<3;i++){
-    const a=start+i,b=start+i+4,c=start+i+1,d=start+i+5;
-    if(side>0)faces.push(a,b,c,c,b,d);else faces.push(a,c,b,c,d,b);
-   }
-  }
- }
- const caps=new T.BufferGeometry();caps.setAttribute('position',new T.Float32BufferAttribute(vertices,3));caps.setIndex(faces);caps.computeVertexNormals();mesh(g,caps,material);
-}
-const villaBlock=(g,w,h,d,material,x,y,z)=>mesh(g,new T.BoxGeometry(w,h,d),material,x,y,z);
-function windowBays(g,width,height,y,z){
- const count=Math.max(2,Math.round(width/3.45)),step=width/count;
- for(let i=0;i<count;i++){
-  const x=-width/2+step*(i+.5),w=step-.38;
-  villaBlock(g,w+.22,height+.2,.12,M.reveal,x,y,z+.055);
-  villaBlock(g,w-.1,height-.1,.045,M.glass,x,y,z+.125);
-  for(const dx of [-w/2,w/2])villaBlock(g,.115,height+.24,.28,M.trim,x+dx,y,z+.2);
-  for(const yy of [-height/2,height/2])villaBlock(g,w+.23,.115,.28,M.trim,x,y+yy,z+.2);
-  villaBlock(g,.055,height-.1,.065,M.trim,x,y,z+.16);
- }
-}
-function rail(g,w,y,z){pipe(g,[-w/2,y,z],[w/2,y,z],.045,M.trim);for(let x=-w/2;x<=w/2;x+=.62)pipe(g,[x,y-.9,z],[x,y,z],.025,M.trim)}
-export function waterfrontVilla(seed=0){
- const g=new T.Group(),type=seed%4,w=16+(seed%3)*2,d=13,h=type===2?12:8.5,wall=M.wall[seed%4];
- if(type===1){
-  box(g,w,h,d,wall,0,h/2,0);box(g,w+3,.4,d+1.5,M.trim,1,h+.2,0);windowBays(g,w*.82,2.8,5.8,d/2);box(g,w*.8,.35,5,M.trim,1,4,d/2+1);windowBays(g,w*.7,2.7,1.65,d/2);for(const x of [-w/2,w/2])box(g,.5,h,4,M.trim,x,h/2,d/2+1.1);
-  box(g,w*.8,.75,.12,0x85b7ae,1,4.8,d/2+3.42);rail(g,w*.8,5.24,d/2+3.42);box(g,w*.35,1.2,3,wall,w*.3,h+.6,-3);
- }else{
-  box(g,w,h,d,wall,0,h/2,0);hipRoof(g,w+2,d+2,h,M.roof);
-  const floors=type===2?3:2;
-  for(let f=0;f<floors;f++){
-   const y=1.8+f*3.7,bayCount=Math.max(2,Math.round((w-.7)/3.45));windowBays(g,w-.7,2.5,y,d/2);
-   for(let i=0;i<=bayCount;i++)villaBlock(g,.38,3.7,.32,wall,-(w-.7)/2+(w-.7)*i/bayCount,y,d/2+.14);
-   box(g,w+1,.32,3.8,M.trim,0,y-1.5,d/2+1.7);rail(g,w,y-.25,d/2+3.42);
-   for(const x of [-w/2+.3,w/2-.3]){box(g,.43,3.7,.43,M.trim,x,y+.25,d/2+3.1);box(g,.68,.15,.65,M.trim,x,y-1.35,d/2+3.1)}
-  }
-  if(type===3){box(g,w*.55,3.8,7,wall,w*.65,1.9,-1);const wing=new T.Group();hipRoof(wing,w*.65,8,3.9,M.roof);wing.position.x=w*.65;g.add(wing)}
- }
- for(const side of [-1,1])for(let z=-4;z<5;z+=3.5)for(const y of [2,5.8]){
-  villaBlock(g,.06,1.96,1.86,M.glass,side*(w/2+.045),y,z);
-  for(const dz of [-1,1])villaBlock(g,.22,2.16,.12,M.trim,side*(w/2+.05),y,z+dz);
-  for(const dy of [-1.04,1.04])villaBlock(g,.22,.12,2.12,M.trim,side*(w/2+.05),y+dy,z);
- }
- // Deep pergola, furniture and pool edge create overlapping near-bank silhouettes.
- const pergola=new T.Group();for(const x of [-2.6,2.6])for(const z of [-2,2])pipe(pergola,[x,0,z],[x,3.3,z],.09,M.teak);for(let z=-2.4;z<2.6;z+=.5)box(pergola,6,.16,.13,M.teak,0,3.3,z);box(pergola,3,.45,1.3,M.cloth,0,.7,1.2);pergola.position.set(-w/2-4,0,4);g.add(pergola);
- box(g,6.5,.13,5,M.white,w/2+4,.1,3);box(g,5.8,.03,4.3,0x399fa9,w/2+4,.18,3);for(let i=0;i<2;i++){const x=w/2+2+i*3;box(g,.9,.12,2.3,M.cloth,x,.5,7);const back=box(g,.9,.7,.15,M.cloth,x,.85,8);back.rotation.x=-.35}
- return bake(applySurfaceUVs(g));
-}
+export function waterfrontVilla(seed=0){return villaAsset(seed%4)}
 export function sportYacht(seed=0){
  const g=new T.Group(),scale=seed%2?1:.78;const shape=new T.Shape();shape.moveTo(-2.45,7.5);shape.quadraticCurveTo(-2.85,7.5,-2.85,6.6);shape.lineTo(-2.75,-4.8);shape.quadraticCurveTo(-2,-10,0,-11.8);shape.quadraticCurveTo(2,-10,2.75,-4.8);shape.lineTo(2.85,6.6);shape.quadraticCurveTo(2.85,7.5,2.45,7.5);shape.closePath();shell(g,shape,1.8,M.white,1.8);shell(g,shape,.06,M.teak,2.04);
  box(g,5.5,.25,11.3,M.white,0,2.3,.8);const cabin=box(g,4.5,1.5,6.3,M.glass,0,3.2,1.3);cabin.rotation.x=-.14;box(g,5.3,.28,7.8,M.white,0,4.02,1.9);if(seed%2){box(g,3.5,1.1,4,M.glass,0,4.7,2);box(g,4.2,.22,5.2,M.white,0,5.4,2.4)}else{for(const x of [-1.2,1.2])box(g,1.05,.22,3,M.cloth,x,2.3,-4.7)}

@@ -153,6 +153,9 @@ class Plant:
 
 def palm(name, height, lean, coconut=False):
     plant=Plant(name)
+    # Keep additional sculpting randomness independent of the legacy stream:
+    # changing palms must not rearrange the four other vegetation templates.
+    detail=random.Random(49217 if coconut else 73031)
     rows=65 if coconut else 72
     points=[]; radii=[]
     for i in range(rows):
@@ -164,35 +167,118 @@ def palm(name, height, lean, coconut=False):
     plant.tube(points,radii,sides=10,ribbed=True,color=(.65,.61,.51) if not coconut else (.52,.47,.36))
     crown=Vector(points[-1]); crown.y+=.7
     plant.tube([points[-4],tuple(crown-Vector((0,.1,0))),tuple(crown+Vector((0,.55,0)))],[.2,.23,.13],mat='PalmCrownshaft',sides=10,color=(.45,.49,.25))
-    for ring,(count,reach,rise,drop) in enumerate([(11,5.6,1.2,2.7),(9,5.0,2.8,1.8),(6,3.2,3.4,.4)]):
+    # Keep exactly the six legacy RNG draws for each of the original 26
+    # fronds. All crown design below uses its own stream, so other templates
+    # remain byte-for-byte identical when palm leaf construction changes.
+    for _ in range(26 * 6):
+        R.random()
+
+    # Four depth layers: hanging mature skirt, broad lateral fan, sunlit upper
+    # arcs, and short asymmetrical emerging fronds. The upper interior is not
+    # another scaled copy of the outer ring.
+    layers=[(9,5.50,1.36,2.65),(8,5.02,2.35,1.52),
+            (5,3.70,3.24,.68),(4,2.34,3.42,.24)]
+    for ring,(count,reach,rise,drop) in enumerate(layers):
+        phase=(.07,.49,.13,.80)[ring]
         for i in range(count):
-            angle=i*math.tau/count+ring*.41+R.uniform(-.16,.16)
-            direction=Vector((math.cos(angle),0,math.sin(angle))); side=Vector((-math.sin(angle),0,math.cos(angle)))
-            length=reach*R.uniform(.85,1.12)*(1.1 if coconut else 1)
-            start=crown+Vector((0,ring*.17,0))
-            span=(2.6 if coconut else 2.25)*R.uniform(.8,1.13)
-            vertices=[];uv=[];colors=[];rachis=[]
-            tint=(R.uniform(.80,.95),R.uniform(.86,1),R.uniform(.62,.87)) if ring==0 else (R.uniform(.79,.93),R.uniform(.88,1),R.uniform(.72,.91))
-            segments=14
-            for k in range(segments+1):
-                t=k/segments
-                point=start+direction*(length*t)+Vector((0,rise*math.sin(t*math.pi*.85)-drop*t*t,0))
-                rachis.append(tuple(point))
-                twist=.20*math.sin(t*math.pi)*math.sin(angle*2)
-                for col in range(3):
-                    texture_center=(.32+.35*t*t) if coconut else .50
-                    cross=(col/2-texture_center)*span
-                    pos=point+side*cross+Vector((0,-abs(cross)*.24*math.sin(t*math.pi)+cross*twist,0))
-                    vertices.append(tuple(pos));uv.append(uv_at('coconut' if coconut else 'palm',col/2,t))
-                    colors.append(tone(tuple(c*(.93+.07*t) for c in tint)))
-            faces=[]
-            for k in range(segments):
-                for j in range(2):
-                    a=k*3+j;faces.append((a,a+3,a+4,a+1))
+            angle=i*math.tau/count+phase+detail.uniform(-.25,.25)
+            direction=Vector((math.cos(angle),0,math.sin(angle)))
+            side=Vector((-math.sin(angle),0,math.cos(angle)))
+            # Alternating lengths break the level umbrella edge without
+            # changing the grounded tree height or the established envelope.
+            length=reach*detail.uniform(.77,1.14)*(1.1 if coconut else 1)
+            start=crown+direction*detail.uniform(.02,.18)+Vector((0,ring*.13+detail.uniform(-.18,.18),0))
+            span=(3.05 if coconut else 2.72)*detail.uniform(.87,1.15)
+            if ring==3:
+                span*=detail.uniform(.66,.84)
+            arch=rise*detail.uniform(.89,1.11)
+            fall=drop*detail.uniform(.90,1.19)
+            sweep=detail.uniform(-.74,.74)*(1.15 if coconut else 1)
+            roll=detail.uniform(-.30,.30)
+            droop=detail.uniform(.24,.46) if ring>0 else detail.uniform(.40,.65)
+            left_scale=detail.uniform(.76,1.16)
+            right_scale=detail.uniform(.76,1.16)
+            sunlit=(ring==2 or (ring==1 and i in (0,3,6)) or (ring==3 and i%2==0))
+            tint=(1.0,.99,.49) if sunlit else (detail.uniform(.85,.98),detail.uniform(.88,1),detail.uniform(.63,.83))
+            if ring==0:
+                tint=(tint[0]*.94,tint[1]*.96,tint[2]*.87)
+
+            def spine(t):
+                return start+direction*(length*t)+side*(sweep*math.sin(t*math.pi)*t)+Vector((0,arch*math.sin(t*math.pi*.85)-fall*t*t,0))
+
+            def midrib(t):
+                return (.32+.35*t*t) if coconut else .50
+
+            def surface(t,u):
+                cross=(u-midrib(t))*span
+                cross*=left_scale if cross<0 else right_scale
+                sag=abs(cross)**1.38*droop*(.34+.66*math.sin(t*math.pi))
+                return spine(t)+side*cross-direction*(abs(cross)*(.12+.18*t))+Vector((0,-sag+cross*roll*math.sin(t*math.pi),0))
+
+            vertices=[];uv=[];colors=[];faces=[]
+            kind='coconut' if coconut else 'palm'
+
+            def vertex(t,u,pos,color):
+                index=len(vertices)
+                vertices.append(tuple(pos));uv.append(uv_at(kind,u,t));colors.append(tone(color))
+                return index
+
+            # The narrow unbroken atlas midrib holds the disconnected leaflet
+            # groups together. Every UV retains its authored atlas registration.
+            for k in range(14):
+                t=k/13
+                for offset in (-.014,.014):
+                    u=midrib(t)+offset
+                    vertex(t,u,surface(t,u),tint)
+                if k:
+                    a=(k-1)*2;faces.append((a,a+1,a+3,a+2))
+
+            # Curved cuts follow leaflet direction in the authored atlas image.
+            # Each side is split into 13 unequal groups, with cuts sweeping up
+            # toward the tips rather than slicing rectangular cross-frond bars.
+            # Groups keep their roots registered while independent tip length,
+            # twist, and sag open irregular gaps and expose actual crown depth.
+            for half in range(2):
+                sign=1 if half else -1
+                divisions=[0]+[k/13+detail.uniform(-.017,.017) for k in range(1,13)]+[1]
+                for group,(t0,t1) in enumerate(zip(divisions,divisions[1:])):
+                    tip_scale=detail.uniform(.90,1.10)
+                    tip_lift=detail.uniform(-.17,.14)
+                    tip_sweep=detail.uniform(-.10,.10)
+                    opening=detail.uniform(.0005,.003) if 1<group<11 else 0
+                    shade=detail.uniform(.91,1.0)
+                    # A few short groups interrupt the perimeter of mature
+                    # fronds; retain an intact central petiole, no missing cards.
+                    if ring<2 and group in ((i*3+half+2)%10+1,(i*7+half+5)%11+1):
+                        tip_scale*=.90
+                        opening*=1.5
+                    rows=[]
+                    for row,base_t in enumerate((t0,t1)):
+                        row_indices=[]
+                        for outward in (0,.48,1):
+                            edge_t=base_t+(opening if row==0 else -opening)*outward**4
+                            # Leaflets in both palm quadrants climb diagonally
+                            # from their stem. Their UV boundaries share this
+                            # sweep so the cuts are visually hidden in the veins.
+                            t=edge_t+.18*math.sin(edge_t*math.pi)*outward
+                            u=midrib(t)+sign*(.5 if not coconut else (1-midrib(t) if half else midrib(t)))*outward
+                            u=min(1,max(0,u))
+                            center=surface(t,midrib(t))
+                            pos=surface(t,u)
+                            offset=pos-center
+                            # Tip movement vanishes at the rachis and grows
+                            # smoothly outwards, producing scalloped side depth.
+                            free_tip=max(0,(outward-.45)/.55)
+                            pos=center+offset*(1+(tip_scale-1)*free_tip)+Vector((0,tip_lift*free_tip*free_tip,0))+direction*(tip_sweep*free_tip*free_tip)
+                            col=tuple(min(1,c*shade*(.98+.02*base_t)) for c in tint)
+                            row_indices.append(vertex(t,u,pos,col))
+                        rows.append(row_indices)
+                    for j in range(2):
+                        face=(rows[0][j],rows[1][j],rows[1][j+1],rows[0][j+1])
+                        faces.append(face if half else tuple(reversed(face)))
             plant.mesh('LeafAtlas',vertices,faces,uv,colors)
-            # A short modeled petiole joins the atlas midrib to the crown. The
-            # fine full-length midrib is already present in the leaf texture.
-            plant.tube(rachis[:3],[.044,.029,.008],mat='PalmCrownshaft',sides=4,color=(.45,.47,.23))
+            rachis=[tuple(spine(t)) for t in (0,.07,.14)]
+            plant.tube(rachis,[.044,.029,.008],mat='PalmCrownshaft',sides=4,color=(.45,.47,.23))
     return plant.finish()
 
 
@@ -291,14 +377,14 @@ report['triangles']=sum(r['triangles'] for r in report['templates'].values())
 print('VEGETATION_ASSET '+json.dumps(report),flush=True)
 if '--no-render' in sys.argv: sys.exit(0)
 
-scene=bpy.context.scene;scene.render.engine='CYCLES';scene.cycles.device='CPU';scene.cycles.samples=32;scene.cycles.use_denoising=True
+scene=bpy.context.scene;scene.render.engine='CYCLES';scene.cycles.device='CPU';scene.cycles.samples=24;scene.cycles.use_denoising=True
 scene.render.resolution_x=1800;scene.render.resolution_y=1100;scene.render.resolution_percentage=100
 scene.world=bpy.data.worlds.new('Florida warm sky');scene.world.use_nodes=True
 scene.world.node_tree.nodes['Background'].inputs['Color'].default_value=(.42,.58,.73,1)
-scene.world.node_tree.nodes['Background'].inputs['Strength'].default_value=.65
-bpy.ops.object.light_add(type='SUN',location=xyz((-20,50,40)))
-sun=bpy.context.object;sun.data.energy=2.5;sun.data.angle=.07
-sun.rotation_euler=Vector((.7,.4,-1)).to_track_quat('-Z','Y').to_euler()
+scene.world.node_tree.nodes['Background'].inputs['Strength'].default_value=.3
+bpy.ops.object.light_add(type='SUN',location=xyz((.38*80,.84*80,.12*80)))
+sun=bpy.context.object;sun.data.energy=5.2;sun.data.angle=.07;sun.data.color=(1,.95,.84)
+sun.rotation_euler=(-sun.location).to_track_quat('-Z','Y').to_euler()
 bpy.ops.mesh.primitive_plane_add(size=300,location=xyz((0,-.035,0)))
 ground=bpy.context.object;ground.data.materials.append(material('ReviewSand',(.64,.67,.58)))
 bpy.ops.object.camera_add();camera=bpy.context.object;scene.camera=camera;camera.data.type='ORTHO'
@@ -308,11 +394,25 @@ positions=[(-23,0,0),(-9,0,0),(7,0,0),(22,0,0),(11,0,10),(3,0,-15)]
 for root,p in zip(roots,positions): root.location=xyz(p)
 camera.location=xyz((37,26,67));target=(0,7,0)
 camera.rotation_euler=(Vector(xyz(target))-camera.location).to_track_quat('-Z','Y').to_euler();camera.data.ortho_scale=63
-scene.render.filepath=str(WORK/'vegetation-kit.png');bpy.ops.render.render(write_still=True)
+if '--palm-proofs' not in sys.argv:
+    scene.render.filepath=str(WORK/'vegetation-kit.png');bpy.ops.render.render(write_still=True)
 # Close detail view makes atlas/card artefacts visible before runtime integration.
-for root in roots:
-    root.location=(0,0,0)
-    for obj in root.children_recursive: obj.hide_render=root.name!='PalmCoconut'
-camera.location=xyz((11,14,18));target=(1.5,12.5,0)
-camera.rotation_euler=(Vector(xyz(target))-camera.location).to_track_quat('-Z','Y').to_euler();camera.data.ortho_scale=15
-scene.render.filepath=str(WORK/'palm-detail.png');bpy.ops.render.render(write_still=True)
+for palm_root in roots[:2]:
+    for root in roots:
+        root.location=(0,0,0)
+        for obj in root.children_recursive: obj.hide_render=root!=palm_root
+    crown_y=14.5 if palm_root.name=='PalmRoyal' else 11.8
+    for view,eye,target,scale in [
+        ('front',(1,10.7,29),(1,9.7,0),35),
+        ('quarter',(18,13.7,24),(1,9.7,0),35),
+        ('crown',(10,crown_y+4,18),(1,crown_y+.7,0),15),
+        ('game-scale',(10,crown_y+3,24),(1,crown_y+.15,0),16),
+    ]:
+        # Render the crown at roughly 220 pixels across, comparable to the
+        # nearest complete palm in the 1536px title frame. This is an authoring
+        # proof, not browser lighting or performance evidence.
+        scene.render.resolution_x=320 if view=='game-scale' else 1800
+        scene.render.resolution_y=256 if view=='game-scale' else 1100
+        camera.location=xyz(eye)
+        camera.rotation_euler=(Vector(xyz(target))-camera.location).to_track_quat('-Z','Y').to_euler();camera.data.ortho_scale=scale
+        scene.render.filepath=str(WORK/f'{palm_root.name}-{view}.png');bpy.ops.render.render(write_still=True)

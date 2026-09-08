@@ -1,45 +1,24 @@
-import { BoxGeometry } from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
-import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { loadSurfaceTextures, applySurfaceMaps, applySurfaceUVs } from './materials.js';
 
 const NAMES = ['WaterfrontResidence', 'MarinaHotel', 'SkylineTower', 'WaterfrontClub', 'SkylineFar', 'CanopyCluster'];
 const templates = new Map();
+const glassMaterials = new Set();
+const GLASS_ENV_INTENSITY = .95;
 let loading;
 
-function appendFacadeDivisions(root, boxes) {
-  const structural = root.children.find(object => object.isMesh && object.material.name === 'porcelain');
-  if (!structural) throw new Error(`${root.name} is missing its architectural trim.`);
-  const original = structural.geometry;
-  const base = original.index ? original.toNonIndexed() : original.clone();
-  base.deleteAttribute('uv');
-  const additions = boxes.map(([x,y,z,w,h,d]) => {
-    const box = new BoxGeometry(w,h,d).translate(x,y,z);
-    const flat = box.toNonIndexed();box.dispose();flat.deleteAttribute('uv');return flat;
-  });
-  const merged = mergeGeometries([base,...additions],false);
-  if (!merged) throw new Error(`${root.name} architectural divisions could not be merged.`);
-  structural.geometry=merged;
-  original.dispose();base.dispose();additions.forEach(geometry=>geometry.dispose());
-}
-
-/** Refine the shared source templates once, inside their original envelopes. */
-function articulateTowerFacades(scene) {
-  const far=[];
-  for(const x of [-7,0,7])for(const z of [-9.6,7.6])far.push([x,38,z,.2,65,.18]);
-  for(const x of [-10.6,10.6])for(const z of [-6,-1,4])far.push([x,38,z,.18,65,.2]);
-  appendFacadeDivisions(scene.getObjectByName('SkylineFar'),far);
-  const hotel=[];
-  for(const x of [-10,0,10])hotel.push([x,44,5.73,.28,74,.22]);
-  for(const x of [-15.64,15.64])for(const z of [-7,-2])hotel.push([x,44,z,.22,74,.28]);
-  appendFacadeDivisions(scene.getObjectByName('MarinaHotel'),hotel);
-  const tower=[];
-  for(let i=0;i<27;i++){
-    const y=6.5+i*3.4,stage=i<18?0:i<23?1:2,width=24-stage*4,depth=18-stage*2.6;
-    for(const x of [-width/2+.4,width/2-.4])tower.push([x,y+1.8,-stage*.5,.18,2.75,.16]);
-    tower.push([0,y+1.66,depth/2-stage*.5-.07,width-4.8,.075,.12]);
-  }
-  appendFacadeDivisions(scene.getObjectByName('SkylineTower'),tower);
+function useGlazingOcclusion(material) {
+  material.onBeforeCompile = shader => {
+    shader.fragmentShader = shader.fragmentShader.replace('#include <aomap_fragment>', `
+      #include <aomap_fragment>
+      #if defined( USE_COLOR ) || defined( USE_COLOR_ALPHA )
+        // Glass COLOR_0 carries sky brightness and the shaded upper reveal.
+        // Base-color multiplication alone leaves reflected sky unoccluded.
+        reflectedLight.indirectSpecular *= pow(clamp(vColor.b, 0.0, 1.0), 1.35);
+      #endif
+    `);
+  };
+  material.customProgramCacheKey = () => 'waterfront-glazing-occlusion-v1';
 }
 
 function finishWaterfrontMaterials(scene, textures) {
@@ -72,16 +51,19 @@ function finishWaterfrontMaterials(scene, textures) {
         applySurfaceMaps(material, textures.cloth, { roughness: .94, bumpScale: .006, tileSize: [.8, .8] });
         break;
       case 'lagoon_glass':
-        material.color.setHex(0x57858e);
-        material.roughness = .25;
-        material.metalness = .18;
-        material.envMapIntensity = 1.15;
+        material.color.setHex(0x6b899a);
+        material.roughness = .14;
+        material.metalness = .20;
+        material.envMapIntensity = GLASS_ENV_INTENSITY;
+        glassMaterials.add(material);
         break;
       case 'deep_glass':
-        material.color.setHex(0x34505c);
-        material.roughness = .23;
-        material.metalness = .18;
-        material.envMapIntensity = 1.15;
+        material.color.setHex(0x5b7588);
+        material.roughness = .16;
+        material.metalness = .22;
+        material.envMapIntensity = GLASS_ENV_INTENSITY;
+        useGlazingOcclusion(material);
+        glassMaterials.add(material);
         break;
       case 'bronze':
         material.roughness = .32;
@@ -94,13 +76,25 @@ function finishWaterfrontMaterials(scene, textures) {
   applySurfaceUVs(scene);
 }
 
+/** Share the installed PMREM while keeping glazing reflection strength local. */
+export function bindWaterfrontEnvironment(scene) {
+  if (!scene.environment) throw new Error('Waterfront glazing requires the sky environment before binding.');
+  for (const material of glassMaterials) {
+    material.envMap = scene.environment;
+    material.envMapRotation.copy(scene.environmentRotation);
+    // Three uses scene.environmentIntensity when envMap is null; an explicit
+    // shared map activates this glass-only intensity without a new texture.
+    material.envMapIntensity = GLASS_ENV_INTENSITY;
+    material.needsUpdate = true;
+  }
+}
+
 /** Load the Blender-authored kit once before making the world. */
 export function loadWaterfrontArt() {
   return loading ??= Promise.all([
     new GLTFLoader().loadAsync(new URL('./assets/models/waterfront-v1.glb', import.meta.url).href),
     loadSurfaceTextures(),
   ]).then(([{ scene }, textures]) => {
-    articulateTowerFacades(scene);
     finishWaterfrontMaterials(scene, textures);
     for (const name of NAMES) {
       const template = scene.getObjectByName(name);
