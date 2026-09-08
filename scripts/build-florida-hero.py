@@ -17,6 +17,7 @@ OUT = ROOT / 'florida/assets/models'
 WORK = ROOT / 'artifacts/florida-characters-v6'
 OUT.mkdir(parents=True, exist_ok=True)
 WORK.mkdir(parents=True, exist_ok=True)
+FINISH_LINES=[]
 bpy.ops.wm.read_factory_settings(use_empty=True)
 random.seed(2718)
 
@@ -277,7 +278,7 @@ def mesh(name,verts,faces,mat,parent,smooth=True):
 
 sys.path.insert(0, str(ROOT / 'scripts'))
 from florida_characters import make_person
-character_art=SimpleNamespace(M=M,group=group,mesh=mesh,ell=ell,box=box,path=path,ring=ring)
+character_art=SimpleNamespace(M=M,group=group,mesh=mesh,ell=ell,box=box,path=path,ring=ring,finish_lines=FINISH_LINES)
 def person(nina,parent,p):
     return make_person(nina,parent,p,character_art)
 
@@ -418,15 +419,20 @@ def cushion(parent,name,center,size):
     for datum,value in zip(color.data,colors):datum.color=value
     # A one-pixel rounded welt remains visible along the same panel boundary;
     # unlike a flat strip it is not hidden by the adjacent top's turning plane.
-    sv=[];sf=[];sides=6;welt=.0055
+    sv=[];sf=[];sides=6;welt=.0075
     for i,(u,v) in enumerate(outline):
         tangent=(Vector(outline[(i+1)%cols])-Vector(outline[(i-1)%cols])).normalized()
         outward=Vector((tangent.y,-tangent.x))
         for j in range(sides):
-            angle=math.tau*j/sides;offset=.002+welt*math.cos(angle)
-            sv.append(place(u*1.001+outward.x*offset,v*1.001+outward.y*offset,.22*thickness+welt*math.sin(angle)))
+            angle=math.tau*j/sides;offset=.009+welt*math.cos(angle)
+            sv.append(place(u*1.001+outward.x*offset,v*1.001+outward.y*offset,.22*thickness-.006+welt*math.sin(angle)))
             sf.append((i*sides+j,i*sides+(j+1)%sides,((i+1)%cols)*sides+(j+1)%sides,((i+1)%cols)*sides+j))
-    mesh('Rounded upholstery boundary welt',sv,sf,'seam',parent)
+    welt_mesh=mesh('Contrasting upholstery boundary welt',sv,sf,'canvas',parent)
+    # Match the panel bucket so the new cue does not add a draw primitive.
+    welt_mesh.data.materials.append(M['canvasSide'])
+    attr=welt_mesh.data.color_attributes.new(name='ClothShade',type='FLOAT_COLOR',domain='POINT')
+    for datum in attr.data:datum.color=(.92,.90,.86,1)
+    FINISH_LINES.append({'name':name+' boundary welt','parent':parent.name,'points':[list(place(u*1.001,v*1.001,.22*thickness-.006)) for u,v in outline],'radius':welt,'material':'canvas'})
     return pad
 
 
@@ -524,7 +530,21 @@ def boat():
         path('Fan support',[(side*.88,.84,1.06),(side*1.04,2.49,2.1),(side*.85,.84,2.72)],.044,'coral',fixed)
         path('Dark cage support collar',[(side*1.030,2.408,2.055),(side*1.04,2.489,2.10),(side*1.030,2.412,2.147)],.056,'rubber',fixed)
         ell('Cage support collar fastener',(side*1.04,2.477,2.040),(.021,.021,.008),'chrome',fixed,12,8)
-        ring('Cage attachment washer',(side*1.04,2.477,2.031),.022,.0035,'chrome',fixed,'xy',12)
+        # The old thin wire washer resolved below one pixel. A small planar
+        # annulus has enough lit face area to read as attachment hardware.
+        vv=[];ff=[];steps=16
+        for row,(r,z) in enumerate(((.011,2.027),(.024,2.027),(.029,2.032),(.029,2.040))):
+            for i in range(steps):
+                angle=math.tau*i/steps
+                vv.append((side*1.04+math.cos(angle)*r,2.477+math.sin(angle)*r,z))
+                if row:ff.append(((row-1)*steps+i,(row-1)*steps+(i+1)%steps,row*steps+(i+1)%steps,row*steps+i))
+        washer=mesh('Beveled cage attachment face',vv,ff,'chrome',fixed)
+        for poly in washer.data.polygons[:steps]:poly.use_smooth=False
+        theta=math.atan2(.327,1.04);r=1.168
+        attachment=(side*math.cos(theta)*r,2.15+math.sin(theta)*r,2.49)
+        path('Cage attachment standoff',[(side*1.04,2.477,2.13),attachment],.022,'rubber',fixed)
+        clip=[(side*math.cos(theta+d)*r,2.15+math.sin(theta+d)*r,2.49) for d in (-.022,0,.022)]
+        path('Cage wire attachment collar',clip,.027,'rubber',fixed)
     box('Engine cover',(0,1.84,1.46),(.8,.18,.67),'teal',fixed,.07)
     box('Battery',(-.91,1.0,1.53),(.4,.33,.49),'rubber',fixed,.025)
     box('Cooler',(.96,1.03,.37),(.6,.59,.71),'teal',fixed,.065)
@@ -644,7 +664,8 @@ for obj in [o for o in bpy.data.objects if o.type=='MESH' and any(m and m.name i
     mod.ratio=.90 if any(m and m.name in ('hairN','hairGold') for m in obj.data.materials) else .68
     bpy.ops.object.modifier_apply(modifier=mod.name)
 bpy.ops.object.select_all(action='SELECT')
-asset=OUT/'airboat-couple-v6.glb'
+asset=WORK/'airboat-couple-v6-candidate.glb' if '--candidate' in sys.argv else OUT/'airboat-couple-v6.glb'
+(WORK/'finish-line-paths.json').write_text(json.dumps(FINISH_LINES,indent=2)+'\n')
 bpy.ops.export_scene.gltf(filepath=str(asset),export_format='GLB',use_selection=True,export_yup=True)
 bpy.ops.wm.save_as_mainfile(filepath=str(WORK/'airboat-couple-v6.blend'))
 meshes=[o for o in bpy.data.objects if o.type=='MESH']

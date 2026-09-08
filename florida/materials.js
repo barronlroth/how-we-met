@@ -46,12 +46,16 @@ export function loadSurfaceTextures() {
   return texturesLoading ??= Promise.all([
     new T.ImageLoader().loadAsync(new URL('./assets/textures/coastal-materials-v1.png', import.meta.url).href),
     new T.ImageLoader().loadAsync(new URL('./assets/teak-v2.png', import.meta.url).href),
-  ]).then(([atlas, deck]) => ({
+    new T.ImageLoader().loadAsync(new URL('./assets/textures/coastal-ground-v1.png', import.meta.url).href),
+  ]).then(([atlas, deck, ground]) => ({
     plaster: atlasCell(atlas, 0, 0, 'Coastal stucco'),
     tile: atlasCell(atlas, 1, 0, 'Barrel terracotta', 1024, T.RepeatWrapping),
     cloth: atlasCell(atlas, 0, 1, 'Ivory linen'),
     concrete: atlasCell(atlas, 1, 1, 'Cast concrete'),
     teak: surfaceMaps(deck, 'Varnished teak'),
+    lawn: atlasCell(ground,0,0,'Subtropical lawn'),
+    soil: atlasCell(ground,1,0,'Damp mangrove earth'),
+    sand: atlasCell(ground,0,1,'Coastal shell sand'),
   }));
 }
 
@@ -108,6 +112,9 @@ export function surfaceMaterials(textures) {
     cloth: mapped('Ivory woven upholstery', 0xfffcf5, textures.cloth, { roughness: .94, bumpScale: .006, tileSize: [.8, .8] }),
     teak: mapped('Varnished marine teak', 0xead8bd, textures.teak, { roughness: .43, bumpScale: .014, tileSize: [1.8, 3.6] }),
     concrete: mapped('Pale cast concrete', 0xfffcf7, textures.concrete, { roughness: .86, bumpScale: .018, tileSize: [4, 4] }),
+    lawn: applySurfaceMaps(make('Island lawn',0xb8c6a4,{vertexColors:true}),textures.lawn,{roughness:1,bumpScale:.016,tileSize:[2,2]}),
+    soil: applySurfaceMaps(make('Mangrove island soil',0xd0cbbb,{vertexColors:true}),textures.soil,{roughness:1,bumpScale:.020,tileSize:[2,2]}),
+    sand: applySurfaceMaps(make('Island shell shoreline',0xb9b4a7,{vertexColors:true}),textures.sand,{roughness:.95,bumpScale:.010,tileSize:[2,2]}),
     white: make('Warm white marine enamel', 0xfffcf2, { roughness: .27, metalness: .03 }),
     // Opaque dielectric glazing keeps the cool reflection readable under broad
     // overhangs; a highly metallic approximation turned shaded windows black.

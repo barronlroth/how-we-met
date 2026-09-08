@@ -83,11 +83,12 @@ test('restaurant openings have real wall depth, separate inner frames, and uncha
   assert.deepEqual(bounds.max.toArray(), [17.5, 15.350000381469727, 17.228254318237305]);
   const masonry = root.getObjectByName('FisheriesRestaurant_stucco');
   const timber = root.getObjectByName('FisheriesRestaurant_teak');
+  const trim = root.getObjectByName('FisheriesRestaurant_trim');
   const hit = (mesh, x) => new Raycaster(new Vector3(x, 4.1, 3.8), new Vector3(0, 0, -1), 0, 12).intersectObject(mesh)[0];
   for (const x of [-10.5, -6.4, -2.3, 1.8, 5.9, 10]) {
     assert.ok(hit(masonry, x)?.point.z < -1, `bay ${x}: open through front wall to interior`);
     const pier = hit(masonry, x + 1.78);
-    const frame = hit(timber, x + 1.48);
+    const frame = hit(x < 10 ? trim : timber, x + (x < 10 ? 1.27 : 1.48));
     assert.ok(pier && frame && pier.point.z - frame.point.z > .65, `bay ${x}: recessed inner frame behind masonry reveal`);
   }
 });
@@ -150,12 +151,40 @@ test('near restaurant tile noses and inner frame stops are visible from the actu
   const next = at([step, 6.24, 12.44]);
   const pixels = Math.abs(next.projected.x - nose.projected.x) * 768;
   assert.ok(pixels >= 3 && pixels <= 6, `canopy ends are spaced ${pixels}px apart in the intro`);
-  const frame = at([-11.98, 3.8, 2.4575]);
+  const frame = at([-11.77, 3.8, 2.4575]);
   assert.equal(frame.hit.object.material.name, 'LandmarkTrim', 'a pale inner stop separates the dark timber from the window recess');
   assert.ok(frame.local.z < 2.47 && frame.local.z > 2.45, 'the stop remains behind the unchanged masonry plane');
   const sill = at([-11.4, 1.80, 3.37]);
   assert.equal(sill.hit.object.material.name, 'LandmarkTrim');
   assert.ok(sill.local.z >= 3 && sill.local.z <= 3.4 && normal(sill.hit).dot(sunlight) > .5, 'a narrow lit sill bevel stays within the original frame bounds');
+  const screen = point => {
+    const p = root.localToWorld(point.clone()).project(camera);return new Vector3(p.x * 768, p.y * 512, 0);
+  };
+  const positions = root.getObjectByName('FisheriesRestaurant_terracotta').geometry.attributes.position;
+  const lip = [], ends = [];
+  for (let i = 0; i < positions.count; i++) {
+    const p = new Vector3().fromBufferAttribute(positions, i);
+    if (p.z < 12.4 || p.y < 5.9 || p.y > 6.3) continue;
+    if (Math.abs(p.x) < .00001) lip.push(p);
+    if (p.z > 12.5 && Math.abs(p.x) < step) ends.push(p.x);
+  }
+  lip.sort((a, b) => a.y - b.y);
+  const lipPixels = screen(lip[0]).distanceTo(screen(lip.at(-1)));
+  assert.ok(lipPixels >= 1.8 && lipPixels <= 2.2, `actual clay nose height is ${lipPixels}px`);
+  const xs = [...new Set(ends.map(x => Math.round(x * 1000000) / 1000000))].sort((a, b) => a - b);
+  const gaps = xs.slice(1).map((x, i) => ({ a: xs[i], b: x, width: x - xs[i] })).sort((a, b) => b.width - a.width);
+  const gapPixels = screen(new Vector3(gaps[0].a, 6.17, 12.525)).distanceTo(screen(new Vector3(gaps[0].b, 6.17, 12.525)));
+  assert.ok(gapPixels >= 1.5 && gapPixels <= 2, `actual side gaps occupy ${gapPixels}px`);
+  for (const center of [-10.5, -6.4, -2.3, 1.8, 5.9]) {
+    const inner = at([center - 1.27, 3.8, 2.4575]);
+    const reveal = at([center - 1.48, 3.8, 2.8318605]);
+    assert.equal(inner.hit.object.material.name, 'LandmarkTrim');
+    assert.equal(reveal.hit.object.material.name, 'LandmarkTeak');
+    assert.ok(reveal.local.z > inner.local.z + .25 && reveal.local.z < 3.15, 'the shaded return lies behind the mouth and ahead of the inner stop');
+    const revealPixels = screen(new Vector3(center - 1.575, 3.8, 3.15)).distanceTo(screen(new Vector3(center - 1.36, 3.8, 2.4575)));
+    const stopPixels = screen(new Vector3(center - 1.36, 3.8, 2.4575)).distanceTo(screen(new Vector3(center - 1.18, 3.8, 2.4575)));
+    assert.ok(revealPixels >= 2.5 && revealPixels <= 4 && stopPixels >= 1.5 && stopPixels <= 2, `${center}: return ${revealPixels}px / inset stop ${stopPixels}px`);
+  }
 });
 
 test('landmark material, sampler and embedded image payloads remain exactly preserved', () => {

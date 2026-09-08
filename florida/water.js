@@ -5,10 +5,34 @@ import {waterSkySamplingGLSL,skyReflectionOpacity} from './sky.js';
 import {makeWaterGrid,WATER_GRID_STEP,WATER_GRID_INNER_EXTENT,WATER_GRID_MIDDLE_STEP,WATER_DISPLACEMENT_START,WATER_DISPLACEMENT_END} from './water-grid.js';
 import {fixWaterReflectionFraming} from './planar-reflection.js';
 import {prepareReliefField} from './relief-field.js';
+import {decodeSubRows} from './wave-codec.js';
 
 const AUTHORED_WAVE_SCALE=.28;
 
-let waterNormals, waterArtLoading, spectralWaves, waveDisplacement, waveManifest, authoredDisplacement, authoredDisplacementScale, authoredTexelLength;
+let waterNormals, waterArtLoading, spectralWaves, primaryWaves, primaryNormalSize=128, waveDisplacement, waveManifest, authoredDisplacement, authoredDisplacementScale, authoredTexelLength;
+
+function normalArrayTexture(data,size,layers,name){
+  const texture=new T.DataArrayTexture(data,size,size,layers);
+  texture.name=name;texture.colorSpace=T.NoColorSpace;
+  texture.wrapS=texture.wrapT=T.RepeatWrapping;texture.minFilter=T.LinearMipmapLinearFilter;texture.magFilter=T.LinearFilter;
+  texture.generateMipmaps=true;texture.anisotropy=8;texture.needsUpdate=true;return texture;
+}
+
+async function loadPrimaryNormals(){
+  primaryWaves=spectralWaves;primaryNormalSize=waveManifest.size;
+  const metadata=waveManifest.primaryNormals;
+  // The original cache remains usable on browsers without stream decompression.
+  if(!metadata||typeof DecompressionStream==='undefined')return;
+  const {file,size,frames,compression,predictor,uncompressedBytes}=metadata;
+  if(size!==512||frames!==64||compression!=='deflate'||(predictor!==undefined&&predictor!=='sub')||uncompressedBytes!==size*size*frames*4||!/^[a-z0-9-]+\.deflate$/.test(file))throw new Error('The detailed wind-wave metadata is invalid.');
+  const response=await fetch(new URL(`./assets/textures/${file}`,import.meta.url));
+  if(!response.ok||!response.body)throw new Error('The detailed wind-wave surface could not load.');
+  const stream=response.body.pipeThrough(new DecompressionStream('deflate'));
+  const data=new Uint8Array(await new Response(stream).arrayBuffer());
+  if(data.length!==uncompressedBytes)throw new Error('The detailed wind-wave surface data is invalid.');
+  if(predictor==='sub')decodeSubRows(data,size*4);
+  primaryWaves=normalArrayTexture(data,size,frames,'Analytic primary wind-wave normals');primaryNormalSize=size;
+}
 
 async function loadWaveCache(){
   const [metadataResponse,dataResponse]=await Promise.all([fetch(new URL('./assets/textures/wind-waves-v1.json',import.meta.url)),fetch(new URL('./assets/textures/wind-waves-v1.bin',import.meta.url))]);
@@ -16,11 +40,8 @@ async function loadWaveCache(){
   waveManifest=await metadataResponse.json();const data=new Uint8Array(await dataResponse.arrayBuffer());
   const {version,size,frames,period,bands}=waveManifest;
   if(version!==1||size!==128||frames!==64||period!==4||bands.length!==2||data.length!==size*size*frames*bands.length*4)throw new Error('The wind-wave surface data is invalid.');
-  spectralWaves=new T.DataArrayTexture(data,size,size,frames*bands.length);
-  spectralWaves.name='Wind-driven long waves and short ripples';spectralWaves.colorSpace=T.NoColorSpace;
-  spectralWaves.wrapS=spectralWaves.wrapT=T.RepeatWrapping;spectralWaves.minFilter=T.LinearMipmapLinearFilter;spectralWaves.magFilter=T.LinearFilter;
-  spectralWaves.generateMipmaps=true;spectralWaves.anisotropy=8;spectralWaves.needsUpdate=true;
-  const displacementResponse=await fetch(new URL('./assets/textures/wind-displacement-v1.bin',import.meta.url));
+  spectralWaves=normalArrayTexture(data,size,frames*bands.length,'Wind-driven long waves and short ripples');
+  const [displacementResponse]=await Promise.all([fetch(new URL('./assets/textures/wind-displacement-v1.bin',import.meta.url)),loadPrimaryNormals()]);
   if(!displacementResponse.ok)throw new Error('The wind-wave displacement could not load.');
   const displacementData=new Uint8Array(await displacementResponse.arrayBuffer());
   if(displacementData.length!==size*size*frames*4)throw new Error('The wind-wave displacement data is invalid.');
@@ -100,8 +121,9 @@ vec3 surfaceOffset(vec2 p){
   float spectralLod=max(0.0,log2(footprint/displacementTexelLength)+.5);
   float authoredLod=max(0.0,log2(footprint/authoredTexelLength)+.5);
   float frame=floor(waveFrame),blend=fract(waveFrame);
-  vec3 a=textureLod(displacementSampler,vec3(p/displacementLength,frame),spectralLod).rgb;
-  vec3 b=textureLod(displacementSampler,vec3(p/displacementLength,mod(frame+1.0,64.0)),spectralLod).rgb;
+  vec2 displacementUV=p/displacementLength+vec2(.5*displacementTexelLength/displacementLength);
+  vec3 a=textureLod(displacementSampler,vec3(displacementUV,frame),spectralLod).rgb;
+  vec3 b=textureLod(displacementSampler,vec3(displacementUV,mod(frame+1.0,64.0)),spectralLod).rgb;
   vec3 baseOffset=mix(a,b,blend)-.5;
   vec3 offset=baseOffset*displacementScale;
   vec3 art=(textureLod(authoredDisplacementSampler,authoredWaveUV(p),authoredLod).rgb-.5)*authoredDisplacementScale;
@@ -137,8 +159,10 @@ const fragmentShader = `
 uniform sampler2D mirrorSampler;
 ${authoredWaveGLSL}
 uniform highp sampler2DArray waveSampler;
+uniform highp sampler2DArray primaryWaveSampler;
 uniform float waveFrame;
 uniform vec2 waveLengths;
+uniform vec2 waveTexelOffsets;
 uniform sampler2D skySampler;
 uniform float skyRotation;
 uniform float skyIntensity;
@@ -175,10 +199,13 @@ vec4 rippleField(vec2 uv,vec2 rotation) {
 
 // Two offline Fourier wave bands, with continuous frame interpolation. This
 // avoids a runtime FFT and keeps the normal surface periodic at the cache seam.
-vec4 spectralField(vec2 uv,float baseLayer){
+vec4 spectralField(highp sampler2DArray fieldSampler,vec2 uv,float baseLayer,float texelOffset){
+  // Cached values lie on integer physical grid nodes, while texture samples
+  // lie at texel centres. Align both resolutions with the displacement field.
+  uv+=vec2(texelOffset);
   float frame=floor(waveFrame),blend=fract(waveFrame);
-  vec4 a=texture(waveSampler,vec3(uv,baseLayer+frame));
-  vec4 b=texture(waveSampler,vec3(uv,baseLayer+mod(frame+1.0,64.0)));
+  vec4 a=texture(fieldSampler,vec3(uv,baseLayer+frame));
+  vec4 b=texture(fieldSampler,vec3(uv,baseLayer+mod(frame+1.0,64.0)));
   vec4 field=mix(a,b,blend);vec3 na=a.rgb*2.0-1.0,nb=b.rgb*2.0-1.0,n=mix(na,nb,blend);
   // Only spatial mip filtering represents unresolved waves. Interpolating
   // two times must not broaden highlights halfway between cached frames.
@@ -187,8 +214,8 @@ vec4 spectralField(vec2 uv,float baseLayer){
 }
 
 vec4 waveSurface(vec2 p) {
-  vec4 broad=spectralField(p/waveLengths.x,0.0);
-  vec4 ripples=spectralField(p/waveLengths.y,64.0);
+  vec4 broad=spectralField(primaryWaveSampler,p/waveLengths.x,0.0,waveTexelOffsets.x);
+  vec4 ripples=spectralField(waveSampler,p/waveLengths.y,64.0,waveTexelOffsets.y);
   vec2 rotation=vec2(-.358,.934);
   vec4 detail=rippleField(authoredWaveUV(p),rotation);
   vec2 slope=broad.xy+ripples.xy*.40+detail.xy;
@@ -252,6 +279,7 @@ void main() {
   // sky and sun supply the pale crests instead of a separate foam overlay.
   vec3 body=waterColor*.64*(.86+.20*ndl)*(.92+.16*waves.z);
   body*=.70+.45*ndv;
+  body*=mix(1.0,clamp(1.0+waves.y*1.65-waves.x*.50,.52,1.55),.30);
   body*=mix(.56,1.0,shadow);
 
   // GGX sun reflection with pixel/mipmap variance: interrupted warm highlights
@@ -261,12 +289,12 @@ void main() {
   float vdh=max(dot(viewDirection,halfDirection),0.0);
   vec3 normalDx=dFdx(normal),normalDy=dFdy(normal);
   float pixelVariance=dot(normalDx,normalDx)+dot(normalDy,normalDy);
-  float roughnessSquared=.00028+min(.006,pixelVariance*.020+waves.w*.040);
+  float roughnessSquared=.00010+min(.006,pixelVariance*.020+waves.w*.040);
   float denominator=ndh*ndh*(roughnessSquared-1.0)+1.0;
   float distribution=roughnessSquared/(3.14159265*denominator*denominator);
   float geometry=smithVisibility(ndv,roughnessSquared)*smithVisibility(max(ndl,.001),roughnessSquared);
   float sunFresnel=.020+.98*pow(1.0-vdh,5.0);
-  vec3 sunReflection=sunColor*(distribution*geometry*sunFresnel/(4.0*ndv))*11.0*shadow;
+  vec3 sunReflection=sunColor*(distribution*geometry*sunFresnel/(4.0*ndv))*3.3*shadow;
   vec3 outgoingLight=mix(body,reflection,fresnel)+sunReflection;
   gl_FragColor=vec4(outgoingLight,1.0);
   #include <tonemapping_fragment>
@@ -283,6 +311,7 @@ export function makeDreamWater(scene,sunDirection) {
   water.material.fragmentShader=fragmentShader;
   water.material.vertexShader=vertexShader;
   water.material.uniforms.waveSampler={value:spectralWaves};
+  water.material.uniforms.primaryWaveSampler={value:primaryWaves};
   water.material.uniforms.waveFrame={value:0};
   const surfaceUniforms={
     waveFrame:water.material.uniforms.waveFrame,
@@ -299,13 +328,14 @@ export function makeDreamWater(scene,sunDirection) {
   };
   Object.assign(water.material.uniforms,surfaceUniforms);
   water.material.uniforms.waveLengths={value:new T.Vector2(...waveManifest.bands.map(b=>b.length))};
+  water.material.uniforms.waveTexelOffsets={value:new T.Vector2(.5/primaryNormalSize,.5/waveManifest.size)};
   water.material.uniforms.skySampler={value:scene.background};
   water.material.uniforms.skyRotation={value:-scene.backgroundRotation.y};
   water.material.uniforms.skyIntensity={value:scene.backgroundIntensity};
   fixWaterReflectionFraming(water,skyReflectionOpacity);
   water.rotation.x=-Math.PI/2;water.position.y=.025;scene.add(water);
   const colors={downtown:new T.Color(0x166d74),marina:new T.Color(0x117c82),mangrove:new T.Color(0x2c6e59),cove:new T.Color(0x118e91),bridge:new T.Color(0x14797d)};
-  return{mesh:water,bindFoam(material){
+  return{mesh:water,primaryNormalSize,bindFoam(material){
     const compile=material.onBeforeCompile;
     material.onBeforeCompile=shader=>{
       compile(shader);Object.assign(shader.uniforms,surfaceUniforms);

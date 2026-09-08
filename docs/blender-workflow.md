@@ -52,7 +52,7 @@ Sources: [Blender macOS command line](https://docs.blender.org/manual/en/5.0/adv
 
 ## Current player asset: Dream Loop candidate
 
-`npm run blender:hero` builds `florida/assets/models/airboat-couple-v6.glb` from `scripts/build-florida-hero.py` and `scripts/florida_characters.py`. Editable source, reports, and review renders go to ignored `artifacts/florida-characters-v6/`. The current export is 4,820,744 bytes, 125,366 triangles, 42 glTF primitives, 27 materials, and nine embedded images. This is the round-eight visual candidate; review and benchmark evidence is recorded in the Dream Loop validation report.
+`npm run blender:hero` builds `florida/assets/models/airboat-couple-v6.glb` from `scripts/build-florida-hero.py` and `scripts/florida_characters.py`. Editable source, reports, and review renders go to ignored `artifacts/florida-characters-v6/`. The current export is 4,990,768 bytes, 131,710 triangles, 42 glTF primitives, 28 materials, and nine embedded images. This is the round-eleven review checkpoint; review and benchmark evidence is recorded in the Dream Loop validation report.
 
 V6 retains the approved facial albedo, face/eye positions and UVs, articulation pivots, outfits, and blonde Nina. Eight rounded scalp-tangent hair locks with recessed support geometry, sculpted sleeve and shorts folds, dyed linen with weave normals, anatomical face normals, teak grain, upholstered seats, and the larger fan assembly add surface detail. The facial normal map changes light response without resculpting the approved face vertices or eye surfaces. Original likeness photographs remain outside the export.
 
@@ -81,16 +81,16 @@ Run `npm run blender:vegetation` or `npm run blender:landmarks` through the exis
 | Pack | Reusable roots | Current export |
 | --- | --- | --- |
 | Vegetation | Royal/coconut palms, hammock/sea-grape trees, hedge, tree band | 3,017,140 bytes; 16,706 triangles; three materials; one embedded atlas |
-| Landmarks | BridgeCauseway and FisheriesRestaurant | 4,959,464 bytes; 71,402 triangles; twelve materials; eight embedded textures |
+| Landmarks | BridgeCauseway and FisheriesRestaurant | 5,033,292 bytes; 71,576 triangles; twelve materials; eight embedded textures |
 
 The foliage pack uses a shared generated leaf atlas with alpha testing and alpha-to-coverage in the game. The landmark pack adds modeled roof, structural, railing, and waterfront detail with generated coastal materials. The imported templates retain shared resources when cloned. Their tests check named roots, dimensions, finite geometry, and export contracts; final live appearance remains a separate check.
 
-Generated source images live in `florida/assets/textures/`, with exact `.prompt.md` sidecars for the coastal materials, tropical foliage, sky versions, and Intracoastal height field. Existing generated teak and facial-atlas sources retain their own provenance. `sky.js` currently loads `florida-sky-v2.png`; `water.js` converts `intracoastal-height-v1.png` into a seamless, filtered normal/height texture at startup. The game applies these generated textures to its three-dimensional surfaces.
+Generated source images live in `florida/assets/textures/`, with exact `.prompt.md` sidecars for the coastal materials, tropical foliage, sky versions, Intracoastal height fields and coastal ground. Existing generated teak and facial-atlas sources retain their own provenance. `sky.js` loads `florida-sky-v2.png`; `water.js` reconstructs `intracoastal-height-v2.png` into a bounded choppy relief field at startup. The game applies these generated textures to its three-dimensional surfaces.
 
 
 ## Villas, yacht and reflection framing
 
-`npm run blender:villas` exports four shared-material villa variants from `scripts/build-florida-villas.py`. The current pack has 1,756,808 bytes, 19,876 triangles, 23 primitives and six materials; generated coastal maps are applied by the loader. Villa0's visible side openings have shaded 0.40 m returns, glazing at 0.42 m, separate inner frames and curtains. Other variants and all four placement bounds are preserved. `npm run blender:yacht` exports the 242,520-byte, 3,602-triangle yacht with six materials and two embedded images.
+`npm run blender:villas` exports four shared-material villa variants from `scripts/build-florida-villas.py`. The current pack has 1,835,196 bytes, 20,794 triangles, 23 primitives and six materials; generated coastal maps are applied by the loader. Villa0's visible side openings have shaded returns, separate inner frames and curtains. Other variants and all four placement bounds are preserved. `npm run blender:yacht` exports the 242,520-byte, 3,602-triangle yacht with six materials and two embedded images.
 
 `planar-reflection.js` corrects the reflected camera's horizontal lens shift for the entry view's off-axis framing. Tests project actual water-plane points through the real and reflected cameras and check that the visible views match. The correction uses the existing Water render pass; it adds neither a depth texture nor a second reflection render. Renderer state and the real camera projection are restored even if reflection rendering fails.
 
@@ -104,3 +104,11 @@ The nearest staged towers are two `SkylineFar` instances and one `SkylineTower`.
 Palm silhouettes are verified from the actual low camera. Their source winding now points upper leaf faces upward, avoiding shadow-bias self-occlusion. Palm transmission uses shadowed directional light, while the existing non-palm foliage term is preserved. Nineteen fronds form the interior, hanging fans and sparse mature skirt; the number and placement of trees are unchanged.
 
 `intracoastal-height-v2.png` is a new original generated relief source, retained unchanged beside v1 with an exact prompt sidecar. Its filtered luminance drives near-water displacement as well as normals and hull-foam height. The near grid uses 0.18 m spacing, a 0.45 m middle region and a flat outer apron, with the same 131,072 triangles as before. Displacement ends before the stretched apron; the horizon stays continuous.
+
+## Round-eleven projection and wave-cache checks
+
+Garment seams are densely projected onto the final cloth surface rather than joined with sparse chords that pass through it. Cuff occlusion fell from about 73% to about 2%; seam diameters measure 1.4–1.6 pixels at the actual entry camera. Cage attachment faces measure about 3.8 pixels. The rounded fold tips are restricted to 34 vertices, with accepted broad forms, faces and images preserved.
+
+Roof pitch alone did not ensure readable tile ends. The revised exports give near-villa noses 2.33 pixels of height and 1.89-pixel gaps, and restaurant noses 1.94 pixels with 1.64-pixel gaps. Inset sash/stop widths and shaded returns are also checked from the exported geometry. Full browser captures remain the visual authority; numerical visibility does not establish a passed art-review gate.
+
+`npm run art:water` builds periodic wind-wave packets, checks the complete displacement Jacobian and bakes the primary normals at 512×512 by analytically differentiating the same physical Fourier modes. Displacement and short-band normals remain 128×128, with 64 frames over four seconds. The finer check also bounds the matching horizontal displacement, without increasing wave heights. The primary normal file uses lossless Sub prediction and zlib; the loader restores its exact RGBA bytes before creating the texture. `npm run art:water -- --package-only` can repackage the checksum-verified raw bake retained under ignored `.dream-loop/`, without regenerating the waves. Binary Git attributes prevent newline conversion of cache bytes.

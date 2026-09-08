@@ -2,8 +2,10 @@ import * as T from 'three';
 import {villaAsset} from './villa-art.js';
 import {box,ball,pipe,ring,bake,person,flamingo,textSign,C} from './art.js';
 import {surfaceMaterials,loadSurfaceTextures,applySurfaceUVs} from './materials.js';
+import {makeIslandSurface} from './island-surface.js';
 let M;
 export async function loadArtMaterials(){M=surfaceMaterials(await loadSurfaceTextures())}
+export function islandTerrain(island){return makeIslandSurface(island,island.district==='mangrove'?M.soil:M.lawn,island.district==='mangrove'?M.soil:M.sand)}
 function mesh(g,geo,material,x=0,y=0,z=0){const m=new T.Mesh(geo,material);m.position.set(x,y,z);m.castShadow=m.receiveShadow=true;g.add(m);return m}
 function curvedPipe(g,points,r,material,closed=false){return mesh(g,new T.TubeGeometry(new T.CatmullRomCurve3(points.map(p=>new T.Vector3(...p)),closed),Math.max(24,points.length*6),r,8,closed),material)}
 function shell(g,shape,depth,material,y){const geo=new T.ExtrudeGeometry(shape,{depth,bevelEnabled:true,bevelSegments:4,bevelSize:.13,bevelThickness:.09,curveSegments:16});geo.rotateX(Math.PI/2);return mesh(g,geo,material,0,y,0)}

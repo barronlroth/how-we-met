@@ -90,10 +90,11 @@ class Villa:
                 self.quad('stucco',[p(u0,y0),p(u1,y0),p(u1,y1),p(u0,y1)],outward)
         for u,bottom,w,h in openings:
             left,right,top=u-w/2,u+w/2,bottom+h
-            self.quad('stucco',[p(left,bottom),p(left,top),p(left,top,-.8),p(left,bottom,-.8)],across,shades=[.88,.68,.28,.46])
-            self.quad('stucco',[p(right,bottom),p(right,bottom,-.8),p(right,top,-.8),p(right,top)],tuple(-v for v in across),shades=[1,.59,.36,.82])
+            visible_finish=self.refined and bottom>4 and ((axis=='x' and side<0) or (axis=='z' and side>0))
+            self.quad('stucco',[p(left,bottom),p(left,top),p(left,top,-.8),p(left,bottom,-.8)],across,shades=[.85,.70,.10,.14] if visible_finish else [.88,.68,.28,.46])
+            self.quad('stucco',[p(right,bottom),p(right,bottom,-.8),p(right,top,-.8),p(right,top)],tuple(-v for v in across),shades=[.90,.14,.10,.72] if visible_finish else [1,.59,.36,.82])
             self.quad('trim',[p(left,bottom),p(left,bottom,-.8),p(right,bottom,-.8),p(right,bottom)],(0,1,0),shades=[1,.66,.76,1])
-            self.quad('stucco',[p(left,top),p(right,top),p(right,top,-.8),p(left,top,-.8)],(0,-1,0),shades=[.58,.69,.26,.22])
+            self.quad('stucco',[p(left,top),p(right,top),p(right,top,-.8),p(left,top,-.8)],(0,-1,0),shades=[.68,.74,.10,.10] if visible_finish else [.58,.69,.26,.22])
             # A bright inner pane and a dark upper band preserve room depth
             # without depending on the runtime's limited-distance AO pass.
             if self.refined:
@@ -106,7 +107,6 @@ class Villa:
                         colors=[tuple(v*vertical[yy]*horizontal[xx] for v in (.84,.94,1)) for xx,yy in corners]
                         self.quad('glass',points,outward,shades=colors)
             else:self.quad('glass',[p(left,bottom,-.84),p(right,bottom,-.84),p(right,top,-.84),p(left,top,-.84)],outward)
-            visible_finish=self.refined and bottom>4 and ((axis=='x' and side<0) or (axis=='z' and side>0))
             if visible_finish:
                 # Fit a small upward-facing bevel inside the existing sill
                 # bounds. The broad wall, reveal and glass positions do not
@@ -126,9 +126,13 @@ class Villa:
             # Every facade, including the side facing the intro camera, has a
             # separate inner sash. Outer decorative trim remains optional.
             if self.refined:
-                for edge in (left+.065,right-.065):part(edge,bottom+h/2,-.695,.13,h,.19,'trim','vertical',.78)
-                for level in (bottom+.06,top-.06):part(u,level,-.695,w,.12,.19,'trim','horizontal',.78 if level<top-.1 else .59)
-                part(u,bottom+h/2,-.70,.11,h,.16,'trim','vertical',.81)
+                # The old shaded .13m sash covered only 1.6px at the intro.
+                # Widen inward, retaining its plane and the original mouth.
+                frame_width=.18 if visible_finish else .13
+                for edge in (left+frame_width/2,right-frame_width/2):part(edge,bottom+h/2,-.695,frame_width,h,.19,'trim','vertical',1 if visible_finish else .78)
+                frame_height=.17 if visible_finish else .12
+                for level in (bottom+frame_height/2,top-frame_height/2):part(u,level,-.695,w,frame_height,.19,'trim','horizontal',1 if visible_finish else .78 if level<top-.1 else .59)
+                part(u,bottom+h/2,-.70,.14 if visible_finish else .11,h,.16,'trim','vertical',1 if visible_finish else .81)
             if trim:
                 if not self.refined:part(u,bottom+h/2,-.795,.055,h,.09,'trim','vertical')
                 for edge in (left-.045,right+.045):part(edge,bottom+h/2,.045,.09,h+.18,.15,'trim','vertical')
@@ -148,8 +152,8 @@ class Villa:
                 # A narrow inner stop is visible behind the accepted cream
                 # sash on the unobscured upper windows; wall/glass depths stay
                 # unchanged. The dark bead resolves at roughly one pixel.
-                for edge in (left+.16,right-.16):part(edge,bottom+h/2,-.79,.06,h-.26,.04,'teak','vertical',.26)
-                for level in (bottom+.16,top-.16):part(u,level,-.79,w-.26,.06,.04,'teak','horizontal',.26)
+                for edge in (left+.21,right-.21):part(edge,bottom+h/2,-.79,.06,h-.36,.04,'teak','vertical',.26)
+                for level in (bottom+.21,top-.21):part(u,level,-.79,w-.36,.06,.04,'teak','horizontal',.26)
     def rail(self,x,y,z,width,depth=0):
         self.box((x,y,z),(width,.065,.075),'trim')
         self.box((x,y-.8,z),(width,.045,.055),'trim')
@@ -195,9 +199,9 @@ class Villa:
                 angle=i*math.pi/3
                 if nose_finish:
                     # The previous end ring faced downward (N dot Sun < 0).
-                    # A 55mm forward / 85mm downward bevel points partly up,
-                    # catching the existing sun without changing eave pitch.
-                    inner.append(tuple(Vector(vertices[i])+outward*.055+Vector((0,-.085,0))))
+                    # A .15m drop occupies about 2px at the real camera. The
+                    # earlier .085m lip and narrow gaps blended into the trim.
+                    inner.append(tuple(Vector(vertices[i])+outward*.075+Vector((0,-.15,0))))
                 else:inner.append(tuple(a+across*math.cos(angle)*(r-.05)+normal*(math.sin(angle)*(r-.05)+.04)))
             inward=(b-a).normalized()*.075
             shade=.74+.12*(.5+.5*math.sin(a.x*6.1+a.z*3.7))
@@ -267,9 +271,11 @@ class Villa:
                     direction=(peak-edge).normalized()
                     normal=Vector((0,abs(direction.z),direction.y)) if axis=='z' else Vector((-direction.y,abs(direction.x),0))
                     normal.normalize()
-                    self.barrel(edge+outward*.13,edge+direction*.66,across,normal,r=.17,end_cap=True,nose_finish=True)
-                if axis=='z':self.box((x,y-.02,z+d/2+.045),(w-.25,.08,.12),'teak',faces=[1,4],shade=.24)
-                else:self.box((x-w/2-.045,y-.02,z),(.12,.08,d-.25),'teak',faces=[1,5],shade=.24)
+                    self.barrel(edge+outward*.13,edge+direction*.66,across,normal,r=.14,end_cap=True,nose_finish=True)
+                # A recessed backing is visible through 1.5–2px side gaps;
+                # it no longer creates a continuous front-facing black band.
+                if axis=='z':self.box((x,y-.02,z+d/2-.035),(w-.25,.035,.06),'teak',faces=[1,4],shade=.24)
+                else:self.box((x-w/2+.035,y-.02,z),(.06,.035,d-.25),'teak',faces=[1,5],shade=.24)
         for first,last in [(0,4),(3,4),(1,5),(2,5),(4,5)]:self.tube(vertices[first],vertices[last],.095,'terracotta',6)
     def garden(self,w,variant):
         x=-w/2-4
@@ -361,6 +367,20 @@ def make_villa(variant):
     return b.finish()
 
 roots=[make_villa(i) for i in range(4)]
+if '--check-envelopes' in sys.argv:
+    # Validate the generated native meshes before replacing the GLB.
+    baseline=Path(sys.argv[sys.argv.index('--check-envelopes')+1]).read_bytes()
+    document=json.loads(baseline[20:20+int.from_bytes(baseline[12:16],'little')])
+    for root in roots:
+        node=next(n for n in document['nodes'] if n.get('name')==root.name)
+        accessors=[document['accessors'][p['attributes']['POSITION']] for child in node['children']
+                   for p in document['meshes'][document['nodes'][child]['mesh']]['primitives']]
+        points=[(v.co.x,v.co.z,-v.co.y) for obj in root.children for v in obj.data.vertices]
+        for axis in range(3):
+            expected=(min(a['min'][axis] for a in accessors),max(a['max'][axis] for a in accessors))
+            actual=(min(p[axis] for p in points),max(p[axis] for p in points))
+            assert all(abs(a-b)<.00001 for a,b in zip(actual,expected)),(root.name,axis,actual,expected)
+    print('Native villa envelope checks passed before export',flush=True)
 bpy.ops.object.select_all(action='DESELECT')
 for root in roots:
     root.select_set(True)
@@ -377,7 +397,7 @@ for material in M.values():
     links.new(color.outputs['Color'],multiply.inputs[2]);links.new(multiply.outputs['Color'],shader.inputs['Base Color'])
 bpy.ops.wm.save_as_mainfile(filepath=str(WORK/'villas-v1.blend'))
 report={'blender':bpy.app.version_string,'bytes':OUT.stat().st_size,'materials':len(M),'templates':{},'window_recess_m':{'WaterfrontVilla0':.42,'other_variants':.84},
-        'inner_frame_width_m':.13,'inner_frame_front_depth_m':.2525,'architectural_ao':'Villa0 COLOR_0 on reveals, glazing and hollow tile lips'}
+        'inner_frame_width_m':{'visible_Villa0_upper':.18,'other_refined':.13},'inner_frame_front_depth_m':.2525,'architectural_ao':'Villa0 COLOR_0 on reveals, glazing and hollow tile lips'}
 for root in roots:
     points=[];triangles=0
     for obj in root.children:

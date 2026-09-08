@@ -5,7 +5,7 @@ import {vegetationAsset} from './vegetation-art.js';
 import {landmarkAsset} from './landmark-art.js';
 import {batchScenery} from './scenery-batches.js';
 import {waterfrontAsset} from './waterfront-art.js';
-import {waterfrontVilla,sportYacht,canopyTree} from './premium-art.js';
+import {waterfrontVilla,sportYacht,canopyTree,islandTerrain} from './premium-art.js';
 import {C,mat,box,ball,pipe,bake,buoy,fisheries,bridge,textSign} from './art.js';
 import {superyacht,lushPalm,shrub,marinaPier,pavilion,parasol} from './detail-art.js';
 import {waterfrontCrowd,promenadeFurniture,riverfrontBlock,riverBridge,sailboat,boatyard,marinaClub,mangrove,boardwalk,pelican,partyBar,partyPontoon,finishTerrace,beachSlipway} from './district-art.js';
@@ -136,8 +136,7 @@ export function makeWorld(scene,{multiDraw=false}={}){
  // crossing remains unique and much taller on the horizon.
  const urbanS=COURSE_LENGTH*.112,urban=new T.Group();place(urban,riverBridge(halfWidth(urbanS)*2+26),urbanS,0);const urbanChunk=instance(urban);urbanChunk.userData.s=urbanS;chunks.push(urbanChunk);
  for(const island of ISLANDS){
-  const vertices=[];for(let j=0;j<40;j++){const a=j*Math.PI/20,p=pointAt(island.s+Math.cos(a)*island.length/2,island.x+Math.sin(a)*island.width);vertices.push(new T.Vector2(p.x,-p.z))}
-  const g=new T.Group(),mesh=new T.Mesh(new T.ShapeGeometry(new T.Shape(vertices)),mat(island.district==='mangrove'?0x557140:0x89a366));mesh.rotation.x=-Math.PI/2;mesh.position.y=.55;mesh.receiveShadow=true;g.add(mesh);
+  const g=islandTerrain(island);
   if(island.district==='mangrove'){
    for(let offset=-island.length*.4,j=0;offset<=island.length*.4;offset+=18,j++){
     const r=island.width*Math.sqrt(1-(offset/(island.length/2))**2);

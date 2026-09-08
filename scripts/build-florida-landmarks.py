@@ -229,12 +229,12 @@ class Asset:
                 verts=[]
                 for depth in (depth0,depth1):
                     for k in range(5):
-                        xx=cx+(k/4-.5)*(step-(.075 if finish else .018))
+                        xx=cx+(k/4-.5)*(step-(.15 if finish else .018))
                         roll=(.15 if finish else .10)*math.sin(k*math.pi/4)
                         verts.append((x+xx,roof_y(xx,max(0,depth))+.035+roll,z+d/2-depth))
                 # Open profile ends are backed by a thin terracotta lip. It
                 # gives a dark underside and individually rounded tile ends.
-                verts.extend((vx,vy-(.085 if finish else .055),vz+(.055 if finish else 0)) for vx,vy,vz in verts[:5])
+                verts.extend((vx,vy-(.18 if finish else .055),vz+(.085 if finish else 0)) for vx,vy,vz in verts[:5])
                 faces=[(k,k+1,6+k,5+k) for k in range(4)]
                 lip=[(k,10+k,11+k,k+1) for k in range(4)]
                 if finish:
@@ -244,7 +244,7 @@ class Asset:
                     self.mesh('terracotta',verts,faces,True)
                     self.mesh('terracotta',verts,lip)
                 else:self.mesh('terracotta',verts,faces+lip,True)
-        if finish:self.box((x,y+.04,z+d/2+.11),(w-.10,.10,.06),'teak')
+        if finish:self.box((x,y+.04,z+d/2+.04),(w-.10,.035,.035),'teak')
 
     def text(self, text, center, width, material='navy'):
         font=bpy.data.curves.new(self.name+'Sign',type='FONT')
@@ -450,10 +450,15 @@ def restaurant():
         for yy in (1.92,6.54):b.box((x,yy,2.32),(3.08,.12,.16),'teak')
         b.box((x,5.68,2.31),(3.00,.10,.14),'teak')
         if i<5:
-            # The lower jambs are the unobscured inner-frame portions at the
-            # intro camera. A pale stop behind the masonry reads over the dark
-            # timber without changing the opening, glass, or wall depth.
-            for dx in (-1.48,1.48):b.box((x+dx,3.89,2.43),(.075,3.80,.055),'trim')
+            # Only these lower jambs are unobscured at the intro. Their old
+            # .075m stops covered .66–.78px; this .18m stop is a distinct inset
+            # frame beyond a 3–4px timber-lined return. Mouth, frame depth and
+            # glass remain fixed, with no new material or image payload.
+            for side in (-1,1):
+                outer=x+side*1.575;inner=x+side*1.36
+                verts=[(outer,1.92,3.15),(inner,1.92,2.43),(inner,6.54,2.43),(outer,6.54,3.15)]
+                b.mesh('teak',verts,[(0,1,2,3) if side<0 else (3,2,1,0)])
+                b.box((x+side*1.27,3.89,2.43),(.18,3.80,.055),'trim')
         # Narrow folded glass leaves flank an unobstructed central aperture;
         # diners and bar structure behind it can receive real window shadows.
         for side in (-1,1):
@@ -584,6 +589,20 @@ def restaurant():
 
 
 templates=[bridge(),restaurant()]
+if '--check-envelopes' in sys.argv:
+    # Validate the generated native meshes before replacing the GLB.
+    baseline=Path(sys.argv[sys.argv.index('--check-envelopes')+1]).read_bytes()
+    document=json.loads(baseline[20:20+int.from_bytes(baseline[12:16],'little')])
+    for root in templates:
+        node=next(n for n in document['nodes'] if n.get('name')==root.name)
+        accessors=[document['accessors'][p['attributes']['POSITION']] for child in node['children']
+                   for p in document['meshes'][document['nodes'][child]['mesh']]['primitives']]
+        points=[(v.co.x,v.co.z,-v.co.y) for obj in root.children for v in obj.data.vertices]
+        for axis in range(3):
+            expected=(min(a['min'][axis] for a in accessors),max(a['max'][axis] for a in accessors))
+            actual=(min(p[axis] for p in points),max(p[axis] for p in points))
+            assert all(abs(a-b)<.00001 for a,b in zip(actual,expected)),(root.name,axis,actual,expected)
+    print('Native landmark envelope checks passed before export',flush=True)
 bpy.ops.object.select_all(action='DESELECT')
 for root in templates:
     root.select_set(True)

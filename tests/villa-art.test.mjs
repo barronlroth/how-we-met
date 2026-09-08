@@ -116,7 +116,7 @@ test('villa kit stays under the full four-variant geometry budget with six opaqu
 
 test('Villa0 starter tiles have separate eave noses and small shaded inner-frame stops', () => {
   const root = scene.getObjectByName('WaterfrontVilla0'), step = 15 / 35;
-  const tileAt = z => new Raycaster(new Vector3(-30, 8.64, z), new Vector3(1, 0, 0)).intersectObject(root, true)[0];
+  const tileAt = z => new Raycaster(new Vector3(-30, 8.56, z), new Vector3(1, 0, 0)).intersectObject(root, true)[0];
   const nose = tileAt(0), gap = tileAt(step / 2), adjacent = tileAt(step);
   assert.equal(nose?.object.material.name, 'VillaTerracotta');
   assert.ok(nose.point.x < -9.15 && gap.point.x > -9.10, 'projecting starter noses are separated by visible recessed gaps');
@@ -127,11 +127,35 @@ test('Villa0 starter tiles have separate eave noses and small shaded inner-frame
   camera.setViewOffset(1536, 1024, -307.2, 0, 1536, 1024); camera.updateMatrixWorld();
   const spacing = Math.abs(nose.point.clone().project(camera).x - adjacent.point.clone().project(camera).x) * 768;
   assert.ok(spacing >= 3 && spacing <= 6, `near eave spacing is ${spacing}px`);
-  const stop = new Raycaster(new Vector3(-35, 5.9, -1.29), new Vector3(1, 0, 0)).intersectObject(root, true)[0];
+  const stop = new Raycaster(new Vector3(-35, 5.9, -1.24), new Vector3(1, 0, 0)).intersectObject(root, true)[0];
   assert.equal(stop?.object.material.name, 'VillaTeak');
   assert.ok(stop.point.x > -7.64 && stop.point.x < -7.61, 'dark inner stop is behind the accepted sash without changing wall depth');
   const sillPoint = new Vector3(-8.21, 4.79, -.5);
   const sill = new Raycaster(camera.position, sillPoint.sub(camera.position).normalize()).intersectObject(root, true)[0];
   assert.equal(sill?.object.material.name, 'VillaTrim');
   assert.ok(sill.point.x >= -8.25 && sill.point.x <= -8.17 && sill.face.normal.y > .65, 'the camera sees a small upward bevel inside the existing sill bounds');
+  const screen = point => {
+    const p = point.clone().project(camera);return new Vector3(p.x * 768, p.y * 512, 0);
+  };
+  const positions = root.getObjectByName('WaterfrontVilla0_terracotta').geometry.attributes.position;
+  const edge = [];
+  for (let i = 0; i < positions.count; i++) {
+    const p = new Vector3().fromBufferAttribute(positions, i);
+    if (p.x < -9.2 && p.y > 8.3 && p.y < 8.7 && Math.abs(p.z + .07) < .00001) edge.push(p);
+  }
+  edge.sort((a, b) => a.y - b.y);
+  const lipPixels = screen(edge[0]).distanceTo(screen(edge.at(-1)));
+  assert.ok(lipPixels >= 1.9 && lipPixels <= 2.5, `the real leading clay face occupies ${lipPixels}px`);
+  const leftEnd = new Vector3(-9.25, 8.56, .14), nextStart = new Vector3(-9.25, 8.56, step - .14);
+  const gapPixels = screen(leftEnd).distanceTo(screen(nextStart));
+  assert.ok(gapPixels >= 1.5 && gapPixels <= 2, `gaps survive filtering at ${gapPixels}px`);
+  const sash = root.getObjectByName('WaterfrontVilla0_trim').geometry.attributes;
+  const sashVertices = [];
+  for (let i = 0; i < sash.position.count; i++) {
+    const p = new Vector3().fromBufferAttribute(sash.position, i);
+    if (Math.abs(p.x + 7.7475) < .0001 && p.y > 4.7 && p.y < 6.9 && p.z >= -1.451 && p.z < -1.26) sashVertices.push({ p, shade: sash.color.getX(i) });
+  }
+  const zs = sashVertices.map(({ p }) => p.z), lo = Math.min(...zs), hi = Math.max(...zs);
+  const sashPixels = screen(new Vector3(-7.7475, 5.9, lo)).distanceTo(screen(new Vector3(-7.7475, 5.9, hi)));
+  assert.ok(sashPixels >= 2 && sashPixels <= 2.5 && sashVertices.every(v => v.shade > .99), `neutral inset sash occupies ${sashPixels}px`);
 });

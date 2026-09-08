@@ -7,6 +7,7 @@ import math
 import random
 import bpy
 from mathutils import Vector
+from mathutils.bvhtree import BVHTree
 
 
 def interpolate(rows, y, column):
@@ -143,6 +144,31 @@ def cloth_edge_color(obj,value=.56):
     return obj
 
 
+def cloth_surface(objects):
+    vertices=[];polygons=[]
+    for obj in objects:
+        offset=len(vertices)
+        vertices.extend([v.co.copy() for v in obj.data.vertices])
+        polygons.extend([tuple(offset+i for i in face.vertices) for face in obj.data.polygons])
+    return BVHTree.FromPolygons(vertices,polygons,all_triangles=False)
+
+
+def visible_thread(a,parent,name,controls,surface,radius=.007,lift=.008):
+    """Sample the final cloth densely so a stitch cannot chord through a fold."""
+    points=[]
+    for i in range(len(controls)-1):
+        begin,end=Vector(controls[i]),Vector(controls[i+1]);steps=max(1,math.ceil((end-begin).length/.007))
+        for j in range(steps+(1 if i==len(controls)-2 else 0)):
+            p=begin.lerp(end,j/steps)
+            hit,_,_,_=surface.ray_cast(Vector((p.x,.85,p.y)),Vector((0,-1,0)),1.7)
+            if hit is not None:p.z=-hit.y-lift
+            else:p.z-=lift
+            points.append(tuple(p))
+    obj=a.path(name,points,radius,'seam',parent)
+    a.finish_lines.append({'name':name,'parent':parent.name,'points':[list(p) for p in points],'radius':radius,'material':'seam'})
+    return obj
+
+
 def soften_shirt_fold_tips(obj):
     """Round only the two accepted fold endings after final garment decimation."""
     centers=((.282,.985,-.150),(-.295,1.105,-.138))
@@ -170,6 +196,31 @@ def soften_shirt_fold_tips(obj):
         strength=.35*weights[i]
         datum.color=tuple(original[i][k]*(1-strength)+sum(original[j][k] for j in neighbors[i])/len(neighbors[i])*strength for k in range(4))
     print('SHIRT_FINISH '+str({'moved_vertices':sum(w>0 for w in weights),'maximum_iteration_displacement_m':largest,'centers':centers}))
+    # The prior masks softened the valleys beside the visible tips. These centers
+    # are the actual projected peaks at approximately (902,546) and (959,536).
+    tip_centers=((.285,1.012,-.165),(-.260,1.109,-.157))
+    tip_weights=[]
+    for vertex in obj.data.vertices:
+        x,y,z=vertex.co.x,vertex.co.z,-vertex.co.y
+        q=min(((x-cx)/.036)**2+((y-cy)/.028)**2+((z-cz)/.040)**2 for cx,cy,cz in tip_centers)
+        tip_weights.append(max(0,1-q)**1.5)
+    starting=[v.co.copy() for v in obj.data.vertices]
+    for _ in range(3):
+        original=[v.co.copy() for v in obj.data.vertices]
+        for i,vertex in enumerate(obj.data.vertices):
+            if not tip_weights[i] or not neighbors[i]:continue
+            average=sum((original[j] for j in neighbors[i]),Vector())/len(neighbors[i])
+            offset=(average-original[i])*(.78*tip_weights[i])
+            if offset.length>.006:offset*=.006/offset.length
+            vertex.co=original[i]+offset
+    original=[tuple(d.color) for d in colors]
+    for i,datum in enumerate(colors):
+        if not tip_weights[i] or not neighbors[i]:continue
+        strength=.60*tip_weights[i]
+        datum.color=tuple(original[i][k]*(1-strength)+sum(original[j][k] for j in neighbors[i])/len(neighbors[i])*strength for k in range(4))
+    maximum=max((v.co-p).length for v,p in zip(obj.data.vertices,starting))
+    print('VISIBLE_TIP_FINISH '+str({'moved_vertices':sum(w>0 for w in tip_weights),'maximum_total_displacement_m':maximum,'centers':tip_centers}))
+
 
 
 def weld_cloth(a,name,objects,parent,voxel=.014):
@@ -277,7 +328,7 @@ def limb(a,name,points,radii,mat,parent,depth=1,segments=12):
     return a.mesh(name,verts,faces,mat,parent)
 
 
-def cloth_hem(a,name,center,axis,radius,mat,parent,depth=1):
+def cloth_hem(a,name,center,axis,radius,mat,parent,depth=1,surface_object=None):
     """Three cross-sections form a turned cloth edge without a separate draw."""
     center=Vector(center);axis=Vector(axis).normalized()
     right=axis.cross(Vector((0,0,-1))).normalized();normal=right.cross(axis).normalized()
@@ -299,16 +350,16 @@ def cloth_hem(a,name,center,axis,radius,mat,parent,depth=1):
     hem=a.mesh(name,verts,faces,mat,parent)
     color=hem.data.color_attributes.new(name='ClothShade',type='FLOAT_COLOR',domain='POINT')
     for datum,shade in zip(color.data,shades):datum.color=(shade,shade,shade,1)
-    if mat=='shirt':
-        # One short line sits just inside the turned edge, on its visible arc.
-        points=[]
-        for j in range(12):
-            theta=math.pi*(.18+j/11*.64)
-            radial=(right*math.cos(theta)+normal*(math.sin(theta)*depth)).normalized()
+    if mat=='shirt' and surface_object is not None:
+        # Project against both the final sleeve and its turned opening.
+        surface=cloth_surface([surface_object,hem]);points=[]
+        for j in range(28):
+            theta=math.pi*(.18+j/27*.64)
             p=center-axis*.027+right*(math.cos(theta)*(radius+.010))+normal*(math.sin(theta)*(radius+.010)*depth)
-            displacement,_=male_sleeve_field(p);p+=radial*(displacement+.0015)
+            displacement,_=male_sleeve_field(p)
+            p+=(right*math.cos(theta)+normal*(math.sin(theta)*depth)).normalized()*displacement
             points.append(tuple(p))
-        cloth_edge_color(a.path('Short cuff stitching',points,.0045,mat,parent),.58)
+        visible_thread(a,parent,'Visible cuff stitching',points,surface,.007,.008)
     return hem
 
 
@@ -632,9 +683,9 @@ def make_person(nina,parent,p,a):
         middle=(side*(.282 if nina else .315),1.047,-.007)
         end=(side*(.338 if nina else .388),.975,-.031)
         garment.append(limb(a,'Integrated short sleeve',[start,middle,end],[.102 if nina else .113,.112 if nina else .122,.103 if nina else .114],shirt,root,depth=1.04,segments=16))
-    weld_cloth(a,'Continuous coral T shirt' if nina else 'Continuous linen camp shirt',garment,root)
+    garment_body=weld_cloth(a,'Continuous coral T shirt' if nina else 'Continuous linen camp shirt',garment,root)
     for side in (-1,1):
-        cloth_hem(a,'Turned short sleeve opening',(side*(.338 if nina else .388),.975,-.031),(side*.056,-.072,-.024),.103 if nina else .114,shirt,root,1.04)
+        cloth_hem(a,'Turned short sleeve opening',(side*(.338 if nina else .388),.975,-.031),(side*.056,-.072,-.024),.103 if nina else .114,shirt,root,1.04,surface_object=garment_body if not nina else None)
     if nina:
         a.ring('Soft crew neckline',(0,1.266,.025),.116,.008,shirt,root,'xz',28)
     else:
@@ -656,7 +707,7 @@ def make_person(nina,parent,p,a):
             mod=collar.modifiers.new('Soft collar edge','BEVEL');mod.width=.005;mod.segments=2
             bpy.ops.object.modifier_apply(modifier=mod.name)
             edge_points=[tuple(v+Vector((0,0,-.006))) for v in (corners[1],corners[2],corners[3])]
-            cloth_edge_color(a.path('Stitched camp collar edge',edge_points,.0055,shirt,root),.58)
+            visible_thread(a,root,'Visible collar stitching',edge_points,cloth_surface([collar]),.0065,.008)
         a.path('Gold chain',[(-.086,1.225,-.137),(0,1.145,-.187),(.086,1.225,-.137)],.004,'gold',root)
         def shirt_front(x,y):
             width=interpolate(rows,y,1);z=interpolate(rows,y,3)-interpolate(rows,y,2)*math.sqrt(max(0,1-(x/width)**2))
@@ -674,7 +725,7 @@ def make_person(nina,parent,p,a):
         pocket=[]
         for x,y in ((-.235,1.018),(-.105,1.018),(-.110,.925),(-.173,.908),(-.230,.925),(-.235,1.018)):
             pocket.append((x,y,shirt_front(x,y)-.003))
-        cloth_edge_color(a.path('Single breast pocket seam',pocket,.0055,shirt,root),.62)
+        visible_thread(a,root,'Visible pocket stitching',pocket,cloth_surface([garment_body]),.0075,.008)
     shorts='linen' if nina else 'shorts'
     pelvis=loft(a,'Soft shorts hips',[(.32,.207,.135,-.033),(.40,.272,.193,-.047),(.51,.264,.173,.0),(.568,.246,.165,.013)],shorts,root,28,14)
     pants=[pelvis]
