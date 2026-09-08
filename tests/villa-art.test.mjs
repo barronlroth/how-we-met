@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
-import { Box3, Raycaster, Triangle, Vector3 } from 'three';
+import { Box3, PerspectiveCamera, Raycaster, Triangle, Vector3 } from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 
 const bytes = await readFile(new URL('../florida/assets/models/villas-v1.glb', import.meta.url));
@@ -112,4 +112,26 @@ test('villa kit stays under the full four-variant geometry budget with six opaqu
   assert.equal(materials.size, 6, 'baked reveal shading does not add material variants');
   assert.ok(triangles < 21000, `${triangles} triangles`);
   assert.ok(bytes.length < 1900000, `${bytes.length} bytes`);
+});
+
+test('Villa0 starter tiles have separate eave noses and small shaded inner-frame stops', () => {
+  const root = scene.getObjectByName('WaterfrontVilla0'), step = 15 / 35;
+  const tileAt = z => new Raycaster(new Vector3(-30, 8.64, z), new Vector3(1, 0, 0)).intersectObject(root, true)[0];
+  const nose = tileAt(0), gap = tileAt(step / 2), adjacent = tileAt(step);
+  assert.equal(nose?.object.material.name, 'VillaTerracotta');
+  assert.ok(nose.point.x < -9.15 && gap.point.x > -9.10, 'projecting starter noses are separated by visible recessed gaps');
+  assert.ok(nose.face.normal.x < -.7 && nose.face.normal.y > .4, 'the eave bevel faces outward and up to catch the sun');
+  const camera = new PerspectiveCamera(63, 1.5, .15, 6000);
+  camera.position.set(-62.10801488367133, 5.1388888888888875, 53.763856560395794);
+  camera.lookAt(-42.61259427002369, -1.1574074074074072, 50.53973382464292);
+  camera.setViewOffset(1536, 1024, -307.2, 0, 1536, 1024); camera.updateMatrixWorld();
+  const spacing = Math.abs(nose.point.clone().project(camera).x - adjacent.point.clone().project(camera).x) * 768;
+  assert.ok(spacing >= 3 && spacing <= 6, `near eave spacing is ${spacing}px`);
+  const stop = new Raycaster(new Vector3(-35, 5.9, -1.29), new Vector3(1, 0, 0)).intersectObject(root, true)[0];
+  assert.equal(stop?.object.material.name, 'VillaTeak');
+  assert.ok(stop.point.x > -7.64 && stop.point.x < -7.61, 'dark inner stop is behind the accepted sash without changing wall depth');
+  const sillPoint = new Vector3(-8.21, 4.79, -.5);
+  const sill = new Raycaster(camera.position, sillPoint.sub(camera.position).normalize()).intersectObject(root, true)[0];
+  assert.equal(sill?.object.material.name, 'VillaTrim');
+  assert.ok(sill.point.x >= -8.25 && sill.point.x <= -8.17 && sill.face.normal.y > .65, 'the camera sees a small upward bevel inside the existing sill bounds');
 });

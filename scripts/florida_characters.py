@@ -61,24 +61,115 @@ def loft(a,name,rows,mat,parent,segments=32,rings=24):
     return a.mesh(name,verts,faces,mat,parent)
 
 
+def folded_profile(distance, width, height):
+    """A long tension plane rolls over a short crest into a compression valley.
+
+    The old symmetric Gaussian bumps read as padded tubes after projection. A
+    shallow approach and steep return give each fold distinct lit/shaded faces.
+    """
+    t=distance/width
+    points=((-1.65,0),(-.82,.17),(-.20,.84),(0,1),(.31,-.10),(.61,-.07),(1.35,0))
+    if t<=points[0][0] or t>=points[-1][0]:return 0,0
+    i=next(i for i in range(len(points)-1) if t<=points[i+1][0])
+    a,b=points[i],points[i+1];u=(t-a[0])/(b[0]-a[0])
+    # Keep the long planes nearly linear; ease only the join itself.
+    blend=u*.72+(u*u*(3-2*u))*.28
+    height_value=(a[1]+(b[1]-a[1])*blend)*height
+    valley=math.exp(-((t-.36)/.27)**2)
+    return height_value,valley
+
+
 def shorts_fold_field(point):
-    """Localized diagonal folds; the same field keeps turned hems attached."""
+    """Two diagonal tension paths span the visible upper thigh, beyond the cuff."""
     x,y,z=point;side=1 if x>=0 else -1
     axis=Vector((side*.011,-.030,-.155)).normalized()
     delta=Vector((x,y,z))-Vector((side*.176,.382,-.402))
     along=delta.dot(axis);radial=delta-axis*along
-    reach=math.exp(-((radial.length-.137)/.088)**4)
-    facing=max(0,radial.y/max(radial.length,.001))**.65
-    crease=0;valley=0
-    folds=((-.037,.044,.032,.024,.040,.068),(-.131,.048,.041,-.025,-.024,.082),(-.208,.034,.036,.019,.028,.073))
+    reach=math.exp(-((radial.length-.137)/.095)**4)
+    facing=max(0,radial.y/max(radial.length,.001))**.38
+    crease=0;valley=0;lateral=radial.x*side
+    # The unequal diagonals converge toward the seated crotch; their dark return
+    # planes cross the thigh itself instead of accumulating at the turned hem.
+    folds=((-.075,.057,.050,.072,.006,.119),(-.225,.047,.049,-.052,-.018,.102))
     for offset,amount,width,slant,center,extent in folds:
-        lateral=radial.x*side
         taper=math.exp(-((lateral-center)/extent)**4)
         distance=along-offset-slant*lateral/.135
-        trough=math.exp(-((distance-width*1.15)/(width*.70))**2)
-        crease+=(amount*math.exp(-(distance/width)**2)-.008*trough)*taper
-        valley+=trough*taper
-    return crease*reach*facing,1-min(.28,valley*.26*reach*facing)
+        value,shadow=folded_profile(distance,width,amount)
+        crease+=value*taper;valley+=shadow*taper
+    return crease*reach*facing,1-min(.40,valley*.43*reach*facing)
+
+
+def shirt_fold_profile(distance,width,height):
+    """Four-centimetre return planes survive the actual 22-pixel sleeve view."""
+    t=distance/width
+    rows=((-1.40,0),(-.72,.12),(-.12,.91),(0,1),(.76,-.17),(1.30,-.05),(1.70,0))
+    if t<=rows[0][0] or t>=rows[-1][0]:return 0,0
+    i=next(i for i in range(len(rows)-1) if t<=rows[i+1][0])
+    a,b=rows[i],rows[i+1];u=(t-a[0])/(b[0]-a[0]);blend=u*.65+u*u*(3-2*u)*.35
+    value=(a[1]+(b[1]-a[1])*blend)*height
+    # A broad compressed return, not a one-pixel dark line on the hem.
+    shadow=math.exp(-((t-.48)/.48)**4)
+    return value,shadow
+
+
+def male_sleeve_field(point):
+    x,y,z=point;side=1 if x>=0 else -1
+    axis=Vector((side*.056,-.072,-.024)).normalized()
+    delta=Vector((x,y,z))-Vector((side*.388,.975,-.031))
+    along=delta.dot(axis);radial=delta-axis*along
+    reach=math.exp(-((radial.length-.108)/.082)**4)*max(0,min(1,(abs(x)-.18)/.09))
+    facing=max(0,-radial.z/max(radial.length,.001))**.48
+    displacement=0;valley=0
+    for offset,amount,width,slant in ((-.048,.041,.054,.038),(-.169,.039,.056,-.034)):
+        distance=along-offset-slant*(radial.x*side)/.11
+        value,shadow=shirt_fold_profile(distance,width,amount)
+        displacement+=value;valley+=shadow
+    return displacement*reach*facing,1-min(.40,valley*.43*reach*facing)
+
+
+def male_torso_field(point):
+    x,y,z=point
+    front=max(0,min(1,(-z-.025)/.105));reach=math.exp(-(x/.315)**8)
+    displacement=0;valley=0
+    for level,slope,height,width in ((.876,.25,.029,.056),(1.025,-.31,.031,.053)):
+        value,shadow=shirt_fold_profile(y-level-slope*x,width,height)
+        displacement+=value;valley+=shadow
+    return displacement*front*reach,1-min(.32,valley*.34*front*reach)
+
+
+def cloth_edge_color(obj,value=.56):
+    color=obj.data.color_attributes.new(name='ClothShade',type='FLOAT_COLOR',domain='POINT')
+    for datum in color.data:datum.color=(value,value,value,1)
+    return obj
+
+
+def soften_shirt_fold_tips(obj):
+    """Round only the two accepted fold endings after final garment decimation."""
+    centers=((.282,.985,-.150),(-.295,1.105,-.138))
+    neighbors=[set() for _ in obj.data.vertices]
+    for edge in obj.data.edges:
+        i,j=edge.vertices;neighbors[i].add(j);neighbors[j].add(i)
+    weights=[]
+    for vertex in obj.data.vertices:
+        x,y,z=vertex.co.x,vertex.co.z,-vertex.co.y
+        q=min(((x-cx)/.033)**2+((y-cy)/.030)**2+((z-cz)/.070)**2 for cx,cy,cz in centers)
+        weights.append(max(0,1-q)**2)
+    largest=0
+    for _ in range(2):
+        original=[v.co.copy() for v in obj.data.vertices]
+        for i,vertex in enumerate(obj.data.vertices):
+            if not weights[i] or not neighbors[i]:continue
+            average=sum((original[j] for j in neighbors[i]),Vector())/len(neighbors[i])
+            offset=(average-original[i])*(.48*weights[i])
+            if offset.length>.004:offset*=.004/offset.length
+            vertex.co=original[i]+offset;largest=max(largest,offset.length)
+    colors=obj.data.color_attributes['ClothShade'].data
+    original=[tuple(d.color) for d in colors]
+    for i,datum in enumerate(colors):
+        if not weights[i] or not neighbors[i]:continue
+        strength=.35*weights[i]
+        datum.color=tuple(original[i][k]*(1-strength)+sum(original[j][k] for j in neighbors[i])/len(neighbors[i])*strength for k in range(4))
+    print('SHIRT_FINISH '+str({'moved_vertices':sum(w>0 for w in weights),'maximum_iteration_displacement_m':largest,'centers':centers}))
 
 
 def weld_cloth(a,name,objects,parent,voxel=.014):
@@ -127,17 +218,23 @@ def weld_cloth(a,name,objects,parent,voxel=.014):
             delta=Vector((x,y,z))-Vector((side*cuff_x,.975,-.031))
             along=delta.dot(axis);radial=delta-axis*along
             reach=math.exp(-((radial.length-.108)/.082)**4)*max(0,min(1,(abs(x)-.18)/.09))
-            facing=max(0,-radial.z/max(radial.length,.001))**(.6 if 'coral' in name.lower() else 1.1)
+            facing=max(0,-radial.z/max(radial.length,.001))**(.6 if 'coral' in name.lower() else .48)
             crease=0;valley=0
             coral='coral' in name.lower()
-            folds=((-.033,.028,.024,.018),(-.092,.030,.028,-.014),(-.155,.023,.033,.013)) if coral else ((-.042,.052,.035,.020),(-.132,.048,.037,-.021),(-.213,.035,.038,.017))
-            for offset,amount,width,slant in folds:
-                distance=along-offset-slant*(radial.x*side)/.11
-                trough=math.exp(-((distance-width*1.20)/(width*.68))**2)
-                crease+=amount*math.exp(-(distance/width)**2)-(amount*.56 if coral else .009)*trough
-                valley+=trough
-            v.co+=surface_normal*(crease*reach*facing)
-            shade=1-min(.24,max(0,-crease)/.025*.35*reach*facing) if coral else 1-min(.28,valley*.26*reach*facing)
+            if coral:
+                for offset,amount,width,slant in ((-.033,.028,.024,.018),(-.092,.030,.028,-.014),(-.155,.023,.033,.013)):
+                    distance=along-offset-slant*(radial.x*side)/.11
+                    trough=math.exp(-((distance-width*1.20)/(width*.68))**2)
+                    crease+=amount*math.exp(-(distance/width)**2)-amount*.56*trough
+                    valley+=trough
+                v.co+=surface_normal*(crease*reach*facing)
+                shade=1-min(.24,max(0,-crease)/.025*.35*reach*facing)
+            else:
+                crease,shade=male_sleeve_field((x,y,z))
+                v.co+=surface_normal*crease
+                tension,tension_shade=male_torso_field((x,y,z))
+                v.co.y+=tension
+                shade=min(shade,tension_shade)
             shade=min(shade,1-min(.12,max(0,-fold)/.016*.12*front))
         else:
             # Seated thighs compress into folds at the groin, hips and rolled hems.
@@ -153,10 +250,11 @@ def weld_cloth(a,name,objects,parent,voxel=.014):
         shades.append(shade)
     color=obj.data.color_attributes.new(name='ClothShade',type='FLOAT_COLOR',domain='POINT')
     for datum,shade in zip(color.data,shades):datum.color=(shade,shade,shade,1)
-    mod=obj.modifiers.new('Relax sculpted cloth folds','SMOOTH');mod.factor=.22;mod.iterations=1
+    mod=obj.modifiers.new('Relax sculpted cloth folds','SMOOTH');mod.factor=.12 if 'coral' not in name.lower() else .22;mod.iterations=1
     bpy.ops.object.modifier_apply(modifier=mod.name)
     mod=obj.modifiers.new('Game garment topology','DECIMATE');mod.ratio=.40;mod.use_collapse_triangulate=True
     bpy.ops.object.modifier_apply(modifier=mod.name)
+    if is_shirt and 'coral' not in name.lower():soften_shirt_fold_tips(obj)
     for face in obj.data.polygons:face.use_smooth=True
     obj.select_set(False)
     return obj
@@ -192,12 +290,25 @@ def cloth_hem(a,name,center,axis,radius,mat,parent,depth=1):
             if 'shorts' in name.lower():
                 displacement,fold_shade=shorts_fold_field(p)
                 p+=(right*math.cos(theta)+normal*(math.sin(theta)*depth)).normalized()*displacement
+            elif mat=='shirt':
+                displacement,fold_shade=male_sleeve_field(p)
+                p+=(right*math.cos(theta)+normal*(math.sin(theta)*depth)).normalized()*displacement
             verts.append(tuple(p))
             shades.append((.82,1,.91)[row]*fold_shade)
             if row:faces.append(((row-1)*steps+j,(row-1)*steps+(j+1)%steps,row*steps+(j+1)%steps,row*steps+j))
     hem=a.mesh(name,verts,faces,mat,parent)
     color=hem.data.color_attributes.new(name='ClothShade',type='FLOAT_COLOR',domain='POINT')
     for datum,shade in zip(color.data,shades):datum.color=(shade,shade,shade,1)
+    if mat=='shirt':
+        # One short line sits just inside the turned edge, on its visible arc.
+        points=[]
+        for j in range(12):
+            theta=math.pi*(.18+j/11*.64)
+            radial=(right*math.cos(theta)+normal*(math.sin(theta)*depth)).normalized()
+            p=center-axis*.027+right*(math.cos(theta)*(radius+.010))+normal*(math.sin(theta)*(radius+.010)*depth)
+            displacement,_=male_sleeve_field(p);p+=radial*(displacement+.0015)
+            points.append(tuple(p))
+        cloth_edge_color(a.path('Short cuff stitching',points,.0045,mat,parent),.58)
     return hem
 
 
@@ -371,7 +482,8 @@ def hair_lock(a,head,name,controls,width,depth,mat,secondary=False):
                 if sn<0:relief*=.45
                 # Fiber lines remain subordinate to the large rounded lock.
                 shadow=min(.53,.30*abs(q)**3+.14*groove*abs(sn))
-                tone=.97+.03*math.sin(sum(ord(c) for c in name)*.1)
+                tone={'Left swept fringe':.95,'Left temple wave':.82,'Left shoulder layer':.88,'Right swept fringe':.84,'Right temple wave':.93,'Right shoulder layer':.84}.get(name,.90)
+                tone*=.90+.10*min(1,u/.28)
                 fiber_color=(tone*(1-shadow*.45),tone*(1-shadow*.58),tone*(1-shadow*.70),1)
             else:
                 relief=sn*r*depth*(1+.12*math.cos(angle*5+u*1.6));shade=1
@@ -379,8 +491,8 @@ def hair_lock(a,head,name,controls,width,depth,mat,secondary=False):
             # cross-section avoids the pinched folds caused by clipping vertices.
             embed=0
             if blonde and not secondary:
-                root_blend=min(1,u/.15);root_blend=root_blend*root_blend*(3-2*root_blend)
-                embed=.018*(1-root_blend)
+                root_blend=min(1,u/.23);root_blend=root_blend*root_blend*(3-2*root_blend)
+                embed=.046*(1-root_blend)
             verts.append(tuple(Vector(p)+right*(q*r)+normal*(relief-embed)))
             colors.append(fiber_color if blonde else (shade,shade,shade,1))
             if i:faces.append(((i-1)*sides+k,(i-1)*sides+(k+1)%sides,i*sides+(k+1)%sides,i*sides+k))
@@ -456,21 +568,36 @@ def make_hair(a,head,nina):
     mantle=a.mesh('Contoured blonde hair foundation',verts,faces,'hairN',head)
     mod=mantle.modifiers.new('Hair mass thickness','SOLIDIFY');mod.thickness=.020
     bpy.context.view_layer.objects.active=mantle;bpy.ops.object.modifier_apply(modifier=mod.name)
-    # A continuous scalp-following crown closes the gaps between swept roots.
-    # It sits beneath the outer locks and keeps three-quarter views solid.
-    crown=[];cf=[];cols=40;rings=12
-    scalp=[(1.87,.285,.255,.035),(1.94,.265,.250,.035),(2.01,.202,.200,.036),
-           (2.07,.105,.120,.036),(2.115,.035,.040,.035),(2.137,.002,.003,.035)]
+    # A broad crown is the outer surface above the temples. Roots terminate
+    # beneath it, so the top reads as a single swept mass rather than eight tubes.
+    crown=[];cf=[];crown_colors=[];cols=56;rings=20
+    scalp=[(1.87,.285,.255,.035),(1.94,.270,.251,.035),(2.01,.221,.207,.036),
+           (2.07,.172,.158,.036),(2.12,.109,.100,.035),(2.153,.053,.050,.035),(2.165,.002,.003,.035)]
     for j in range(rings):
         u=j/(rings-1)
         for i in range(cols):
-            angle=i/cols*math.tau;c=math.cos(angle);edge=1.87+.165*max(0,c)**3
-            y=2.137-u*(2.137-edge)
+            angle=i/cols*math.tau;c=math.cos(angle);edge=1.87+.192*max(0,c)**3
+            y=2.165-u*(2.165-edge)
             width,depth,center=[interpolate(scalp,y,k) for k in (1,2,3)]
-            relief=.008*math.sin(angle*11+u*2.8)*math.sin(math.pi*u)**.7
-            crown.append((math.sin(angle)*(width+relief)*.965,y+relief*.45-.008,center-c*(depth+relief)*.965))
+            # Two unequal sweeping planes, with a quiet shallow part. Texture
+            # strands provide the fine structure, not repeated geometric lobes.
+            crown_relief=.0035*math.sin(angle*2+u*1.3)*math.sin(math.pi*u)
+            part=.008*math.exp(-((math.sin(angle)*width-.024)/.026)**2)*max(0,c)*math.sin(math.pi*u)
+            xx=math.sin(angle)*(width+crown_relief)
+            crown.append((xx,y+crown_relief-part,center-c*(depth+crown_relief)))
+            tone=.88-.10*max(0,math.sin(angle))-.17*u**3
+            crown_colors.append((tone,tone*.98,tone*.94,1))
             if j:cf.append(((j-1)*cols+i,(j-1)*cols+(i+1)%cols,j*cols+(i+1)%cols,j*cols+i))
-    a.mesh('Continuous swept-root crown',crown,cf,'hairN',head)
+    cap=a.mesh('Continuous swept-root crown',crown,cf,'hairN',head)
+    attr=cap.data.color_attributes.new(name='HairFibers',type='FLOAT_COLOR',domain='POINT')
+    for datum,color in zip(attr.data,crown_colors):datum.color=color
+    uv=cap.data.uv_layers.new(name='HairUV')
+    for loop in cap.data.loops:
+        j,i=divmod(loop.vertex_index,cols)
+        # Crown growth flows from the off-centre part toward the temple edges.
+        xx,yy,zz=crown[loop.vertex_index]
+        travel=math.sqrt((xx-.024)**2+((zz+.08)*.35)**2)
+        uv.data[loop.index].uv=(.42+(zz+.10)*.55,1-travel/.36)
     locks=[
         ('Left swept fringe',[(.010,2.137,-.105),(-.135,2.110,-.205),(-.267,1.986,-.252),(-.297,1.812,-.280),(-.266,1.635,-.283),(-.310,1.493,-.244)],.053,.76,'hairGold'),
         ('Left temple wave',[(-.012,2.142,-.012),(-.143,2.135,-.100),(-.293,2.015,-.150),(-.346,1.846,-.151),(-.302,1.628,-.192),(-.363,1.435,-.212),(-.316,1.237,-.195),(-.349,1.095,-.110)],.099,.75,'hairN'),
@@ -528,9 +655,26 @@ def make_person(nina,parent,p,a):
             bpy.context.view_layer.objects.active=collar;bpy.ops.object.modifier_apply(modifier=mod.name)
             mod=collar.modifiers.new('Soft collar edge','BEVEL');mod.width=.005;mod.segments=2
             bpy.ops.object.modifier_apply(modifier=mod.name)
+            edge_points=[tuple(v+Vector((0,0,-.006))) for v in (corners[1],corners[2],corners[3])]
+            cloth_edge_color(a.path('Stitched camp collar edge',edge_points,.0055,shirt,root),.58)
         a.path('Gold chain',[(-.086,1.225,-.137),(0,1.145,-.187),(.086,1.225,-.137)],.004,'gold',root)
-        a.path('Button placket',[(.009,.57,-.154),(.009,.83,-.182),(.009,1.075,-.185)],.0045,shirt,root)
-        for y in (.67,.81,.95):a.ell('Linen button',(.012,y,-.186),(.009,.009,.005),'cream',root,10,6)
+        def shirt_front(x,y):
+            width=interpolate(rows,y,1);z=interpolate(rows,y,3)-interpolate(rows,y,2)*math.sqrt(max(0,1-(x/width)**2))
+            front=max(0,min(1,(-z-.025)/.105));old_fold=0
+            for level,slope,amount,fold_width in ((.583,.16,.018,.021),(.654,-.22,.021,.024),(.730,.27,.017,.026),(.804,-.16,.012,.030)):
+                distance=y-level-slope*x
+                old_fold+=amount*(math.exp(-(distance/fold_width)**2)-.55*math.exp(-((distance-fold_width*1.22)/(fold_width*.70))**2))*math.exp(-(x/.29)**6)
+            tension,_=male_torso_field((x,y,z))
+            return z-old_fold*front-tension-.004
+        placket=[(.009,.57+i*.025,shirt_front(.009,.57+i*.025)) for i in range(21)]
+        cloth_edge_color(a.path('Fold-following button placket',placket,.0045,shirt,root),.68)
+        # Dark horn buttons share the existing seam primitive, allowing a separate
+        # upholstery-side material without raising the hero's 42-draw budget.
+        for y in (.67,.81,.95):a.ell('Horn shirt button',(.012,y,shirt_front(.012,y)-.007),(.010,.010,.005),'seam',root,10,6)
+        pocket=[]
+        for x,y in ((-.235,1.018),(-.105,1.018),(-.110,.925),(-.173,.908),(-.230,.925),(-.235,1.018)):
+            pocket.append((x,y,shirt_front(x,y)-.003))
+        cloth_edge_color(a.path('Single breast pocket seam',pocket,.0055,shirt,root),.62)
     shorts='linen' if nina else 'shorts'
     pelvis=loft(a,'Soft shorts hips',[(.32,.207,.135,-.033),(.40,.272,.193,-.047),(.51,.264,.173,.0),(.568,.246,.165,.013)],shorts,root,28,14)
     pants=[pelvis]

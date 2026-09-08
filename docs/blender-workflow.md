@@ -52,7 +52,7 @@ Sources: [Blender macOS command line](https://docs.blender.org/manual/en/5.0/adv
 
 ## Current player asset: Dream Loop candidate
 
-`npm run blender:hero` builds `florida/assets/models/airboat-couple-v6.glb` from `scripts/build-florida-hero.py` and `scripts/florida_characters.py`. Editable source, reports, and review renders go to ignored `artifacts/florida-characters-v6/`. The current export is 4,760,436 bytes, 125,410 triangles, 42 glTF primitives, 27 materials, and nine embedded images. This is the round-seven visual candidate; review and benchmark evidence is recorded in the Dream Loop validation report.
+`npm run blender:hero` builds `florida/assets/models/airboat-couple-v6.glb` from `scripts/build-florida-hero.py` and `scripts/florida_characters.py`. Editable source, reports, and review renders go to ignored `artifacts/florida-characters-v6/`. The current export is 4,820,744 bytes, 125,366 triangles, 42 glTF primitives, 27 materials, and nine embedded images. This is the round-eight visual candidate; review and benchmark evidence is recorded in the Dream Loop validation report.
 
 V6 retains the approved facial albedo, face/eye positions and UVs, articulation pivots, outfits, and blonde Nina. Eight rounded scalp-tangent hair locks with recessed support geometry, sculpted sleeve and shorts folds, dyed linen with weave normals, anatomical face normals, teak grain, upholstered seats, and the larger fan assembly add surface detail. The facial normal map changes light response without resculpting the approved face vertices or eye surfaces. Original likeness photographs remain outside the export.
 
@@ -69,7 +69,7 @@ The builder renders `characters-front.png`, `characters-three-quarter.png`, `cou
 npm run blender:waterfront -- -- --render-only
 ```
 
-The six roots are a waterfront residence, marina hotel, skyline tower, waterfront club, inexpensive distant tower, and canopy cluster. The close buildings model balconies, stepped volumes, pools, pergolas, window frames, planters, furniture, and planted decks. The source GLB contains geometry and twelve shared opaque PBR materials without embedded textures. In the Dream Loop candidate, the exported towers include recessed glazing, separate balcony plates, thin apartment fins and baked local occlusion. `waterfront-art.js` projects surface UVs and applies shared generated material maps after loading. The export totals 2,103,732 bytes and 42,248 triangles. `waterfront-art.js` loads it once, and scene copies share geometry and materials before the existing scenery batching. Low-cost horizon templates use 3,644 triangles for `SkylineFar` and 548 for `CanopyCluster`.
+The six roots are a waterfront residence, marina hotel, skyline tower, waterfront club, inexpensive distant tower, and canopy cluster. The close buildings model balconies, stepped volumes, pools, pergolas, window frames, planters, furniture, and planted decks. The source GLB contains geometry and twelve shared opaque PBR materials without embedded textures. In the Dream Loop candidate, the exported towers include recessed glazing, separate balcony plates, thin apartment fins and baked local occlusion. `waterfront-art.js` projects surface UVs and applies shared generated material maps after loading. The export totals 2,520,260 bytes and 45,656 triangles. `waterfront-art.js` loads it once, and scene copies share geometry and materials before the existing scenery batching. Low-cost horizon templates use 3,644 triangles for `SkylineFar` and 548 for `CanopyCluster`.
 
 `tests/waterfront-art.test.mjs` imports the actual GLB with Three.js and checks named roots, metre-scale dimensions, Y-up placement, finite positions/normals, shared clone resources, opaque materials, no embedded images, and the export budget. The [density correction report](florida-density-rescue-validation.md) describes the earlier untextured runtime. Current refinements and pending checks are recorded in [Dream Loop validation](florida-dream-loop-validation.md). Blender itself does not run in the browser.
 
@@ -80,7 +80,7 @@ Run `npm run blender:vegetation` or `npm run blender:landmarks` through the exis
 
 | Pack | Reusable roots | Current export |
 | --- | --- | --- |
-| Vegetation | Royal/coconut palms, hammock/sea-grape trees, hedge, tree band | 3,159,080 bytes; 19,022 triangles; three materials; one embedded atlas |
+| Vegetation | Royal/coconut palms, hammock/sea-grape trees, hedge, tree band | 3,017,140 bytes; 16,706 triangles; three materials; one embedded atlas |
 | Landmarks | BridgeCauseway and FisheriesRestaurant | 4,959,464 bytes; 71,402 triangles; twelve materials; eight embedded textures |
 
 The foliage pack uses a shared generated leaf atlas with alpha testing and alpha-to-coverage in the game. The landmark pack adds modeled roof, structural, railing, and waterfront detail with generated coastal materials. The imported templates retain shared resources when cloned. Their tests check named roots, dimensions, finite geometry, and export contracts; final live appearance remains a separate check.
@@ -93,3 +93,14 @@ Generated source images live in `florida/assets/textures/`, with exact `.prompt.
 `npm run blender:villas` exports four shared-material villa variants from `scripts/build-florida-villas.py`. The current pack has 1,756,808 bytes, 19,876 triangles, 23 primitives and six materials; generated coastal maps are applied by the loader. Villa0's visible side openings have shaded 0.40 m returns, glazing at 0.42 m, separate inner frames and curtains. Other variants and all four placement bounds are preserved. `npm run blender:yacht` exports the 242,520-byte, 3,602-triangle yacht with six materials and two embedded images.
 
 `planar-reflection.js` corrects the reflected camera's horizontal lens shift for the entry view's off-axis framing. Tests project actual water-plane points through the real and reflected cameras and check that the visible views match. The correction uses the existing Water render pass; it adds neither a depth texture nor a second reflection render. Renderer state and the real camera projection are restored even if reflection rendering fails.
+
+
+## Round-eight material diagnostics
+
+The hero's seat sides now keep independent normals instead of smoothing through the soft top; a direct Three.js-loader comparison confirms the boundary survives export. Cloth uses asymmetric folded profiles and the console has a modeled rolled edge. Face geometry/UVs, embedded images, pivots and world bounds remain unchanged.
+
+The nearest staged towers are two `SkylineFar` instances and one `SkylineTower`. Their old rail cross-sections projected to 0.13–0.20 pixels and nearly disappeared under antialiasing. Revised independent rails project to 0.62–0.95 pixels; slab fronts, downstands, and recessed mullions provide distinct planes. Villa panes explicitly reuse the scene's PMREM with their intended local intensity of 0.9. Without that binding, Three.js used the dimmer global scene intensity.
+
+Palm silhouettes are verified from the actual low camera. Their source winding now points upper leaf faces upward, avoiding shadow-bias self-occlusion. Palm transmission uses shadowed directional light, while the existing non-palm foliage term is preserved. Nineteen fronds form the interior, hanging fans and sparse mature skirt; the number and placement of trees are unchanged.
+
+`intracoastal-height-v2.png` is a new original generated relief source, retained unchanged beside v1 with an exact prompt sidecar. Its filtered luminance drives near-water displacement as well as normals and hull-foam height. The near grid uses 0.18 m spacing, a 0.45 m middle region and a flat outer apron, with the same 131,072 triangles as before. Displacement ends before the stretched apron; the horizon stays continuous.

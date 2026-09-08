@@ -2,8 +2,8 @@ import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 import {flamingo, textSign} from './art.js';
 
 let template;
-export async function loadHeroArt() {
-  const gltf = await new GLTFLoader().loadAsync('./assets/models/airboat-couple-v6.glb');
+export async function loadHeroArt(assetUrl = './assets/models/airboat-couple-v6.glb') {
+  const gltf = await new GLTFLoader().loadAsync(assetUrl);
   template = gltf.scene;
 }
 export function heroAirboat() {

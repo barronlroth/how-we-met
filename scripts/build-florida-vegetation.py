@@ -173,38 +173,43 @@ def palm(name, height, lean, coconut=False):
     for _ in range(26 * 6):
         R.random()
 
-    # Four depth layers: hanging mature skirt, broad lateral fan, sunlit upper
-    # arcs, and short asymmetrical emerging fronds. The upper interior is not
-    # another scaled copy of the outer ring.
-    layers=[(9,5.50,1.36,2.65),(8,5.02,2.35,1.52),
-            (5,3.70,3.24,.68),(4,2.34,3.42,.24)]
-    for ring,(count,reach,rise,drop) in enumerate(layers):
-        phase=(.07,.49,.13,.80)[ring]
-        for i in range(count):
-            angle=i*math.tau/count+phase+detail.uniform(-.25,.25)
+    # Nineteen deliberately grouped fronds replace the 26 evenly filled
+    # radial strips. Broad upper fans, a compact dark core, a sparse hanging
+    # skirt, and two emerging spears have different reach, width, and posture.
+    # These are botanical masses, not four copies of the same radial ring.
+    layers=[
+        dict(role='skirt',angles=(-.25,.95,2.16,3.47,4.98),reach=5.45,rise=1.0,drop=2.85,span=2.20,start=-.20,
+             lengths=(1.08,.88,1.03,.74,.97),widths=(.91,1.12,.83,1.02,.91),tint=(.82,.84,.52)),
+        dict(role='core',angles=(.25,1.05,2.85,3.40,5.10),reach=3.15,rise=1.90,drop=1.28,span=2.62,start=-.04,
+             lengths=(.90,1.12,.80,1.05,.78),widths=(1.05,.86,1.12,.91,.98),tint=(.57,.70,.43)),
+        dict(role='fan',angles=(-.45,.38,1.34,2.32,3.26,4.24,5.25),reach=5.12,rise=2.85,drop=1.38,span=3.82,start=.25,
+             lengths=(1.10,.82,1.00,.90,1.08,.86,1.02),widths=(1.10,.88,1.04,.93,1.08,.94,1.03),tint=(1.0,.99,.48)),
+        dict(role='spear',angles=(2.35,5.55),reach=1.92,rise=3.50,drop=.15,span=1.50,start=.40,
+             lengths=(1.0,.74),widths=(1.0,.79),tint=(.94,1.0,.62)),
+    ]
+    petiole_start=len(plant.parts['PalmCrownshaft'][0])
+    for ring,layer in enumerate(layers):
+        role=layer['role']
+        for i,azimuth in enumerate(layer['angles']):
+            angle=azimuth+detail.uniform(-.13,.13)+(0.28 if coconut else 0)
             direction=Vector((math.cos(angle),0,math.sin(angle)))
             side=Vector((-math.sin(angle),0,math.cos(angle)))
-            # Alternating lengths break the level umbrella edge without
-            # changing the grounded tree height or the established envelope.
-            length=reach*detail.uniform(.77,1.14)*(1.1 if coconut else 1)
-            start=crown+direction*detail.uniform(.02,.18)+Vector((0,ring*.13+detail.uniform(-.18,.18),0))
-            span=(3.05 if coconut else 2.72)*detail.uniform(.87,1.15)
-            if ring==3:
-                span*=detail.uniform(.66,.84)
-            arch=rise*detail.uniform(.89,1.11)
-            fall=drop*detail.uniform(.90,1.19)
-            sweep=detail.uniform(-.74,.74)*(1.15 if coconut else 1)
-            roll=detail.uniform(-.30,.30)
-            droop=detail.uniform(.24,.46) if ring>0 else detail.uniform(.40,.65)
-            left_scale=detail.uniform(.76,1.16)
-            right_scale=detail.uniform(.76,1.16)
-            sunlit=(ring==2 or (ring==1 and i in (0,3,6)) or (ring==3 and i%2==0))
-            tint=(1.0,.99,.49) if sunlit else (detail.uniform(.85,.98),detail.uniform(.88,1),detail.uniform(.63,.83))
-            if ring==0:
-                tint=(tint[0]*.94,tint[1]*.96,tint[2]*.87)
-
+            length=layer['reach']*layer['lengths'][i]*(1.10 if coconut else 1)
+            start=crown+direction*detail.uniform(.02,.14)+Vector((0,layer['start']+detail.uniform(-.10,.10),0))
+            span=layer['span']*layer['widths'][i]*(1.08 if coconut else 1)
+            arch=layer['rise']*detail.uniform(.92,1.08)
+            fall=layer['drop']*detail.uniform(.92,1.08)
+            sweep=detail.uniform(-.64,.64)*(1.15 if coconut else 1)
+            roll=detail.uniform(-.26,.26)
+            # Downward-hanging pinnae expose a broad leaf mass to the low boat
+            # camera; shallow horizontal fans were almost edge-on in the intro.
+            droop=detail.uniform(.82,1.02) if role=='fan' else detail.uniform(.42,.63)
+            left_scale=detail.uniform(.85,1.08)
+            right_scale=detail.uniform(.85,1.08)
+            tint=tuple(c*detail.uniform(.96,1.0) for c in layer['tint'])
             def spine(t):
-                return start+direction*(length*t)+side*(sweep*math.sin(t*math.pi)*t)+Vector((0,arch*math.sin(t*math.pi*.85)-fall*t*t,0))
+                rise_phase=.47 if role=='spear' else .85
+                return start+direction*(length*t)+side*(sweep*math.sin(t*math.pi)*t)+Vector((0,arch*math.sin(t*math.pi*rise_phase)-fall*t*t,0))
 
             def midrib(t):
                 return (.32+.35*t*t) if coconut else .50
@@ -241,15 +246,22 @@ def palm(name, height, lean, coconut=False):
             for half in range(2):
                 sign=1 if half else -1
                 divisions=[0]+[k/13+detail.uniform(-.017,.017) for k in range(1,13)]+[1]
+                # Remove whole pinna clusters at irregular positions. These
+                # .25–.6m apertures survive mipmapping at a 180–240px crown size;
+                # the previous millimetre-scale panel cuts disappeared entirely.
+                missing=set()
+                if role=='skirt':missing={(i*3+half+2)%10+1,(i*5+half+5)%10+1}
+                elif role=='fan' and half==i%2:missing={(i*3+half*4+4)%10+1}
                 for group,(t0,t1) in enumerate(zip(divisions,divisions[1:])):
+                    if group in missing:continue
                     tip_scale=detail.uniform(.90,1.10)
                     tip_lift=detail.uniform(-.17,.14)
                     tip_sweep=detail.uniform(-.10,.10)
-                    opening=detail.uniform(.0005,.003) if 1<group<11 else 0
+                    opening=0
                     shade=detail.uniform(.91,1.0)
                     # A few short groups interrupt the perimeter of mature
-                    # fronds; retain an intact central petiole, no missing cards.
-                    if ring<2 and group in ((i*3+half+2)%10+1,(i*7+half+5)%11+1):
+                    # fronds while retaining an intact central petiole.
+                    if role=='skirt' and group in ((i*3+half+2)%10+1,(i*7+half+5)%11+1):
                         tip_scale*=.90
                         opening*=1.5
                     rows=[]
@@ -279,6 +291,23 @@ def palm(name, height, lean, coconut=False):
             plant.mesh('LeafAtlas',vertices,faces,uv,colors)
             rachis=[tuple(spine(t)) for t in (0,.07,.14)]
             plant.tube(rachis,[.044,.029,.008],mat='PalmCrownshaft',sides=4,color=(.45,.47,.23))
+    # Sculpt inside the previously accepted canopy envelope. Fit each side
+    # about the unchanged crown attachment, preserving the trunk, grounded base,
+    # placements, and exact palm min/max limits while replacing its interior.
+    bounds=((-3.953803539,9.464496613,-6.202106476),(8.521105766,16.498855591,6.668111801)) if coconut else ((-4.905488968,12.166775703,-5.873694420),(6.054396152,19.366111755,5.592139721))
+    foliage=plant.parts['LeafAtlas'][0]
+    source_lo=[min(v[a] for v in foliage) for a in range(3)]
+    source_hi=[max(v[a] for v in foliage) for a in range(3)]
+    def fit(v):
+        return tuple(crown[a]+(v[a]-crown[a])*(bounds[1 if v[a]>=crown[a] else 0][a]-crown[a])/
+                     ((source_hi[a] if v[a]>=crown[a] else source_lo[a])-crown[a]) for a in range(3))
+    plant.parts['LeafAtlas'][0]=[fit(v) for v in foliage]
+    # The atlas's upper leaf surface must be its authored front face. DoubleSide
+    # alone hides reversed winding visually, but downward vertex normals bias
+    # shadow receivers beneath their own leaves and kill transmitted sunlight.
+    plant.parts['LeafAtlas'][1]=[tuple(reversed(face)) for face in plant.parts['LeafAtlas'][1]]
+    shafts=plant.parts['PalmCrownshaft'][0]
+    shafts[petiole_start:]=[fit(v) for v in shafts[petiole_start:]]
     return plant.finish()
 
 
@@ -406,7 +435,7 @@ for palm_root in roots[:2]:
         ('front',(1,10.7,29),(1,9.7,0),35),
         ('quarter',(18,13.7,24),(1,9.7,0),35),
         ('crown',(10,crown_y+4,18),(1,crown_y+.7,0),15),
-        ('game-scale',(10,crown_y+3,24),(1,crown_y+.15,0),16),
+        ('game-scale',(10,crown_y-6.5,24),(1,crown_y+.15,0),16),
     ]:
         # Render the crown at roughly 220 pixels across, comparable to the
         # nearest complete palm in the 1536px title frame. This is an authoring

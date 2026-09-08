@@ -96,3 +96,29 @@ test('facial contour normals add relief without changing eye surfaces or atlas p
  }
  for(const name of ['eyeB','eyeN'])assert.equal(document.materials.find(m=>m.name===name).normalTexture,undefined);
 });
+
+
+test('painted trim retains its topcoat and modeled finish through the game loader',()=>{
+ const paint=document.materials.find(m=>m.name==='cream');
+ const coat=paint.extensions?.KHR_materials_clearcoat;
+ assert.ok(coat?.clearcoatFactor>=.25&&coat.clearcoatFactor<=.4,'painted fiberglass has a restrained clear topcoat');
+ assert.ok(coat.clearcoatRoughnessFactor>=.15&&coat.clearcoatRoughnessFactor<=.3,'the topcoat can resolve a rolling edge highlight');
+ assert.ok(paint.pbrMetallicRoughness.metallicRoughnessTexture,'the original low-frequency paint roughness remains embedded');
+ let lowest=1,highest=0;
+ scene.traverse(o=>{if(!o.isMesh||o.material.name!=='cream')return;
+  assert.ok(o.material.vertexColors&&o.geometry.attributes.color,`${o.name} keeps the authored paint planes`);
+  const color=o.geometry.attributes.color;
+  for(let i=0;i<color.count;i++){lowest=Math.min(lowest,color.getX(i));highest=Math.max(highest,color.getX(i));}
+ });
+ assert.ok(highest-lowest>.2,'top, rolled edge, and side colors survive export instead of becoming uniformly pale');
+});
+
+
+test('firmer upholstery sides retain a separate subdued textile response',()=>{
+ const top=document.materials.find(m=>m.name==='canvas'),side=document.materials.find(m=>m.name==='canvasSide');
+ assert.ok(side,'upholstery sides export their own material');
+ assert.ok(side.pbrMetallicRoughness.roughnessFactor>=top.pbrMetallicRoughness.roughnessFactor+.15);
+ for(let i=0;i<3;i++)assert.ok(side.pbrMetallicRoughness.baseColorFactor[i]<top.pbrMetallicRoughness.baseColorFactor[i],'side dye is quieter than the accepted top');
+ assert.ok(side.extensions.KHR_materials_sheen.sheenColorFactor[0]<top.extensions.KHR_materials_sheen.sheenColorFactor[0]);
+ assert.equal(document.textures[side.pbrMetallicRoughness.baseColorTexture.index].source,document.textures[top.pbrMetallicRoughness.baseColorTexture.index].source,'both panels keep the original linen image source');
+});

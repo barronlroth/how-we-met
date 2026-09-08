@@ -106,7 +106,23 @@ class Villa:
                         colors=[tuple(v*vertical[yy]*horizontal[xx] for v in (.84,.94,1)) for xx,yy in corners]
                         self.quad('glass',points,outward,shades=colors)
             else:self.quad('glass',[p(left,bottom,-.84),p(right,bottom,-.84),p(right,top,-.84),p(left,top,-.84)],outward)
-            part(u,bottom-.025,.08,w+.28,.11,.34,'trim')
+            visible_finish=self.refined and bottom>4 and ((axis=='x' and side<0) or (axis=='z' and side>0))
+            if visible_finish:
+                # Fit a small upward-facing bevel inside the existing sill
+                # bounds. The broad wall, reveal and glass positions do not
+                # move; the sky-facing edge supplies a narrow outer highlight.
+                left_sill=u-(w+.28)/2;right_sill=u+(w+.28)/2
+                cross=[(-.09,bottom-.08),(.25,bottom-.08),(.25,bottom-.05),(.17,bottom+.03),(-.09,bottom+.03)]
+                def sill_point(uu,section):
+                    nn,yy=section
+                    return p(uu,yy,nn*2 if nn<0 else nn)
+                normals=[(0,-1,0),outward,tuple(v+(1 if i==1 else 0) for i,v in enumerate(outward)),(0,1,0)]
+                for edge in range(4):
+                    self.quad('trim',[sill_point(left_sill,cross[edge]),sill_point(right_sill,cross[edge]),
+                                      sill_point(right_sill,cross[edge+1]),sill_point(left_sill,cross[edge+1])],normals[edge])
+                self.quad('trim',[sill_point(left_sill,c) for c in cross],tuple(-v for v in across))
+                self.quad('trim',[sill_point(right_sill,c) for c in cross],across)
+            else:part(u,bottom-.025,.08,w+.28,.11,.34,'trim')
             # Every facade, including the side facing the intro camera, has a
             # separate inner sash. Outer decorative trim remains optional.
             if self.refined:
@@ -128,6 +144,12 @@ class Villa:
                         depth=-.765+(.027 if strip%2 else 0)
                         tint=(.54,.51,.44) if strip%2 else (.77,.73,.64)
                         self.quad('trim',[p(a,bottom+.10,depth),p(b,bottom+.10,depth),p(b,top-.13,depth),p(a,top-.13,depth)],outward,shades=[tint]*4)
+            if visible_finish:
+                # A narrow inner stop is visible behind the accepted cream
+                # sash on the unobscured upper windows; wall/glass depths stay
+                # unchanged. The dark bead resolves at roughly one pixel.
+                for edge in (left+.16,right-.16):part(edge,bottom+h/2,-.79,.06,h-.26,.04,'teak','vertical',.26)
+                for level in (bottom+.16,top-.16):part(u,level,-.79,w-.26,.06,.04,'teak','horizontal',.26)
     def rail(self,x,y,z,width,depth=0):
         self.box((x,y,z),(width,.065,.075),'trim')
         self.box((x,y-.8,z),(width,.045,.055),'trim')
@@ -148,7 +170,7 @@ class Villa:
                 self.box((x,level+1.95,9.6),(.43,3.7,.43),'trim',True)
                 self.box((x,level+.22,9.6),(.68,.15,.65),'trim')
                 self.box((x,level+3.66,9.6),(.7,.16,.67),'trim')
-    def barrel(self,a,b,across,normal,r=.18,end_cap=False):
+    def barrel(self,a,b,across,normal,r=.18,end_cap=False,nose_finish=False):
         a,b,across,normal=map(Vector,(a,b,across,normal))
         vertices=[]
         for row,p in enumerate((a,b)):
@@ -168,14 +190,20 @@ class Villa:
             # Hollow leading lips give each curved tile a dark inner edge. The
             # cap remains inside the old radius and eave envelope.
             inner=[]
+            outward=(a-b).copy();outward.y=0;outward.normalize()
             for i in range(4):
                 angle=i*math.pi/3
-                inner.append(tuple(a+across*math.cos(angle)*(r-.05)+normal*(math.sin(angle)*(r-.05)+.04)))
+                if nose_finish:
+                    # The previous end ring faced downward (N dot Sun < 0).
+                    # A 55mm forward / 85mm downward bevel points partly up,
+                    # catching the existing sun without changing eave pitch.
+                    inner.append(tuple(Vector(vertices[i])+outward*.055+Vector((0,-.085,0))))
+                else:inner.append(tuple(a+across*math.cos(angle)*(r-.05)+normal*(math.sin(angle)*(r-.05)+.04)))
             inward=(b-a).normalized()*.075
             shade=.74+.12*(.5+.5*math.sin(a.x*6.1+a.z*3.7))
             for i in range(3):
-                self.quad('terracotta',[vertices[i],inner[i],inner[i+1],vertices[i+1]],tuple(a-b),shades=[shade]*4)
-                self.quad('terracotta',[inner[i],tuple(Vector(inner[i])+inward),tuple(Vector(inner[i+1])+inward),inner[i+1]],normal,shades=[.31,.22,.22,.31])
+                self.quad('terracotta',[vertices[i],inner[i],inner[i+1],vertices[i+1]],outward+Vector((0,1,0)) if nose_finish else tuple(a-b),shades=[.98 if nose_finish else shade]*4)
+                self.quad('terracotta',[inner[i],tuple(Vector(inner[i])+inward),tuple(Vector(inner[i+1])+inward),inner[i+1]],-normal if nose_finish else normal,shades=[.31,.22,.22,.31])
     def hip_roof(self,x,y,z,w,d,rise=2.35):
         ridge=w*.3
         vertices=[(x-w/2,y,z-d/2),(x+w/2,y,z-d/2),(x+w/2,y,z+d/2),(x-w/2,y,z+d/2),(x-ridge,y+rise,z),(x+ridge,y+rise,z)]
@@ -201,7 +229,9 @@ class Villa:
                 normal.z=side*direction.y;normal.normalize()
                 for j in range(math.ceil(length/1.6)):
                     lo=max(0,j*1.6-.13);hi=min(length,(j+1)*1.6+.08)
-                    self.barrel(a+direction*lo,b if hi==length else a+direction*hi,(1,0,0),normal,end_cap=j==0)
+                    starter=self.refined and side>0 and j==0
+                    if starter:lo=min(.48,hi)
+                    if hi-lo>.03:self.barrel(a+direction*lo,b if hi==length else a+direction*hi,(1,0,0),normal,end_cap=j==0 and not starter)
             count=max(1,math.floor(d/pitch))
             for i in range(count):
                 zz=-d/2+(i+.5)*d/count;reach=1-abs(zz)/(d/2)
@@ -211,7 +241,35 @@ class Villa:
                 direction=(b-a).normalized();normal=Vector((side*direction.y,abs(direction.x),0)).normalized()
                 for j in range(math.ceil(length/1.6)):
                     lo=max(0,j*1.6-.13);hi=min(length,(j+1)*1.6+.08)
-                    self.barrel(a+direction*lo,a+direction*hi,(0,0,1),normal,end_cap=j==0)
+                    starter=self.refined and side<0 and j==0
+                    if starter:lo=min(.48,hi)
+                    if hi-lo>.03:self.barrel(a+direction*lo,a+direction*hi,(0,0,1),normal,end_cap=j==0 and not starter)
+        if self.refined:
+            # Only the +Z and -X eaves face the staged camera. Their old .66m
+            # spacing projected near 8px; a short .42m starter course resolves
+            # at 4–6px while leaving the rest of the roof topology alone.
+            pitch=.42
+            for axis,side,span in [('z',1,w),('x',-1,d)]:
+                count=math.floor(span/pitch);step=span/count
+                for i in range(count):
+                    along=-span/2+(i+.5)*step
+                    if span/2-abs(along)<.42:continue
+                    if axis=='z':
+                        reach=min(1,(w/2-abs(along))/(w*.2))
+                        edge=Vector((x+along,y,z+d/2));peak=Vector((x+along,y+rise*reach,z+d/2*(1-reach)))
+                        across=Vector((1,0,0));outward=Vector((0,0,1))
+                    else:
+                        reach=1-abs(along)/(d/2)
+                        edge=Vector((x-w/2,y,z+along));peak=Vector((x-(w/2-w*.2*reach),y+rise*reach,z+along))
+                        across=Vector((0,0,1));outward=Vector((-1,0,0))
+                    length=(peak-edge).length
+                    if length<.6:continue
+                    direction=(peak-edge).normalized()
+                    normal=Vector((0,abs(direction.z),direction.y)) if axis=='z' else Vector((-direction.y,abs(direction.x),0))
+                    normal.normalize()
+                    self.barrel(edge+outward*.13,edge+direction*.66,across,normal,r=.17,end_cap=True,nose_finish=True)
+                if axis=='z':self.box((x,y-.02,z+d/2+.045),(w-.25,.08,.12),'teak',faces=[1,4],shade=.24)
+                else:self.box((x-w/2-.045,y-.02,z),(.12,.08,d-.25),'teak',faces=[1,5],shade=.24)
         for first,last in [(0,4),(3,4),(1,5),(2,5),(4,5)]:self.tube(vertices[first],vertices[last],.095,'terracotta',6)
     def garden(self,w,variant):
         x=-w/2-4

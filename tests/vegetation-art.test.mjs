@@ -2,7 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
-import { Box3, DoubleSide, Texture, Vector3 } from 'three';
+import { Box3, DoubleSide, MeshStandardMaterial, ShaderChunk, ShaderLib, Texture, Vector3 } from 'three';
+import { configureFoliageMaterial } from '../florida/vegetation-art.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 
 const bytes = await readFile(new URL('../florida/assets/models/vegetation-v1.glb', import.meta.url));
@@ -15,8 +16,8 @@ const atlas = new Texture();
 loader.register(() => ({ name: 'NODE_LEAF_ATLAS', loadTexture: () => Promise.resolve(atlas) }));
 const { scene } = await loader.parseAsync(bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength), '');
 const expected = {
-  PalmRoyal: { size: [10.960, 19.366, 11.466], triangles: 6000, meshes: 3, uv: [0, 0] },
-  PalmCoconut: { size: [12.475, 16.499, 12.870], triangles: 6000, meshes: 3, uv: [.5, .5] },
+  PalmRoyal: { size: [10.960, 19.366, 11.466], triangles: 4500, meshes: 3, uv: [0, 0] },
+  PalmCoconut: { size: [12.475, 16.499, 12.870], triangles: 4500, meshes: 3, uv: [.5, .5] },
   HammockTree: { size: [13.44, 10.58, 13.71], triangles: 5000, meshes: 2, uv: [.5, 0] },
   SeaGrapeTree: { size: [9.89, 7.53, 10.52], triangles: 5000, meshes: 2, uv: [.5, 0] },
   HedgeCluster: { size: [6.07, 1.98, 2.44], triangles: 1500, meshes: 2, uv: [0, .5] },
@@ -107,7 +108,7 @@ test('vegetation export embeds one RGBA PNG and stays within shared resource bud
   assert.equal(png[25], 6, 'RGBA keeps transparent gaps between individual leaves');
   let triangles = 0;
   scene.traverse(mesh => { if (mesh.isMesh) triangles += (mesh.geometry.index?.count ?? mesh.geometry.attributes.position.count) / 3; });
-  assert.ok(triangles <= 22000, `${triangles} kit triangles`);
+  assert.ok(triangles <= 17000, `${triangles} kit triangles`);
 });
 
 // Freeze the non-palm meshes while palm generation evolves. Include geometry,
@@ -138,5 +139,56 @@ test('palm refinements preserve the four non-palm exports exactly', () => {
       return { name: node.name, parts };
     });
     assert.equal(createHash('sha256').update(JSON.stringify(meshes)).digest('hex'), expectedHash, name);
+  }
+});
+
+
+test('palm transmission reuses directional shadows and preserves the other atlas quadrants', () => {
+  const material = new MeshStandardMaterial({ map: atlas, alphaTest: .45, vertexColors: true });
+  assert.equal(configureFoliageMaterial(material), material, 'one shared material');
+  const compile = material.onBeforeCompile;
+  configureFoliageMaterial(material);
+  assert.equal(material.onBeforeCompile, compile, 'configure the shared material once');
+  const shader = { uniforms: {}, fragmentShader: ShaderLib.standard.fragmentShader };
+  compile(shader);
+  const source = shader.fragmentShader;
+  const transmitted = source.indexOf('reflectedLight.directDiffuse+=palmAtlasMask');
+  const directional = source.indexOf('getDirectionalLightInfo(');
+  const shadow = source.indexOf('getShadow( directionalShadowMap');
+  assert.ok(directional >= 0 && shadow > directional && transmitted > shadow, 'transmitted sunlight uses the existing shadowed directional light');
+  assert.ok(source.includes('palmAtlasMask*material.diffuseColor*directLight.color'), 'occluded sunlight cannot fill the inner crown');
+  assert.equal((source.match(/getShadow\(/g) || []).length, (ShaderChunk.lights_fragment_begin.match(/getShadow\(/g) || []).length, 'no additional shadow-map lookup');
+  assert.ok(source.includes('(1.0-palmAtlasMask)*diffuseColor.rgb*vec3(.72,.85,.25)*leafTransmission'), 'non-palm transmission retains its previous expression');
+  assert.equal(material.map, atlas);
+  assert.equal(material.alphaTest, .45);
+  assert.equal(material.alphaToCoverage, true);
+  assert.equal(material.transparent, false);
+  for (const name of Object.keys(expected)) {
+    const mesh = scene.getObjectByName(name + '_LeafAtlas');
+    const uv = mesh.geometry.attributes.uv;
+    for (let i = 0; i < uv.count; i++) {
+      const isPalmQuadrant = (uv.getX(i) < .5) === (uv.getY(i) < .5);
+      assert.equal(isPalmQuadrant, name.startsWith('Palm'), `${name} retains its shader quadrant`);
+    }
+  }
+});
+
+
+test('palm upper surfaces face upward so shadow bias does not self-occlude transmission', () => {
+  for (const name of ['PalmRoyal', 'PalmCoconut']) {
+    const geometry = scene.getObjectByName(name + '_LeafAtlas').geometry;
+    const { position, normal } = geometry.attributes;
+    const indices = geometry.index;
+    let area = 0;
+    let weightedNormalY = 0;
+    for (let i = 0; i < indices.count; i += 3) {
+      const ids = [indices.getX(i), indices.getX(i + 1), indices.getX(i + 2)];
+      const vertices = ids.map(id => new Vector3().fromBufferAttribute(position, id));
+      const triangleArea = vertices[1].sub(vertices[0]).cross(vertices[2].sub(vertices[0])).length() / 2;
+      const averagedNormal = ids.reduce((sum, id) => sum.add(new Vector3().fromBufferAttribute(normal, id)), new Vector3()).normalize();
+      area += triangleArea;
+      weightedNormalY += triangleArea * averagedNormal.y;
+    }
+    assert.ok(weightedNormalY / area > .35, `${name}: upper-side winding must keep the shadow receiver above the thin leaf`);
   }
 });

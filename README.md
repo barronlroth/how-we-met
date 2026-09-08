@@ -6,7 +6,7 @@ Two chapters of Barron and Nina's wedding game: the original pixel-art Toronto p
 
 Run `npm ci`, `npm test`, and `npm run build`, then `npm run preview`. Open `http://127.0.0.1:4179/florida/`.
 
-This worktree contains an in-progress Dream Loop visual iteration. The latest independent review scored 6.6/10 and passed the lighting/color gate; the 8/10 visual target remains open. The latest default-quality race averaged 56.4–59.9 FPS by district. Round-seven assets and the reflection-camera correction are integrated. See [Dream Loop status and validation](docs/florida-dream-loop-validation.md).
+This worktree contains an in-progress Dream Loop visual iteration. The latest independent review scored 6.8/10 and passed the lighting/color gate; the best score is 6.9 and the 8/10 visual target remains open. The round-ten default-quality race averaged 55.4–59.8 FPS by district. Reconstructed water, corrected reflections and localized asset finishing are integrated. See [Dream Loop status and validation](docs/florida-dream-loop-validation.md).
 
 - A/D or left/right arrows steer; S or down arrow brakes; hold it while steering to drift and earn boost. The boat accelerates automatically.
 - Hold Shift to spend Cafecito Boost. Hold Space to fire the deck-mounted water blaster; steer the boat to aim. Escape or P pauses.

@@ -2,7 +2,20 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { loadSurfaceTextures, applySurfaceMaps, applySurfaceUVs } from './materials.js';
 
 const templates = new Map();
+const glassMaterials = new Set();
+const GLASS_ENV_INTENSITY = .9;
 let loading;
+
+/** Keep recessed villa panes on the shared sky map with local reflectance. */
+export function bindVillaEnvironment(scene) {
+  if (!scene.environment) throw new Error('Villa glazing requires the sky environment before binding.');
+  for (const material of glassMaterials) {
+    material.envMap = scene.environment;
+    material.envMapRotation.copy(scene.environmentRotation);
+    material.envMapIntensity = GLASS_ENV_INTENSITY;
+    material.needsUpdate = true;
+  }
+}
 
 /** Four Blender-authored houses retain the previous variant scale and +Z frontage. */
 export function loadVillaArt() {
@@ -37,11 +50,12 @@ export function loadVillaArt() {
           material.color.setHex(0xd2b994);
           applySurfaceMaps(material, textures.teak, { roughness: .7, bumpScale: .014, tileSize: [1.8, 3.6] });
           break;
-      case 'VillaGlass':
+        case 'VillaGlass':
           material.color.setHex(0x314b56);
           material.roughness = .25;
           material.metalness = .08;
-          material.envMapIntensity = .9;
+          material.envMapIntensity = GLASS_ENV_INTENSITY;
+          glassMaterials.add(material);
           material.onBeforeCompile = shader => {
             shader.fragmentShader = shader.fragmentShader.replace('#include <aomap_fragment>', `
               #include <aomap_fragment>

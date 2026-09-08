@@ -36,7 +36,7 @@ def material(name, color, rough=.5, metal=0):
 M = {k:material(k,*v) for k,v in {
     'cream':('eee3cb',.39), 'coral':('d97c5d',.39,.18), 'teal':('387f80',.36,.3),
     'chrome':('c4c9c0',.22,.88), 'rubber':('273b3b',.8), 'teak':('ffffff',.58),
-    'linen':('e8dcc1',.87), 'seam':('71543b',.8), 'canvas':('ded5be',.73),
+    'linen':('e8dcc1',.87), 'seam':('71543b',.8), 'canvas':('ded5be',.73), 'canvasSide':('c7c0ae',.96),
     'skinB':('e4a16e',.64), 'skinN':('de9d6c',.64), 'lipsB':('bf796b',.72),
     'lipsN':('bf735e',.62), 'hairB':('24170e',.67), 'curlLight':('39251a',.67),
     'hairN':('f7f6f2',.65), 'hairGold':('fffdfa',.51), 'eyes':('718e4c',.3),
@@ -141,7 +141,7 @@ normal_pixels=np.ones((256,256,4),dtype=np.float32);normal_pixels[:,:,:3]=normal
 cloth_normal=bpy.data.images.new('Linen weave normal',width=256,height=256);cloth_normal.colorspace_settings.name='Non-Color'
 cloth_normal.pixels.foreach_set(normal_pixels.flatten());cloth_normal.file_format='PNG';cloth_normal.filepath_raw=str(WORK/'linen-normal.png');cloth_normal.save()
 cloth_normal=bpy.data.images.load(str(WORK/'linen-normal.png'));cloth_normal.colorspace_settings.name='Non-Color'
-CLOTH={'linen','shirt','ninaShirt','shorts','canvas'}
+CLOTH={'linen','shirt','ninaShirt','shorts','canvas','canvasSide'}
 for name in CLOTH:
     mat=M[name];nodes=mat.node_tree.nodes;shader=nodes['Principled BSDF']
     tex=nodes.new('ShaderNodeTexImage');tex.image=cloth_image
@@ -156,7 +156,7 @@ for name in CLOTH:
     mat.node_tree.links.new(mix.outputs[2],shader.inputs['Base Color'])
     # glTF exports Sheen Tint but ignores Blender's nonzero Sheen Weight amount.
     shader.inputs['Sheen Weight'].default_value=1
-    shader.inputs['Sheen Tint'].default_value=(.08,.08,.08,1)
+    shader.inputs['Sheen Tint'].default_value=(.02,.02,.02,1) if name=='canvasSide' else (.08,.08,.08,1)
     normal_tex=nodes.new('ShaderNodeTexImage');normal_tex.image=cloth_normal
     normal_map=nodes.new('ShaderNodeNormalMap');normal_map.inputs['Strength'].default_value=.35
     mat.node_tree.links.new(normal_tex.outputs['Color'],normal_map.inputs['Color'])
@@ -180,6 +180,15 @@ nodes=M['cream'].node_tree.nodes;paint_tex=nodes.new('ShaderNodeTexImage');paint
 channels=nodes.new('ShaderNodeSeparateColor');channels.mode='RGB'
 M['cream'].node_tree.links.new(paint_tex.outputs['Color'],channels.inputs['Color'])
 M['cream'].node_tree.links.new(channels.outputs['Green'],nodes['Principled BSDF'].inputs['Roughness'])
+paint_shader=nodes['Principled BSDF']
+paint_shader.inputs['Coat Weight'].default_value=.32
+paint_shader.inputs['Coat Roughness'].default_value=.22
+paint_shade=nodes.new('ShaderNodeVertexColor');paint_shade.layer_name='PaintShade'
+paint_mix=nodes.new('ShaderNodeMix');paint_mix.data_type='RGBA';paint_mix.blend_type='MULTIPLY';paint_mix.inputs[0].default_value=1
+paint_mix.inputs[7].default_value=M['cream'].diffuse_color
+M['cream'].node_tree.links.new(paint_shade.outputs['Color'],paint_mix.inputs[6])
+M['cream'].node_tree.links.new(paint_mix.outputs[2],paint_shader.inputs['Base Color'])
+
 
 # Native golden color from the generated strand source replaces the old flat dye.
 # The two near-neutral factors preserve subtle lock variation without multiplying
@@ -299,7 +308,13 @@ def hull_shape(parent):
         for i in range(n):
             j=(i+1)%n;nextrow=(row+1)%len(section)
             ff.append((row*n+i,row*n+j,nextrow*n+j,nextrow*n+i))
-    mesh('Rolled continuous gunwale cap',vv,ff,'cream',parent)
+    cap=mesh('Rolled continuous gunwale cap',vv,ff,'cream',parent)
+    attr=cap.data.color_attributes.new(name='PaintShade',type='FLOAT_COLOR',domain='POINT')
+    for j,datum in enumerate(attr.data):
+        row,i=divmod(j,n);x,z=outline[i]
+        broad=.95+.035*math.sin(z*.82+x*.55)+.014*math.cos(z*1.9-x*.38)
+        tone=broad*(.82,.94,1,.97,.88,.72,.76)[row]
+        datum.color=(tone,tone*.996,tone*.986,1)
     path('Coral hull inlay',[(x*1.003,.495,z*1.002) for x,z in outline],.032,'coral',parent,True)
     path('Recessed rub rail',[(x*1.006,.43,z*.999) for x,z in outline],.025,'rubber',parent,True)
     # Vertical generated grain and narrow dark caulking are mapped at .28m/plank.
@@ -351,15 +366,15 @@ def hull_shape(parent):
 
 
 def cushion(parent,name,center,size):
-    # Straight panel edges and small corner arcs replace the uniformly swollen
-    # superellipse. The face remains softly padded above a firmer side wall.
-    x,y,z=center;w,h,d=size;verts=[];faces=[];colors=[]
+    # The padded top and tailored side panel have separate normal boundaries.
+    # Shared normals previously turned even straight sides into a single pillow.
+    x,y,z=center;w,h,d=size;verts=[];faces=[];colors=[];flat_faces=[];side_faces=[]
     upright='backrest' in name.lower()
     bolster='bolster' in name.lower();occupied='loaded' in name.lower()
     if bolster:w*=.84;d*=.84
     length=h if upright else d;thickness=d if upright else h
     def place(u,v,padding):return (x+u,y+v,z-padding) if upright else (x+u,y+padding,z+v)
-    radius=min(w,length)*(.19 if bolster else .14 if upright else .115)
+    radius=min(w,length)*(.16 if bolster else .13 if upright else .095)
     outline=[]
     for cx,cv,start in ((w/2-radius,length/2-radius,0),(-w/2+radius,length/2-radius,math.pi/2),(-w/2+radius,-length/2+radius,math.pi),(w/2-radius,-length/2+radius,math.pi*1.5)):
         for i in range(8):
@@ -367,35 +382,51 @@ def cushion(parent,name,center,size):
             outline.append((cx+math.cos(angle)*radius,cv+math.sin(angle)*radius))
     cols=len(outline)
     def load(u,v):
-        if occupied:return .017*math.exp(-(u/(w*.34))**4-((v+.065)/(length*.39))**4)
+        if occupied:return .014*math.exp(-(u/(w*.35))**4-((v+.065)/(length*.40))**4)
         return (.003 if bolster else .008)*math.exp(-(u/(w*.36))**4-(v/(length*.38))**4)
-    sections=[(.90,-.50),(.985,-.48),(1,-.39),(1,.10),(.979,.17),(.981,.21),
-              (1,.25),(.997,.32),(.97,.41),(.87,.49),(.52,.49)]
+    # The repeated .22 ring deliberately splits top normals from side normals.
+    sections=[(.90,-.50),(.995,-.43),(.976,.14),(1,.22),
+              (1,.22),(.987,.29),(.943,.38),(.83,.455),(.50,.475)]
     for j,(scale,height) in enumerate(sections):
         for i,(u,v) in enumerate(outline):
-            xx=u*scale;vv=v*scale
-            yy=height*thickness
-            depression=load(xx,vv) if yy>0 else 0
-            yy-=depression
-            verts.append(place(xx,vv,yy))
-            shade=.87 if height<-.35 else .90 if height<=.10 else .86 if height<.22 else .98 if height<.40 else 1-depression*2.5
-            colors.append((shade,shade,shade,1))
-            if j:faces.append(((j-1)*cols+i,j*cols+i,j*cols+(i+1)%cols,(j-1)*cols+(i+1)%cols))
-    for row,height in ((0,-.5),(len(sections)-1,.49)):
+            xx=u*scale;vv=v*scale;yy=height*thickness
+            depression=load(xx,vv) if j>=4 else 0
+            verts.append(place(xx,vv,yy-depression))
+            # The side panel uses the same textile and dye, with sewn-down
+            # compression and less upward reflected light than the soft top.
+            shade=(.72 if j in (1,2,3) else .78) if j<4 else (.77 if j==4 else .96 if j<7 else 1-depression*2.1)
+            colors.append((shade,shade*.995,shade*.985,1))
+            if j and j!=4:
+                faces.append(((j-1)*cols+i,j*cols+i,j*cols+(i+1)%cols,(j-1)*cols+(i+1)%cols))
+                # Four long side planes stay genuinely planar; corner arcs and
+                # all top planes retain soft interpolated normals.
+                if j<4:
+                    side_faces.append(len(faces)-1)
+                    if i%8==7:flat_faces.append(len(faces)-1)
+    for row,height in ((0,-.5),(len(sections)-1,.475)):
         center_index=len(verts);depression=load(0,0) if height>0 else 0
-        verts.append(place(0,0,height*thickness-depression));shade=1-depression*2.5 if height>0 else .87
-        colors.append((shade,shade,shade,1))
-        for i in range(cols):faces.append((center_index,row*cols+i,row*cols+(i+1)%cols))
+        verts.append(place(0,0,height*thickness-depression));shade=1-depression*2.1 if height>0 else .78
+        colors.append((shade,shade*.995,shade*.985,1))
+        for i in range(cols):
+            faces.append((center_index,row*cols+i,row*cols+(i+1)%cols))
+            if row==0:side_faces.append(len(faces)-1)
     pad=mesh(name,verts,faces,'canvas',parent)
+    pad.data.materials.append(M['canvasSide'])
+    for index in side_faces:pad.data.polygons[index].material_index=1
+    for index in flat_faces:pad.data.polygons[index].use_smooth=False
     color=pad.data.color_attributes.new(name='ClothShade',type='FLOAT_COLOR',domain='POINT')
     for datum,value in zip(color.data,colors):datum.color=value
-    # A narrow fabric join sits inside the modeled recess, not on the padded face.
-    sv=[];sf=[]
-    for j,height in enumerate((.18*thickness-.004,.18*thickness+.004)):
-        for i,(u,v) in enumerate(outline):
-            sv.append(place(u*.982,v*.982,height))
-            if j:sf.append((i,(i+1)%cols,cols+(i+1)%cols,cols+i))
-    mesh('Recessed upholstery joining seam',sv,sf,'seam',parent)
+    # A one-pixel rounded welt remains visible along the same panel boundary;
+    # unlike a flat strip it is not hidden by the adjacent top's turning plane.
+    sv=[];sf=[];sides=6;welt=.0055
+    for i,(u,v) in enumerate(outline):
+        tangent=(Vector(outline[(i+1)%cols])-Vector(outline[(i-1)%cols])).normalized()
+        outward=Vector((tangent.y,-tangent.x))
+        for j in range(sides):
+            angle=math.tau*j/sides;offset=.002+welt*math.cos(angle)
+            sv.append(place(u*1.001+outward.x*offset,v*1.001+outward.y*offset,.22*thickness+welt*math.sin(angle)))
+            sf.append((i*sides+j,i*sides+(j+1)%sides,((i+1)%cols)*sides+(j+1)%sides,((i+1)%cols)*sides+j))
+    mesh('Rounded upholstery boundary welt',sv,sf,'seam',parent)
     return pad
 
 
@@ -410,6 +441,31 @@ def seat(parent,x,y,z,w):
     for dx in (-.22,.22):
         path('Upholstery channel',[(x+dx*w,y+.18,z+.235),(x+dx*w,y+.37,z+.233),(x+dx*w,y+.67,z+.25)],.004,'seam',parent)
     box('Seat base shell',(x,y-.105,z+.06),(w*.92,.09,.73),'cream',parent,.042)
+
+def dashboard(parent):
+    w=.99;d=.59;radius=.074;outline=[]
+    for cx,cz,start in ((w/2-radius,d/2-radius,0),(-w/2+radius,d/2-radius,math.pi/2),(-w/2+radius,-d/2+radius,math.pi),(w/2-radius,-d/2+radius,math.pi*1.5)):
+        for i in range(10):
+            angle=start+i/9*math.pi/2
+            outline.append((cx+math.cos(angle)*radius,cz+math.sin(angle)*radius))
+    n=len(outline);verts=[];faces=[];colors=[]
+    # A near-vertical face rolls into a 4 cm curved edge and a quiet flat top.
+    for row,(inset,y,tone) in enumerate(((.009,1.815,.72),(0,1.838,.78),(0,1.905,.82),(.006,1.927,.94),(.023,1.944,1),(.048,1.952,.97),(.115,1.952,.965))):
+        for i,(x,z) in enumerate(outline):
+            verts.append((-.46+x*(1-2*inset/w),y,-1.37+z*(1-2*inset/d)))
+            colors.append((tone,tone*.996,tone*.986,1))
+            if row:faces.append(((row-1)*n+i,(row-1)*n+(i+1)%n,row*n+(i+1)%n,row*n+i))
+    faces.append(tuple(range(6*n,7*n)));faces.append(tuple(reversed(range(n))))
+    panel=mesh('Rolled-edge painted dashboard',verts,faces,'cream',parent)
+    attr=panel.data.color_attributes.new(name='PaintShade',type='FLOAT_COLOR',domain='POINT')
+    for datum,value in zip(attr.data,colors):datum.color=value
+    # The top and long fascia use planar normals. The actual roll between them
+    # stays smoothly curved, so sunlight produces a narrow moving highlight.
+    panel.data.polygons[-2].use_smooth=False
+    for polygon in panel.data.polygons:
+        if polygon.index//n==1 and polygon.index%n%10==9:polygon.use_smooth=False
+    return panel
+
 
 def console_shell(parent):
     verts=[];faces=[];segments=40
@@ -447,7 +503,7 @@ def boat():
     box('Driver footrest',(-.46,1.147,-1.24),(.66,.075,.45),'rubber',fixed,.035)
     for x in (-.74,-.18):path('Footrest support',[(x,.75,-1.22),(x,1.12,-1.22)],.023,'chrome',fixed)
     console_shell(fixed)
-    box('Dashboard',(-.46,1.88,-1.37),(.99,.14,.59),'cream',fixed,.08)
+    dashboard(fixed)
     path('Dashboard rolled metal lip',[(-.865,1.917,-1.616),(-.46,1.923,-1.638),(-.055,1.917,-1.616)],.022,'chrome',fixed)
     for x in (-.75,-.46,-.18):
         ell('Gauge face',(x,1.962,-1.37),(.078,.008,.078),'rubber',fixed)
@@ -466,6 +522,9 @@ def boat():
             for y in (1.38,1.45,1.52,1.59):path('Cooling fin',[(side*.2,y,z-.16),(side*.5,y,z-.16),(side*.57,y,z+.12)],.016,'rubber',fixed)
         path('Exhaust manifold',[(side*.49,1.5,1.1),(side*.72,1.25,1.58),(side*.72,1.14,2.47)],.056,'chrome',fixed)
         path('Fan support',[(side*.88,.84,1.06),(side*1.04,2.49,2.1),(side*.85,.84,2.72)],.044,'coral',fixed)
+        path('Dark cage support collar',[(side*1.030,2.408,2.055),(side*1.04,2.489,2.10),(side*1.030,2.412,2.147)],.056,'rubber',fixed)
+        ell('Cage support collar fastener',(side*1.04,2.477,2.040),(.021,.021,.008),'chrome',fixed,12,8)
+        ring('Cage attachment washer',(side*1.04,2.477,2.031),.022,.0035,'chrome',fixed,'xy',12)
     box('Engine cover',(0,1.84,1.46),(.8,.18,.67),'teal',fixed,.07)
     box('Battery',(-.91,1.0,1.53),(.4,.33,.49),'rubber',fixed,.025)
     box('Cooler',(.96,1.03,.37),(.6,.59,.71),'teal',fixed,.065)
@@ -539,6 +598,11 @@ for obj in [o for o in bpy.data.objects if o.type=='MESH' and any(m and m.name i
     if obj.data.color_attributes.get('ClothShade') is None:
         attr=obj.data.color_attributes.new(name='ClothShade',type='FLOAT_COLOR',domain='POINT')
         for datum in attr.data:datum.color=(1,1,1,1)
+for obj in [o for o in bpy.data.objects if o.type=='MESH' and any(m and m.name=='cream' for m in o.data.materials)]:
+    if obj.data.color_attributes.get('PaintShade') is None:
+        attr=obj.data.color_attributes.new(name='PaintShade',type='FLOAT_COLOR',domain='POINT')
+        for datum in attr.data:datum.color=(1,1,1,1)
+
 # Merge fixed geometry by shared material within each articulation node.
 # This keeps the authored details cheap to submit in Three.js.
 for parent in [o for o in list(bpy.data.objects) if o.type=='EMPTY']:

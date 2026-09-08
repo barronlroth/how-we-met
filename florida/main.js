@@ -13,7 +13,7 @@ import {loadLandmarkArt} from './landmark-art.js';
 import {loadSkyArt} from './sky.js';
 import {loadWaterArt} from './water.js';
 import {loadYachtArt} from './yacht-art.js';
-import {loadVillaArt} from './villa-art.js';
+import {loadVillaArt,bindVillaEnvironment} from './villa-art.js';
 import {makeWorld,makeWater,makeSky,SUN} from './world.js';
 import {makeEffects,makeWaterCannon,loadEffectArt} from './effects.js';
 import {makeTargetHealth} from './target-health.js';
@@ -183,7 +183,7 @@ async function boot(){
  sunshine=new T.DirectionalLight(0xffecd1,5.2);sunshine.castShadow=true;sunshine.shadow.mapSize.set(2048,2048);Object.assign(sunshine.shadow.camera,{left:-100,right:100,top:100,bottom:-100,near:1,far:280});sunshine.shadow.normalBias=.018;sunshine.shadow.bias=-.00008;sunshine.shadow.radius=2;scene.add(sunshine,sunshine.target);
  portraitFill=new T.PointLight(0xfff6e8,65,24,2);portraitFill.visible=false;scene.add(portraitFill);
  openingFlamingo=flamingo();openingFlamingo.scale.setScalar(2.4);scene.add(openingFlamingo);
- makeSky(scene,renderer);bindWaterfrontEnvironment(scene);water=makeWater(scene);scenery=makeWorld(scene,{multiDraw:renderer.extensions.has('WEBGL_multi_draw')});boat=heroAirboat();scene.add(boat);boat.userData.waterCannon=makeWaterCannon(boat);effects=makeEffects(scene,{reducedMotion,water,boat});targetHealth=makeTargetHealth(scene);
+ makeSky(scene,renderer);bindWaterfrontEnvironment(scene);bindVillaEnvironment(scene);water=makeWater(scene);scenery=makeWorld(scene,{multiDraw:renderer.extensions.has('WEBGL_multi_draw')});boat=heroAirboat();scene.add(boat);boat.userData.waterCannon=makeWaterCannon(boat);effects=makeEffects(scene,{reducedMotion,water,boat});targetHealth=makeTargetHealth(scene);
  (boat.userData.hull||boat.children[0]).traverse(o=>{if(o.isMesh){o.material=o.material.clone();hullMaterials.push({material:o.material,roughness:o.material.roughness,metalness:o.material.metalness})}});
  const models={floater:[floater(0),floater(1),floater(2)],gator:gator(),ramp:ramp(),wake:boatWake(),coffee:pickup('coffee'),flamingo:pickup('flamingo'),sunscreen:pickup('sunscreen'),taxi:waterTaxi(),yacht:superyacht(1)};
  for(const [i,o]of race.objects.entries()){const m=(o.type==='floater'?models.floater[i%3]:models[o.type])?.clone(true);if(m){if(o.type==='yacht')m.scale.setScalar(o.scale);scene.add(m);entities.set(o.id,m)}}

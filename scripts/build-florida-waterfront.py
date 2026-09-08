@@ -9,6 +9,7 @@ import bmesh
 import json
 import math
 import random
+import subprocess
 import sys
 from pathlib import Path
 from mathutils import Vector
@@ -24,6 +25,8 @@ BALCONY_PROJECTION=1.7
 SLAB_THICKNESS=.7
 RAIL_BOTTOM=1.65
 RAIL_TOP=1.71
+READABLE_RAIL_BOTTOM=1.54
+READABLE_RAIL_TOP=1.82
 
 def xyz(p): return (p[0], -p[2], p[1])
 def linear(v): return v / 12.92 if v <= .04045 else ((v + .055) / 1.055) ** 2.4
@@ -116,7 +119,7 @@ class Building:
                 faces.append((r*n+i,r*n+j,(r+1)*n+j,(r+1)*n+i));shades.append(colors)
         self.mesh('deep_glass',verts,faces,face_occlusion=shades)
 
-    def solid(self, profile, low, high, mat, x=0, z=0, bevel=0):
+    def solid(self, profile, low, high, mat, x=0, z=0, bevel=0, row_shades=None):
         n = len(profile)
         if bevel:
             b = min(bevel, (high-low)*.32)
@@ -129,7 +132,8 @@ class Building:
         faces = [tuple(reversed(range(n))), tuple(range((len(rows)-1)*n,len(rows)*n))]
         for r in range(len(rows)-1):
             faces.extend((r*n+i,r*n+(i+1)%n,(r+1)*n+(i+1)%n,(r+1)*n+i) for i in range(n))
-        self.mesh(mat, verts, faces)
+        shades=[row_shades[r] for r in range(len(rows)) for _ in profile] if row_shades else None
+        self.mesh(mat, verts, faces,occlusion=shades)
 
     def ring(self, outer, inner, low, high, mat, x=0, z=0):
         n = len(outer)
@@ -140,6 +144,33 @@ class Building:
             faces.extend([(i,j,2*n+j,2*n+i),(n+j,n+i,3*n+i,3*n+j),
                           (2*n+i,2*n+j,3*n+j,3*n+i),(j,i,n+i,n+j)])
         self.mesh(mat, verts, faces)
+
+    def handrail(self,outer,inner,low,high,z=0):
+        """A six-sided cap with a bright crown and shaded lower face.
+
+        The intro's actual skyline instances reduce a 60mm rail to 0.13px.
+        This slim cap survives at 0.6–1px independently of the floor edge.
+        """
+        n=len(outer);mid=(low+high)/2
+        section=[(.30,low,.35),(0,mid,.70),(.30,high,1),(.70,high,.90),(1,mid,.40),(.70,low,.30)]
+        verts=[(ox+(ix-ox)*mix,y,z+oz+(iz-oz)*mix) for mix,y,shade in section for (ox,oz),(ix,iz) in zip(outer,inner)]
+        faces=[(r*n+i,r*n+(i+1)%n,((r+1)%6)*n+(i+1)%n,((r+1)%6)*n+i) for r in range(6) for i in range(n)]
+        self.mesh('porcelain',verts,faces,occlusion=[shade for mix,y,shade in section for _ in outer])
+
+    def ceiling_return(self,inner,y,z=0):
+        """A small downstand at the glazing line underneath the balcony.
+
+        Its exposed face and bottom return are modeled; the top and room-side
+        faces remain absent because the slab and glazing conceal them.
+        """
+        outer=[(x+math.copysign(.16,x),dz+math.copysign(.16,dz)) for x,dz in inner]
+        n=len(inner)
+        verts=[(x,h,z+dz) for h in (y-.42,y-.025) for profile in (outer,inner) for x,dz in profile]
+        faces=[]
+        for i in range(n):
+            j=(i+1)%n
+            faces.extend([tuple(reversed((i,j,2*n+j,2*n+i))),tuple(reversed((j,i,n+i,n+j)))])
+        self.mesh('ivory',verts,faces,occlusion=[(.105,.135,.155)]*len(verts))
 
     def tube(self, points, radius, mat, sides=6):
         verts = []
@@ -242,7 +273,7 @@ class Building:
             bmesh.ops.recalc_face_normals(bm,faces=list(bm.faces)); bm.to_mesh(mesh); bm.free()
             # Polygon topology is preserved by recalc_face_normals.
             for face,flag in zip(mesh.polygons,smooth): face.use_smooth=flag
-            if mat in ('deep_glass','ivory'):
+            if mat in ('deep_glass','ivory','porcelain'):
                 # Every mesh sharing either material gets this attribute, with
                 # neutral white elsewhere. GLTFLoader can therefore retain one
                 # shared material per name instead of cloning colored variants.
@@ -289,7 +320,8 @@ def balcony_storey(b, y, width, depth, height, z=0, radius=0, detailed=True):
         inner = [(math.copysign(abs(x)-projection,x),math.copysign(abs(dz)-projection,dz)) for x,dz in outer]
         rail_outer = [(math.copysign(abs(x)-.07,x),math.copysign(abs(dz)-.07,dz)) for x,dz in outer]
         rail_inner = [(math.copysign(abs(x)-.13,x),math.copysign(abs(dz)-.13,dz)) for x,dz in outer]
-    b.solid(outer,y,y+SLAB_THICKNESS,'porcelain',0,z)
+    if detailed:b.solid(outer,y,y+SLAB_THICKNESS,'porcelain',0,z)
+    else:b.solid(outer,y,y+SLAB_THICKNESS,'porcelain',0,z,.10,row_shades=[.70,1,1,1])
     b.occluded_glazing(inner,y+SLAB_THICKNESS+.02,y+height-.06,z)
     # Dark underside is a physical horizontal soffit, never a painted facade
     # strip. This also preserves the recess at horizon LOD (no shadow map).
@@ -297,7 +329,13 @@ def balcony_storey(b, y, width, depth, height, z=0, radius=0, detailed=True):
     vertices=[(x,y-.012,z+dz) for profile in (outer,inner) for x,dz in profile]
     b.mesh('ivory',vertices,[(i,(i+1)%n,n+(i+1)%n,n+i) for i in range(n)],
            occlusion=[(.032,.047,.060)]*len(vertices))
-    b.ring(rail_outer,rail_inner,y+RAIL_BOTTOM,y+RAIL_TOP,'porcelain',0,z)
+    if detailed:b.ring(rail_outer,rail_inner,y+RAIL_BOTTOM,y+RAIL_TOP,'porcelain',0,z)
+    else:
+        # Retain the old rail's outer placement while widening its crown into
+        # the balcony. The whole cap remains behind the existing slab envelope.
+        rail_inner=[(x*.991,dz*.989) for x,dz in rail_inner]
+        b.handrail(rail_outer,rail_inner,y+READABLE_RAIL_BOTTOM,y+READABLE_RAIL_TOP,z)
+        b.ceiling_return(inner,y,z)
     # Individual handrail supports stay light; apartment dividers are authored
     # separately as continuous fins spanning multiple storeys.
     for side in (-1,1):
@@ -325,10 +363,10 @@ def facade_fins(b,low,high,width,depth,z=0,radius=0):
     corners=[(-1,-1,-1),(1,-1,-1),(1,-1,1),(-1,-1,1),(-1,1,-1),(1,1,-1),(1,1,1),(-1,1,1)]
     for side in (-1,1):
         for i in range(-count_x,count_x+1):
-            shades=[1.0 if dz*side>0 else .68 for dx,dy,dz in corners]
+            shades=[(1.0 if dz*side>0 else .68) if b.name=='MarinaHotel' else (.32 if dz*side>0 else .14) for dx,dy,dz in corners]
             b.box((i*spacing,(low+high)/2,z+side*(depth/2-BALCONY_PROJECTION+.13)),(.08,high-low,.34),'ivory',occlusion=shades)
         for i in range(-count_z,count_z+1):
-            shades=[1.0 if dx*side>0 else .68 for dx,dy,dz in corners]
+            shades=[(1.0 if dx*side>0 else .68) if b.name=='MarinaHotel' else (.32 if dx*side>0 else .14) for dx,dy,dz in corners]
             b.box((side*(width/2-BALCONY_PROJECTION+.13),(low+high)/2,z+i*spacing),(.34,high-low,.08),'ivory',occlusion=shades)
 
 
@@ -518,7 +556,7 @@ if '--render-only' not in sys.argv:
 # Keep the editable Blender material in parity with glTF COLOR_0. Export is
 # first so the material's existing baseColorFactor remains unchanged. Render-
 # only runs use the same nodes without modifying the published GLB.
-for key in ('ivory','deep_glass'):
+for key in ('ivory','deep_glass','porcelain'):
     nodes=M[key].node_tree.nodes;links=M[key].node_tree.links;shader=nodes['Principled BSDF']
     color=nodes.new('ShaderNodeVertexColor');color.layer_name='ArchitecturalAO'
     multiply=nodes.new('ShaderNodeMixRGB');multiply.name='Architectural occlusion';multiply.blend_type='MULTIPLY'
@@ -539,15 +577,83 @@ for root in templates:
                                   'dimensions_xyz':[round(hi[0]-lo[0],3),round(hi[2]-lo[2],3),round(hi[1]-lo[1],3)]}
 report['triangles']=sum(x['triangles'] for x in report['templates'].values())
 report['balconies']={'projection_m':BALCONY_PROJECTION,'floor_plate_m':SLAB_THICKNESS,'rail_section_m':RAIL_TOP-RAIL_BOTTOM,
+                     'skyline_rail_section_m':READABLE_RAIL_TOP-READABLE_RAIL_BOTTOM,'skyline_slab_bevel_m':.10,'ceiling_return_height_m':.395,
                      'apartment_bay_m':3.5,'fin_width_m':.08,'fin_relief_m':.3,
                      'storeys':{'MarinaHotel':24,'SkylineTower':27,'SkylineFar':17}}
 report['architectural_ao']={'channel':'COLOR_0','glass_bottom':.92,'glass_middle':1,'glass_top':.5,
-                            'fin_rear':.68,'fin_front':1,'soffit_material':'ivory'}
+                            'hotel_fin_rear':.68,'hotel_fin_front':1,'skyline_fin_rear':.14,'skyline_fin_front':.32,'soffit_material':'ivory'}
 report['glazing']={'pane_spacing_m':3.5,'pane_brightness_linear':[.8,1],
                    'lower_sky_rgb':[.72,.82,.88],'upper_sky_rgb':[.87,.96,1],
                    'glass_env_intensity':.95,'specular_occlusion_exponent':1.35,'material_count_unchanged':True}
 (WORK/'report.json').write_text(json.dumps(report,indent=2)+'\n')
 print('WATERFRONT_ASSET '+json.dumps(report),flush=True)
+
+if '--intro-proof' in sys.argv:
+    # Read the current course camera/transforms without starting a browser.
+    # The proof therefore regenerates from a clean checkout without depending
+    # on an earlier ignored artifact or the old generic hotel camera.
+    layout_script="""
+import {pointAt,halfWidth,COURSE_LENGTH} from './florida/course.js';
+const at=COURSE_LENGTH-165,p=pointAt(at,4),fx=Math.sin(p.heading),fz=-Math.cos(p.heading),nx=Math.cos(p.heading),nz=Math.sin(p.heading),instances=[];
+for(const [i,off] of [[40,27],[41,27]]){
+  const s=i*100+off,seed=Math.abs(i*7+off-1),k=.68+(seed%5)*.14,q=pointAt(s,-(halfWidth(s)+155+(seed%3)*23));
+  instances.push({template:'SkylineFar',label:`SkylineFar@${s}`,position:[q.x,.4,q.z],rotation:-q.heading+Math.PI/2,scale:[k,k*(.52+(seed%4)*.14),k]});
+}
+const q=pointAt(4200,-(halfWidth(4200)+88));
+instances.push({template:'SkylineTower',label:'SkylineTower@4200',position:[q.x,.4,q.z],rotation:-q.heading+Math.PI/2,scale:[1.395,.774,1.35]});
+console.log(JSON.stringify({resolution:[1536,1024],vertical_fov:63,film_offset_x:-.2,camera:[p.x-fx*9+nx*3.8,6,p.z-fz*9+nz*3.8],target:[p.x+fx*12,-.8,p.z+fz*12],instances}));
+"""
+    layout=json.loads(subprocess.run(['node','--input-type=module','-e',layout_script],cwd=ROOT,check=True,capture_output=True,text=True).stdout)
+    (WORK/'intro-layout.json').write_text(json.dumps(layout,indent=2)+'\n')
+    scene=bpy.context.scene;scene.render.engine='CYCLES';scene.cycles.device='CPU';scene.cycles.samples=8;scene.cycles.use_denoising=True
+    scene.render.resolution_x=layout['resolution'][0];scene.render.resolution_y=layout['resolution'][1];scene.render.resolution_percentage=100
+    scene.view_settings.view_transform='Standard'
+    scene.world=bpy.data.worlds.new('Exact intro geometry proof');scene.world.use_nodes=True
+    scene.world.node_tree.nodes['Background'].inputs['Color'].default_value=(.36,.54,.66,1)
+    scene.world.node_tree.nodes['Background'].inputs['Strength'].default_value=1
+    bpy.ops.object.camera_add();camera=bpy.context.object;scene.camera=camera
+    camera.data.type='PERSP';camera.data.sensor_fit='VERTICAL';camera.data.sensor_height=32
+    camera.data.lens=32/(2*math.tan(math.radians(layout['vertical_fov'])/2))
+    camera.data.shift_x=layout['film_offset_x']*layout['resolution'][0]/layout['resolution'][1]
+    camera.location=xyz(layout['camera']);camera.rotation_euler=(Vector(xyz(layout['target']))-camera.location).to_track_quat('-Z','Y').to_euler()
+    def place_proof(source,row):
+        copy=source.copy();bpy.context.collection.objects.link(copy);copy.name=row['label'];copy.rotation_mode='XYZ'
+        copy.location=xyz(row['position']);copy.scale=(row['scale'][0],row['scale'][2],row['scale'][1]);copy.rotation_euler.z=row['rotation']
+        for child in source.children:
+            mesh=child.copy();bpy.context.collection.objects.link(mesh);mesh.parent=copy;mesh.hide_render=False
+        return copy
+    current=[place_proof(next(root for root in templates if root.name==row['template']),row) for row in layout['instances']]
+    for root in templates:
+        for child in root.children:child.hide_render=True
+    previous=[];materials=list(M.values())
+    if '--compare-glb' in sys.argv:
+        existing=set(bpy.data.objects);old_materials=set(bpy.data.materials)
+        bpy.ops.import_scene.gltf(filepath=sys.argv[sys.argv.index('--compare-glb')+1])
+        imported=[obj for obj in bpy.data.objects if obj not in existing]
+        sources=[obj for obj in imported if obj.type=='EMPTY']
+        for row in layout['instances']:
+            source=next(obj for obj in sources if obj.name.split('.')[0]==row['template'])
+            previous.append(place_proof(source,row))
+        materials.extend(mat for mat in bpy.data.materials if mat not in old_materials)
+        for obj in imported:
+            if obj.type=='MESH':obj.hide_render=True
+        for root in previous:
+            for child in root.children:child.hide_render=True
+    for material in materials:
+        nodes=material.node_tree.nodes;links=material.node_tree.links
+        shader=next(node for node in nodes if node.type=='BSDF_PRINCIPLED');output=next(node for node in nodes if node.type=='OUTPUT_MATERIAL')
+        emission=nodes.new('ShaderNodeEmission');emission.inputs['Strength'].default_value=1
+        if shader.inputs['Base Color'].is_linked:links.new(shader.inputs['Base Color'].links[0].from_socket,emission.inputs['Color'])
+        else:emission.inputs['Color'].default_value=shader.inputs['Base Color'].default_value
+        links.new(emission.outputs[0],output.inputs['Surface'])
+    scene.render.filepath=str(WORK/'towers-intro-ambient.png');bpy.ops.render.render(write_still=True)
+    if previous:
+        for root in current:
+            for child in root.children:child.hide_render=True
+        for root in previous:
+            for child in root.children:child.hide_render=False
+        scene.render.filepath=str(WORK/'towers-intro-before.png');bpy.ops.render.render(write_still=True)
+    sys.exit(0)
 
 # Shared sunny authoring scene. Exported building origins are unaffected.
 scene=bpy.context.scene

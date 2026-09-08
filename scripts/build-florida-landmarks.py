@@ -135,6 +135,16 @@ class Asset:
                      for r in range(len(points)-1) for i in range(sides))
         self.mesh(material, verts, faces, True)
 
+    def beveled_sill(self,x,y,z,w,h,d):
+        # A sky-facing leading bevel stays inside the old sill box. Its lower
+        # front and maximum top/front coordinates remain exactly unchanged.
+        low=y-h/2;high=y+h/2;front=z+d/2;back=z-d/2
+        cross=[(back,low),(front,low),(front,high-.08),(front-.08,high),(back,high)]
+        verts=[(xx,yy,zz) for xx in (x-w/2,x+w/2) for zz,yy in cross]
+        faces=[tuple(reversed(range(5))),tuple(range(5,10))]
+        faces.extend((i,(i+1)%5,(i+1)%5+5,i+5) for i in range(4))
+        self.mesh('trim',verts,faces)
+
     def ellipsoid(self, p, size, material, sides=10, rings=6):
         verts = [(p[0]+math.sin(i*math.pi/rings)*math.cos(j*math.tau/sides)*size[0],
                   p[1]+math.cos(i*math.pi/rings)*size[1],
@@ -165,7 +175,7 @@ class Asset:
         faces.extend((r*4+i,r*4+(i+1)%4,(r+1)*4+(i+1)%4,(r+1)*4+i) for r in range(len(points)-1) for i in range(4))
         self.mesh(material,verts,faces)
 
-    def hip_roof(self, x, y, z, w, d, rise, seam=.42, tile_ends=False):
+    def hip_roof(self, x, y, z, w, d, rise, seam=.42, tile_ends=False, eave_finish=False):
         # Four continuous roof planes, raised hip caps, regular standing tile seams.
         ridge = max(0, (w-d) / 2)
         verts = [(x-w/2,y,z-d/2),(x+w/2,y,z-d/2),(x+w/2,y,z+d/2),(x-w/2,y,z+d/2),
@@ -200,9 +210,9 @@ class Asset:
                 if not (tile_ends and side==1 and d/2-zz<1.32):
                     self.tube([(x-half,yy,z+side*zz),(x+half,yy,z+side*zz)],.024,'terracotta',5)
         if tile_ends:
-            self.overlapping_eave_tiles(x,y,z,w,d,rise,seam)
+            self.overlapping_eave_tiles(x,y,z,w,d,rise,seam,eave_finish)
 
-    def overlapping_eave_tiles(self,x,y,z,w,d,rise,pitch):
+    def overlapping_eave_tiles(self,x,y,z,w,d,rise,pitch,finish=False):
         # Two actual barrel-tile courses at the waterfront eaves: curved top,
         # thick exposed nose, and a .12m shingle overlap. Undersides are omitted
         # because the continuous roof below already seals the interior.
@@ -212,22 +222,29 @@ class Asset:
             hip=(w/2-abs(xx))/max(.01,w/2-ridge)
             return y+rise*max(0,min(depth/(d/2),hip))
         for row in range(2):
-            depth0=row*.60-.025;depth1=depth0+.72
+            depth0=row*.60-(.18 if finish else .025);depth1=depth0+.72
             for i in range(count):
                 cx=-w/2+(i+.5)*step
                 if w/2-abs(cx)<depth1*.45: continue
                 verts=[]
                 for depth in (depth0,depth1):
                     for k in range(5):
-                        xx=cx+(k/4-.5)*(step-.018)
-                        roll=.10*math.sin(k*math.pi/4)
+                        xx=cx+(k/4-.5)*(step-(.075 if finish else .018))
+                        roll=(.15 if finish else .10)*math.sin(k*math.pi/4)
                         verts.append((x+xx,roof_y(xx,max(0,depth))+.035+roll,z+d/2-depth))
                 # Open profile ends are backed by a thin terracotta lip. It
                 # gives a dark underside and individually rounded tile ends.
-                verts.extend((vx,vy-.055,vz) for vx,vy,vz in verts[:5])
+                verts.extend((vx,vy-(.085 if finish else .055),vz+(.055 if finish else 0)) for vx,vy,vz in verts[:5])
                 faces=[(k,k+1,6+k,5+k) for k in range(4)]
-                faces.extend((k,10+k,11+k,k+1) for k in range(4))
-                self.mesh('terracotta',verts,faces,True)
+                lip=[(k,10+k,11+k,k+1) for k in range(4)]
+                if finish:
+                    # The exposed leading bevel uses the existing clay. Its
+                    # upward component catches light, while the recessed teak
+                    # strip below remains the shaded gap between tile noses.
+                    self.mesh('terracotta',verts,faces,True)
+                    self.mesh('terracotta',verts,lip)
+                else:self.mesh('terracotta',verts,faces+lip,True)
+        if finish:self.box((x,y+.04,z+d/2+.11),(w-.10,.10,.06),'teak')
 
     def text(self, text, center, width, material='navy'):
         font=bpy.data.curves.new(self.name+'Sign',type='FONT')
@@ -420,17 +437,23 @@ def restaurant():
     for dz in (-1,1):
         for dx in (-3.15,3.15): b.box((.5+dx,11.88,-5.3+dz),(.14,1.85,.13),'trim')
     b.box((.5,12.84,-5.3),(7.05,.23,6.95),'trim')
-    b.hip_roof(.5,13.0,-5.3,8.2,7.8,1.8,.32,tile_ends=True)
+    b.hip_roof(.5,13.0,-5.3,8.2,7.8,1.8,.32,tile_ends=True,eave_finish=True)
     b.tube([(.5,14.8,-5.3),(.5,15.35,-5.3)],.055,'brass')
     # Recessed inner timber frames, projected outer trim and open French-door
     # leaves provide three visibly separate planes under the verandah.
     for i,x in enumerate(front_centers):
         for dx in (-1.67,1.67):b.box((x+dx,4.23,3.245),(.20,5.19,.25),'trim')
         b.box((x,6.85,3.4),(3.6,.19,.35),'trim')
-        b.box((x,1.77,3.20),(3.48,.12,.40),'trim')
+        if i<5:b.beveled_sill(x,1.77,3.20,3.48,.12,.40)
+        else:b.box((x,1.77,3.20),(3.48,.12,.40),'trim')
         for dx in (-1.48,1.48):b.box((x+dx,4.23,2.32),(.12,4.66,.16),'teak')
         for yy in (1.92,6.54):b.box((x,yy,2.32),(3.08,.12,.16),'teak')
         b.box((x,5.68,2.31),(3.00,.10,.14),'teak')
+        if i<5:
+            # The lower jambs are the unobscured inner-frame portions at the
+            # intro camera. A pale stop behind the masonry reads over the dark
+            # timber without changing the opening, glass, or wall depth.
+            for dx in (-1.48,1.48):b.box((x+dx,3.89,2.43),(.075,3.80,.055),'trim')
         # Narrow folded glass leaves flank an unobstructed central aperture;
         # diners and bar structure behind it can receive real window shadows.
         for side in (-1,1):
@@ -449,8 +472,10 @@ def restaurant():
             for yy in (2.83,6.57):b.box((inner+side*.10,yy,z),(.14,.11,2.83),'teak')
         for z in (-13.55,3.0):b.box((face+side*.03,4.54,z),(.3,6.2,.35),'trim')
     # Two-level deep shaded dining canopy: main cover and green canvas valances.
-    b.hip_roof(0,6.07,7.36,33.2,9.8,1.28,.39,tile_ends=True)
-    b.box((0,6.12,12.22),(33.3,.44,.25),'trim')
+    b.hip_roof(0,6.07,7.36,33.2,9.8,1.28,.39,tile_ends=True,eave_finish=True)
+    # The old fascia reached above every tile nose and occluded them. Keep its
+    # lower edge and the sign fixed, but expose the curved noses above it.
+    b.box((0,6.00,12.22),(33.3,.20,.25),'trim')
     for x in (-16,-12,-8,-4,0,4,8,12,16):
         b.box((x,3.68,11.55),(.22,4.85,.22),'trim',.025)
         b.box((x,1.57,11.55),(.36,.6,.36),'stucco',.025)

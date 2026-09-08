@@ -1,6 +1,6 @@
 # Florida Dream Loop — work in progress
 
-The approved visual target is `.dream-loop/concept.png`. The latest independently evaluated frame, round seven, scored **6.6/10 and passed Tier 2**. The 8/10 visual target remains open. The latest default-quality race averaged 56.4–59.9 FPS by district; materials and consistent performance remain under refinement. Branch: `codex/florida-dream-loop`; production acceptance and deployment are pending.
+The approved visual target is `.dream-loop/concept.png`. The latest independently evaluated frame, round ten, scored **6.8/10 and passed Tier 2**; the best score remains 6.9. The 8/10 visual target remains open. The round-ten default-quality race averaged 55.4–59.8 FPS by district. Branch: `codex/florida-dream-loop`; production acceptance and deployment are pending.
 
 ## Visual reviews
 
@@ -13,10 +13,13 @@ The approved visual target is `.dream-loop/concept.png`. The latest independentl
 | 5 | 5.9 | Lighting/color | Repeating water bands, cordlike hair, uniform glazing and palm detail |
 | 6 | 6.2 | Lighting/color | Left reflection bands, smooth cloth/bolsters, shallow openings |
 | 7 | 6.6 | Lighting/color | Foreground wave relief, cloth/upholstery form, architecture/palm separation |
+| 8 | 6.9 | Lighting/color | Foreground wave-face contrast, man's shirt and cushion-side shaping |
+| 9 | 6.9 | Lighting/color | Foreground water's broad, rounded relief; clothing and cushions passed |
+| 10 | 6.8 | Lighting/color | Foreground water too flat; middle ripple pattern still too regular |
 
-Each fresh reviewer compares the approved concept, current live screenshot, previous screenshot, and previous verdict. The latest accepted layout retains the hero boat, three individually staged yachts, bridge, restaurant, and distant channel. Round three passed the overall sky, exposure, palette, and shadow separation. Later work preserves those decisions. Evidence and full directives are under ignored `.dream-loop/candidate-01.png` through `candidate-07.png` and `verdict-01.md` through `verdict-07.md`.
+Each fresh reviewer compares the approved concept, current live screenshot, previous screenshot, and previous verdict. The latest accepted layout retains the hero boat, three individually staged yachts, bridge, restaurant, and distant channel. Round three passed the overall sky, exposure, palette, and shadow separation. Later work preserves those decisions. Evidence and full directives are under ignored `.dream-loop/candidate-01.png` through `candidate-10.png` and `verdict-01.md` through `verdict-10.md`.
 
-Rounds three through seven were captured in the in-app browser at the exact concept dimensions, 1536×1024. Earlier native Safari captures included browser chrome and a roughly 4% aspect difference, which the reviewers excluded. The in-app browser allows WebGL checks while the Mac desktop is locked.
+Rounds three through ten were captured in the in-app browser at the exact concept dimensions, 1536×1024. Earlier native Safari captures included browser chrome and a roughly 4% aspect difference, which the reviewers excluded. The in-app browser allows WebGL checks while the Mac desktop is locked.
 
 ## Measured performance
 
@@ -70,7 +73,7 @@ The real no-fire demo completed in **1:25.09**, with thirteen jumps and seven cl
 | Cove | 56.4 | 33.3 ms | 14.1 ms | 1,358 | 5.08 M |
 | Bridge | 59.0 | 18.3 ms | 10.5 ms | 863 | 4.75 M |
 
-Blender was idle; browser error/warning logs were empty. These are the latest measurements and qualify the earlier 60.0 FPS result: consistent 60 FPS is not yet established, especially in Party Cove. Evidence: `.dream-loop/benchmark-07-detailed.txt` and `.png`.
+Blender was idle; browser error/warning logs were empty. These measurements qualify the earlier 60.0 FPS result: consistent 60 FPS was not established, especially in Party Cove. Evidence: `.dream-loop/benchmark-07-detailed.txt` and `.png`.
 
 ## Integrated round-seven surface work
 
@@ -82,10 +85,44 @@ Blender was idle; browser error/warning logs were empty. These are the latest me
 - Round seven fixes a concrete reflection-camera defect: Water flips the horizontal camera basis but originally retained the same off-axis lens shift. The missing left strip was stretched by texture edge clamping into long parallel bands. Reflecting the lens shift restores the complete shoreline/yacht view. A depth-trace experiment was rejected for noise and cost; the final correction uses the existing reflection pass without an extra depth texture.
 - Surface UV projection now restores exact shared vertices afterward. Rendered triangle corners, hard normals and UV seams remain intact. Alpha-tested foliage stays excluded from the unmasked SSAO normal override and is restored afterward; beauty, reflection and sun-shadow leaves remain.
 
-The latest integrated checkpoint passes **128 tests**, including an independent direct-Fourier-sum check, the periodic real-height-field check, normal/displacement-cache integrity, water-mesh coverage and winding, hull-contact geometry, off-axis reflection coverage and state restoration, collision/muzzle alignment, asset geometry and input/destruction regressions. The build and `git diff --check` pass. These checks verify implementation contracts; they do not establish visual target equivalence.
+The round-seven checkpoint passed **132 tests**, including an independent direct-Fourier-sum check, the periodic real-height-field check, normal/displacement-cache integrity, water-mesh coverage and winding, hull-contact geometry, off-axis reflection coverage and state restoration, collision/muzzle alignment, asset geometry and input/destruction regressions. These checks verify implementation contracts; they do not establish visual target equivalence.
+
+## Round-eight verification
+
+The integrated round-eight capture and self-review are `.dream-loop/candidate-08.png` and `self-review-08.md`. The independent review scored 6.9/10. Architecture and palm construction passed the material gate; foreground wave faces, the man's shirt and cushion-side response remained blocking.
+
+This pass addresses causes found in the actual camera/loader: subpixel tower rails, villa glass receiving the wrong environment intensity, smoothed cushion-side normals, isolated hair-root lobes, shallow positive-only cloth bumps, and downward palm winding that caused self-shadowing. Browser A/B proofs confirm the hero changes; actual projected tower measurements and palm-view checks are retained under ignored authoring artifacts.
+
+Water's dominant foreground relief now uses a new generated source with broader asymmetric ridges. A low-pass removes source grain before constructing normals; the same heights displace the water and attached foam. Near/middle mesh regions keep this displacement out of the stretched horizon apron without adding triangles. The accepted reflection-camera correction remains intact. The source texture and its exact built-in-generation prompt are versioned together in `florida/assets/textures/intracoastal-height-v2.png` and `.prompt.md`.
+
+The final round-eight no-fire race finished in **1:24.15**, with thirteen jumps and seven close calls. At default Detailed, 1536×1024, DPR 1.25 and AA 4, district FPS was **59.5 / 59.9 / 59.9 / 55.8 / 58.6**; p95 frame intervals were **18.4 / 18.3 / 18.1 / 33.3 / 18.6 ms**. Blender was idle. Evidence: `.dream-loop/benchmark-08-detailed.txt` and `.png`.
+
+The round-eight local continuous-fire fixture finished in **1:23.41**, with **345 shots, 138 hits and 34 targets cleared**, twelve jumps and one close call. No projectiles remained live at completion; browser logs contained no errors or warnings. Asset authoring could overlap this functional check, so its timings are retained in `.dream-loop/held-fire-08.txt`/`.png` as context, not a controlled performance comparison. Production builds remove the fixture.
+
+## Round-nine verification
+
+The independent review retained 6.9/10. The man's broad shirt folds and firmer cushion sides passed the material gate, leaving water as the sole material blocker. Actual-loader A/B proofs and exported-asset checks preserve the approved character geometry, images and collision envelope. All 136 tests passed.
+
+The frozen default-quality no-fire race finished in **1:25.10**, with fourteen jumps and seven close calls. At 1536×1024, Detailed, DPR 1.25 and AA 4, district FPS was **57.5 / 59.6 / 60.0 / 57.9 / 57.8**, with p95 intervals **18.7 / 18.4 / 18.5 / 18.7 / 18.7 ms**. CPU render time was **14.8 / 13.2 / 13.1 / 13.8 / 11.9 ms**. Evidence: `.dream-loop/benchmark-09-default.txt`/`.png`.
+
+A local comparison enabling front-to-back sorting of opaque BatchedMesh instances slowed the same route to **56.6 / 57.9 / 54.7 / 51.5 / 55.2 FPS**. That change was rejected; production sorting remains limited to transparent materials. The normal build removes the comparison fixture. Evidence: `.dream-loop/benchmark-09-sorted.txt`/`.png`.
+
+Entry layout was inspected at 390×844, 320×568 and 844×390 without document overflow. A real race at 390×844 also verified the visible Touch steering, Drift, SOAK and Cafecito controls. These are desktop browser layout checks, not phone-hardware performance measurements.
+
+## Round-ten structural water and finishing pass
+
+The new frame is `.dream-loop/candidate-10.png`; its surface-by-surface self-review is `self-review-10.md`. Independent evaluation scored **6.8/10**. The reviewer accepted the removal of oversized domes but found the foreground too flat and the middle ripple pattern too regular. Water remains the sole material-gate blocker. The source, build and all 144 tests pass, including seven numerical relief-field tests and reflection-mask state restoration after successful rendering, exceptions and AO bypass.
+
+Water now uses wind waves as its main shape, with a smaller crossing band and subordinate original-image relief. `relief-field.js` removes DC, filters the source to coherent wavelets, applies bounded horizontal crest compression and derives normals from the full deformation Jacobian. The image source stays unchanged. Preparation runs once during loading; there is no CPU Fourier transform during gameplay. Geometry and foam use the same displacement, mip-filtered to the fine or middle mesh footprint. Vertex count and the flat horizon apron are unchanged.
+
+The existing planar target records opaque shoreline coverage in alpha and transparent black for sky. Its premultiplied edge coverage blends with sky sampled along the wave normal's reflected ray. Ordinary spherical panorama sampling avoids the visible dome's angular cloud-framing transform. Background, clear color/alpha, sky opacity and camera/render state restore in `finally`; the previous off-axis reflection correction remains intact. This adds no reflection pass or depth texture. Physical water Fresnel and restrained image relief reduce the large teal puffs and regular pale loops found during the controlled comparisons; the judge still requires more varied spacing and foreground contrast.
+
+The hero's small finishing pass rounds triangular shirt-fold endings, adds restrained collar/pocket/cuff seams and cushion piping, and resolves small cage attachment collars. The existing broad folds, cushion panels, faces, hair, images and proportions remain verified. Near villa and restaurant tile noses turn toward the existing sunlight, with small dark gaps and lit sill edges. Bridge, sign, navigation bounds, materials and embedded images remain preserved. Actual browser A/B and combined-frame inspection found no regressions in these localized changes.
+
+The frozen no-fire race finished in **1:25.09**, with thirteen jumps and seven close calls. At 1536×1024, Detailed, DPR 1.25 and AA 4, district FPS was **58.5 / 59.8 / 59.7 / 55.4 / 58.6**; p95 frame intervals were **18.3 / 18.3 / 18.4 / 33.3 / 18.5 ms**, and CPU render time was **14.1 / 12.9 / 13.1 / 14.9 / 11.5 ms**. Blender was idle and browser error/warning logs were empty. Party Cove still falls short of consistent 60 FPS. Evidence: `.dream-loop/benchmark-10-default.txt`/`.png`.
 
 ## Responsive checks and remaining verification
 
-The in-app browser entry screen was inspected at 390×844, 320×568, and 844×390 using Touch controls. Portrait camera framing now shows the waterfront and keeps the boat between the title and actions; the small-phone variant fits above the controls. Landscape uses a closer dedicated camera and larger hero. Round-seven desktop entry, complete no-fire race and independent review are recorded above. Final responsive rechecks and continuous-fire checks with these exact assets remain pending. No physical-phone performance measurement has been made.
+The in-app browser entry screen was inspected at 390×844, 320×568, and 844×390 using Touch controls, with the later round-nine active-race check recorded above. Portrait camera framing shows the waterfront and keeps the boat between the title and actions; the small-phone variant fits above the controls. Landscape uses a closer dedicated camera and larger hero. A continuous-fire check with the exact round-ten assets remains pending. No physical-phone performance measurement has been made.
 
 Rebuild commands include `npm run blender:hero`, `blender:waterfront`, `blender:vegetation`, `blender:landmarks`, `blender:yacht`, `blender:villas`, and `npm run art:water`. Authoring proofs live under ignored `artifacts/`. Generated raster sources retain prompt sidecars under `florida/assets/textures/`; the wave cache retains its numerical settings and SHA-256 manifest. Earlier [destruction](florida-destruction-validation.md), [density correction](florida-density-rescue-validation.md), and [district](florida-districts-validation.md) reports describe earlier completed releases.
