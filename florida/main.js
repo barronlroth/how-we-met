@@ -29,7 +29,8 @@ let storage;try{storage=localStorage}catch{storage={getItem:()=>null,setItem:()=
 let race=createRace(),best=loadBest(storage),renderer,composer,scene,camera,boat,scenery,water,effects,targetHealth,sunshine,portraitFill,ambientOcclusion,openingFlamingo;
 let countIn=0,pausedFrom='racing',lastTime=0,time=0,captionUntil=0,deflate=0,shake=0,cameraSnap=true,lastFocus=null,currentSpf=false;
 let captionPriority=0,banterRun=0,banter=createNinaBanter();
-const audio=new GameAudio(),pressed=new Set(),entities=new Map(),rivalModels=[],hullMaterials=[];
+const audio=new GameAudio($('background-music')),pressed=new Set(),entities=new Map(),rivalModels=[],hullMaterials=[];
+audio.setMusicPaused(document.hidden);
 const desiredCamera=new T.Vector3(),lookAt=new T.Vector3(),smoothLook=new T.Vector3();
 let smoothedHeading=0,fps=60,perfFrames=0,perfTime=0;
 const frameProfile=createFrameProfile();
@@ -75,14 +76,14 @@ function resetRace(demo=false){
  if(!renderer)return;race=createRace();race.demo=demo;document.body.classList.toggle('demo-mode',demo);race.status='countdown';resetInput();deflate=0;shake=0;countIn=3;cameraSnap=true;effects.reset();scenery.resetDestruction();frameProfile.reset();
  banter=createNinaBanter(banterRun++);captionUntil=0;captionPriority=0;
  for(const id of ['start','paused','finish'])$(id).hidden=true;for(const id of ['hud','pause','countdown'])$(id).hidden=false;
- $('demo-note').hidden=!demo;$('countdown').textContent='3';document.body.classList.add('racing');setCaption('A little racing before dinner. What could go wrong?',5);$('world').focus({preventScroll:true});syncControls();
+ $('demo-note').hidden=!demo;$('countdown').textContent='3';document.body.classList.add('racing');setCaption('A little racing before dinner. What could go wrong?',5);$('world').focus({preventScroll:true});syncControls();audio.setMusicPaused(document.hidden);
 }
 $('start-race').addEventListener('click',()=>resetRace());$('replay').addEventListener('click',()=>resetRace());$('restart-pause').addEventListener('click',()=>resetRace());$('demo').addEventListener('click',()=>resetRace(true));$('take-wheel').addEventListener('click',()=>resetRace());
 function pauseRace(){
  if(!['racing','countdown','paused'].includes(race.status))return;resetInput();
  if(race.status==='paused'){race.status=pausedFrom;$('paused').hidden=true;document.body.classList.add('racing');$('countdown').hidden=race.status!=='countdown';(lastFocus?.isConnected&&lastFocus.offsetParent!==null?lastFocus:$('world')).focus({preventScroll:true})}
- else{pausedFrom=race.status;race.status='paused';audio.update(0,false);$('paused').hidden=false;$('countdown').hidden=true;document.body.classList.remove('racing');lastFocus=document.activeElement;$('resume').focus({preventScroll:true})}
- syncControls();
+ else{pausedFrom=race.status;race.status='paused';audio.update(0,false,false,true);$('paused').hidden=false;$('countdown').hidden=true;document.body.classList.remove('racing');lastFocus=document.activeElement;$('resume').focus({preventScroll:true})}
+ syncControls();audio.setMusicPaused(race.status==='paused'||document.hidden);
 }
 $('pause').addEventListener('click',pauseRace);$('resume').addEventListener('click',pauseRace);
 window.addEventListener('keydown',event=>{
@@ -99,7 +100,7 @@ window.addEventListener('keydown',event=>{
 });
 window.addEventListener('keyup',e=>pressed.delete(e.code));
 window.addEventListener('blur',()=>{resetInput();if(['racing','countdown'].includes(race.status))pauseRace()});
-document.addEventListener('visibilitychange',()=>{if(document.hidden&&['racing','countdown'].includes(race.status))pauseRace()});
+document.addEventListener('visibilitychange',()=>{if(document.hidden&&['racing','countdown'].includes(race.status))pauseRace();audio.setMusicPaused(document.hidden||race.status==='paused')});
 function resize(){if(!renderer||!camera)return;camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);composer?.setSize(innerWidth,innerHeight)}window.addEventListener('resize',resize);
 window.visualViewport?.addEventListener('resize',resize);
 function orientationChanged(){resetInput();cameraSnap=true;if(['racing','countdown'].includes(race.status))pauseRace();resize()}
@@ -171,7 +172,7 @@ function frame(now){
  const fov=staged?63:race.boosting&&!reducedMotion?84:68;camera.fov=T.MathUtils.lerp(camera.fov,fov,1-Math.exp(-dt*5));camera.updateProjectionMatrix();
  scenery.update(s,camera,staged);water.update(s,time,camera);renderEntities(s);effects.update(race,dt,time,staged?boat:null);targetHealth.update(race,camera);
  sunshine.position.set(p.x+SUN.x*130,130*SUN.y,p.z+SUN.z*130);sunshine.target.position.set(p.x,0,p.z);sunshine.target.updateMatrixWorld();
- audio.update(race.speed,race.status==='racing',race.boosting);renderer.info.reset();renderer.shadowMap.needsUpdate=true;const renderStart=performance.now();composer.render();
+ audio.update(race.speed,race.status==='racing',race.boosting,race.status==='paused');renderer.info.reset();renderer.shadowMap.needsUpdate=true;const renderStart=performance.now();composer.render();
  if(race.status==='racing'&&race.elapsed>5&&!document.hidden&&!$('performance').hidden)frameProfile.sample(sector(race.s),realDt*1000,performance.now()-renderStart,renderer.info.render.calls,renderer.info.render.triangles);
  perfTime+=realDt;perfFrames++;if(perfTime>.5){if(!$('performance').hidden)$('performance').textContent=`${Math.round(perfFrames/perfTime)} fps · ${renderer.info.render.calls} draws · ${Math.round(renderer.info.render.triangles/1000)}k triangles\n${innerWidth}×${innerHeight} · ${graphicsMode} · DPR ${renderer.getPixelRatio()} · ${composer.renderTarget1.samples}× AA · excludes first 5 race seconds\n${frameProfile.summary()}\nWater shots ${race.shots.length} · fired ${race.nextShotId} · hits ${race.soaked} · destroyed ${race.destroyed}\nWater normals ${water.primaryNormalSize}px\nMulti-draw ${renderer.extensions.has('WEBGL_multi_draw')}`;perfTime=0;perfFrames=0}
 }

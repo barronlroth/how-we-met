@@ -1,11 +1,15 @@
-// Original synthesized sound effects and a light tropical marimba loop.
+// Synthesized game effects with a streamed chiptune soundtrack.
 export class GameAudio {
-  constructor(){this.enabled=false;this.ctx=null;this.nextNote=0;this.beat=0}
+  constructor(music=null){this.enabled=false;this.ctx=null;this.music=music;this.musicPaused=false}
   async enable(enabled){
     this.enabled=enabled;
     if(enabled&&!this.ctx){
       const AC=window.AudioContext||window.webkitAudioContext;if(!AC){this.enabled=false;return}
       this.ctx=new AC();this.master=this.ctx.createGain();this.master.gain.value=.42;this.master.connect(this.ctx.destination);
+      if(this.music){
+        this.musicSource=this.ctx.createMediaElementSource(this.music);this.musicGain=this.ctx.createGain();this.musicGain.gain.value=.5;
+        this.musicSource.connect(this.musicGain);this.musicGain.connect(this.master);
+      }
       this.engine=this.ctx.createOscillator();this.engine.type='sawtooth';this.engine.frequency.value=55;
       const filter=this.ctx.createBiquadFilter();filter.type='lowpass';filter.frequency.value=210;this.engineGain=this.ctx.createGain();this.engineGain.gain.value=0;
       this.engine.connect(filter);filter.connect(this.engineGain);this.engineGain.connect(this.master);this.engine.start();
@@ -15,9 +19,25 @@ export class GameAudio {
       this.wind=this.ctx.createBufferSource();this.wind.buffer=noiseBuffer;this.wind.loop=true;
       this.windFilter=this.ctx.createBiquadFilter();this.windFilter.type='lowpass';this.windFilter.frequency.value=1000;this.windGain=this.ctx.createGain();this.windGain.gain.value=0;
       this.wind.connect(this.windFilter);this.windFilter.connect(this.windGain);this.windGain.connect(this.master);this.wind.start();
-      this.nextNote=this.ctx.currentTime;
     }
-    if(this.ctx){await this.ctx.resume();this.master.gain.setTargetAtTime(enabled?.42:0,this.ctx.currentTime,.08)}
+    if(this.ctx){
+      // Start media and resume Web Audio in the same user gesture. Applying the
+      // gain before awaiting also makes rapid mute/unmute clicks order-safe.
+      const resumed=enabled?this.ctx.resume():Promise.resolve();
+      this.master.gain.setTargetAtTime(enabled?.42:0,this.ctx.currentTime,.08);this.syncMusic();await resumed;
+    }
+  }
+  setMusicPaused(paused){
+    if(this.musicPaused===paused)return;
+    this.musicPaused=paused;this.syncMusic();
+  }
+  syncMusic(){
+    if(!this.music)return;
+    if(!this.enabled||this.musicPaused){this.music.pause();return}
+    if(!this.music.paused)return;
+    // A blocked or interrupted media play must not break the game or its SFX.
+    // The next sound toggle or resume gesture can retry without a frame loop.
+    try{this.music.play().catch(()=>{})}catch{}
   }
   tone(freq,duration=.2,type='sine',gain=.2,delay=0,endFreq){
     if(!this.ctx||!this.enabled)return;
@@ -46,16 +66,10 @@ export class GameAudio {
     if(type==='jump')this.tone(180,.4,'sine',.15,0,600);
     if(type==='finish')[523,659,784,1046].forEach((f,i)=>this.tone(f,.55,'triangle',.17,i*.12));
   }
-  update(speed,racing,boosting=false){
+  update(speed,racing,boosting=false,musicPaused=false){
+    this.setMusicPaused(musicPaused);
     if(!this.ctx)return;const now=this.ctx.currentTime;
     this.engine.frequency.setTargetAtTime(45+speed*2.5+(boosting?20:0),now,.09);this.engineGain.gain.setTargetAtTime(racing?.045:0,now,.12);
     this.windGain?.gain.setTargetAtTime(racing?Math.min(.11,speed*.0016)+(boosting?.03:0):0,now,.15);this.windFilter?.frequency.setTargetAtTime(500+speed*32,now,.15);
-    if(!this.enabled||!racing){this.nextNote=now;return}
-    if(now>=this.nextNote){
-      const melody=[76,0,79,83,81,0,79,76,74,0,76,79,76,0,72,0,72,0,76,79,81,79,76,0,74,0,79,81,79,0,74,0];
-      const n=melody[this.beat%melody.length];if(n)this.tone(440*2**((n-69)/12),.21,'sine',.08);
-      if(this.beat%4===0){const bass=[48,45,41,43][Math.floor(this.beat/8)%4];this.tone(440*2**((bass-69)/12),.32,'triangle',.05)}
-      this.beat++;this.nextNote=now+.225;
-    }
   }
 }

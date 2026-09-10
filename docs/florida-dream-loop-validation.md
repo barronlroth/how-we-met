@@ -1,6 +1,6 @@
 # Florida Dream Loop — review checkpoint
 
-The approved visual target is `.dream-loop/concept.png`. The latest independently evaluated frame, round eleven, scored **6.9/10 and passed Tier 2**. The 8/10 visual target remains unmet. After substantial changes to reflection handling, wave construction and normal resolution, the best score stayed at 6.9 for three consecutive rounds. The automatic loop is paused at its stall criterion for human art-direction review. The final default-quality race averaged **58.5–60.0 FPS** by district, and all **156 tests pass**. Branch: `codex/florida-dream-loop`; this checkpoint has not replaced production.
+The approved visual target is `.dream-loop/concept.png`. The latest independently evaluated frame, round eleven, scored **6.9/10 and passed Tier 2**. The 8/10 visual target remains unmet. After substantial changes to reflection handling, wave construction and normal resolution, the best score stayed at 6.9 for three consecutive rounds. The automatic loop is paused at its stall criterion for human art-direction review. The final default-quality race averaged **58.5–60.0 FPS** by district, and all **156 tests passed** at the artwork checkpoint. Branch: `codex/florida-dream-loop`. The user approved publishing this checkpoint, and commit `aff881e` was deployed to production on September 10, 2026.
 
 ## Visual reviews
 
