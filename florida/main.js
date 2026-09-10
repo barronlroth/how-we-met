@@ -71,7 +71,16 @@ const mapPoint=p=>({x:10+(p.x-routeBounds.minX)/(routeBounds.maxX-routeBounds.mi
 function setCaption(text,duration=3.5,priority=2){if(!text||(time<captionUntil&&priority<captionPriority))return;$('nina-line').textContent=text;$('nina').style.opacity='1';captionUntil=time+duration;captionPriority=priority}
 function pulse(color){if(reducedMotion)return;$('flash').style.borderColor=color;$('flash').style.opacity='.42';setTimeout(()=>$('flash').style.opacity='0',130)}
 function showError(error){console.error(error);resetInput();$('touch-controls').hidden=true;$('paused').hidden=true;$('pause').hidden=true;$('start').hidden=true;$('hud').hidden=true;$('error').hidden=false;document.body.classList.remove('racing')}
-$('sound').addEventListener('click',async()=>{try{await audio.enable(!audio.enabled);$('sound').querySelector('span').textContent=audio.enabled?'Sound on':'Sound off';$('sound').setAttribute('aria-pressed',String(audio.enabled));$('sound').setAttribute('aria-label',audio.enabled?'Mute sound':'Turn sound on')}catch{$('sound').querySelector('span').textContent='Unavailable'}});
+function syncSoundButton(){$('sound').querySelector('span').textContent=audio.enabled?'Sound on':'Sound off';$('sound').setAttribute('aria-pressed',String(audio.enabled));$('sound').setAttribute('aria-label',audio.enabled?'Mute sound':'Turn sound on')}
+$('sound').addEventListener('click',async()=>{try{await audio.enable(!audio.enabled);syncSoundButton()}catch{$('sound').querySelector('span').textContent='Unavailable'}});
+// Sound is selected by default, but media starts within a real user gesture.
+// Skip the sound button so a first-click mute never starts or restores audio.
+function activateSound(event){
+ if(!event.isTrusted||event.target.closest?.('#sound')||!audio.enabled)return;
+ if(event.type==='keydown'&&(event.repeat||event.key==='Escape'||event.ctrlKey||event.metaKey||event.altKey))return;
+ audio.activate().then(syncSoundButton).catch(()=>{});
+}
+for(const type of ['pointerup','click','keydown'])window.addEventListener(type,activateSound);
 function resetRace(demo=false){
  if(!renderer)return;race=createRace();race.demo=demo;document.body.classList.toggle('demo-mode',demo);race.status='countdown';resetInput();deflate=0;shake=0;countIn=3;cameraSnap=true;effects.reset();scenery.resetDestruction();frameProfile.reset();
  banter=createNinaBanter(banterRun++);captionUntil=0;captionPriority=0;

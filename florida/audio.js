@@ -1,6 +1,11 @@
 // Synthesized game effects with a streamed chiptune soundtrack.
 export class GameAudio {
-  constructor(music=null){this.enabled=false;this.ctx=null;this.music=music;this.musicPaused=false}
+  constructor(music=null){this.enabled=true;this.ctx=null;this.music=music;this.musicPaused=false}
+  async activate(){
+    if(!this.enabled)return;
+    if(!this.ctx||this.ctx.state!=='running'){await this.enable(true);return}
+    this.syncMusic();
+  }
   async enable(enabled){
     this.enabled=enabled;
     if(enabled&&!this.ctx){
@@ -32,7 +37,7 @@ export class GameAudio {
     this.musicPaused=paused;this.syncMusic();
   }
   syncMusic(){
-    if(!this.music)return;
+    if(!this.music||!this.ctx)return;
     if(!this.enabled||this.musicPaused){this.music.pause();return}
     if(!this.music.paused)return;
     // A blocked or interrupted media play must not break the game or its SFX.

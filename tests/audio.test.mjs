@@ -5,12 +5,13 @@ import {GameAudio} from '../florida/audio.js';
 function musicHarness(){
  const music={paused:true,currentTime:42,plays:0,pauses:0,play(){this.plays++;this.paused=false;return Promise.resolve()},pause(){this.pauses++;this.paused=true}};
  const audio=new GameAudio(music),levels=[];
+ audio.enabled=false;
  audio.ctx={currentTime:1,resume:()=>Promise.resolve()};
  audio.master={gain:{setTargetAtTime:value=>levels.push(value)}};
  return {audio,music,levels};
 }
 
-test('background music is opt-in and mute/pause preserve its place without duplicating playback',async()=>{
+test('mute/pause preserve the track position without duplicating playback',async()=>{
  const {audio,music}=musicHarness();
  audio.setMusicPaused(true);audio.setMusicPaused(false);
  assert.equal(music.plays,0);
@@ -26,6 +27,24 @@ test('background music is opt-in and mute/pause preserve its place without dupli
  await audio.enable(false);assert.equal(music.paused,true);
  audio.setMusicPaused(true);audio.setMusicPaused(false);
  assert.equal(music.plays,2,'visibility changes cannot unmute music');
+});
+
+test('sound defaults on without starting media before the audio graph is activated',async()=>{
+ const {music}=musicHarness(),audio=new GameAudio(music);
+ assert.equal(audio.enabled,true);assert.equal(audio.ctx,null);
+ audio.setMusicPaused(true);audio.setMusicPaused(false);
+ assert.equal(music.plays,0,'visibility changes must not bypass the audio graph');
+ audio.ctx={state:'running'};
+ await audio.activate();
+ assert.equal(music.paused,false);assert.equal(music.plays,1);
+ await audio.activate();assert.equal(music.plays,1);
+});
+
+test('muting before the first gesture prevents subsequent activation from enabling sound',async()=>{
+ const {music}=musicHarness(),audio=new GameAudio(music);
+ await audio.enable(false);
+ await audio.activate();audio.setMusicPaused(true);audio.setMusicPaused(false);
+ assert.equal(audio.enabled,false);assert.equal(audio.ctx,null);assert.equal(music.plays,0);
 });
 
 test('a delayed AudioContext resume cannot undo a newer mute',async()=>{

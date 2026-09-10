@@ -23,8 +23,8 @@ The deployed game includes the Dream Loop artwork. Round eleven scored 6.9/10 an
 - Best times stay in this browser; there is no shared Florida leaderboard or account service.
 - On a phone, steer with the left thumb pad and pull down to brake/drift. Hold Cafecito to boost and SOAK to shoot water. Separate Drift and SOAK buttons sit on the right. Portrait and landscape are supported.
 - Entry and pause settings let you choose Keyboard/Touch controls and Smooth/Detailed graphics. Coarse input defaults to Touch and Smooth; explicit choices persist in this browser. Rotation or switching away pauses the race.
-- A current browser with WebGL 2 is required. Sound is opt-in. Physical-phone performance has not yet been measured.
-- Sound on plays the full 5:49 chiptune arrangement of Grind Mode's “I'm So High” alongside the game effects. Music loops across menus and races, pauses with the game or a hidden tab, and resumes from the same position. It streams only after sound is enabled.
+- A current browser with WebGL 2 is required. Sound defaults on and starts at the first click, tap or keypress. Physical-phone performance has not yet been measured.
+- Sound on plays the full 5:49 chiptune arrangement of Grind Mode's “I'm So High” alongside the game effects. Music loops across menus and races, pauses with the game or a hidden tab, and resumes from the same position. The first interaction starts playback automatically; the sound button still mutes both music and effects.
 
 The runtime is split by responsibility:
 
