@@ -3,11 +3,42 @@ import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 import {Box3, Vector3, Texture, Color} from 'three';
+import {makeCharacterMotion} from '../florida/character-motion.js';
 const bytes=await readFile(process.env.HERO_ART_ASSET??new URL('../florida/assets/models/airboat-couple-v6.glb',import.meta.url));
 const document=JSON.parse(bytes.subarray(20,20+bytes.readUInt32LE(12)));
 const loader=new GLTFLoader();
 loader.register(()=>({name:'NODE_BITMAP_PLACEHOLDER',loadTexture:()=>Promise.resolve(new Texture())}));
 const {scene}=await loader.parseAsync(bytes.buffer.slice(bytes.byteOffset,bytes.byteOffset+bytes.byteLength),'');
+const poseSnapshot = root => {
+ const values=[];root.traverse(o=>values.push(...o.position.toArray(),...o.quaternion.toArray()));return values;
+};
+test('character reactions preserve authored poses, freeze on pause, and reset for replay and reduced motion',()=>{
+ const root=scene.clone(true),before=poseSnapshot(root),motion=makeCharacterMotion(root);
+ const race={status:'racing',turn:.7,y:1,vy:-3};
+ motion.event('near');motion.event('land');
+ for(let i=0;i<12;i++)motion.update(race,1/60);
+ const animated=poseSnapshot(root);assert.notDeepEqual(animated,before);
+ motion.update({...race,status:'paused'},.06);assert.deepEqual(poseSnapshot(root),animated);
+ motion.reset();assert.deepEqual(poseSnapshot(root),before);
+ motion.event('near');motion.update(race,1/60,true);assert.deepEqual(poseSnapshot(root),before);
+ motion.update({...race,status:'ready'},1/60);assert.deepEqual(poseSnapshot(root),before);
+});
+test('character animation remains bounded and independent of render frame rate without added meshes',()=>{
+ const a=scene.clone(true),b=scene.clone(true),ma=makeCharacterMotion(a),mb=makeCharacterMotion(b);
+ const race={status:'racing',turn:1,y:0,vy:0};
+ let count=0;a.traverse(o=>count++);
+ for(let i=0;i<30;i++)ma.update(race,1/30);
+ for(let i=0;i<120;i++)mb.update(race,1/120);
+ const pa=poseSnapshot(a),pb=poseSnapshot(b);
+ for(let i=0;i<pa.length;i++)assert.ok(Math.abs(pa[i]-pb[i])<1e-10);
+ let after=0;a.traverse(o=>after++);assert.equal(after,count);
+ assert.ok(Math.abs(a.getObjectByName('Nina').rotation.z)<.121);
+ const base=scene.getObjectByName('NinaHead').rotation.y;
+ ma.event('near');for(let i=0;i<25;i++)ma.update(race,1/60);
+ assert.ok(a.getObjectByName('NinaHead').rotation.y-base>.1,'Nina turns toward her companion');
+ for(let i=0;i<120;i++)ma.update({...race,turn:0},1/60);
+ assert.ok(Math.abs(a.getObjectByName('NinaHead').rotation.y-base)<1e-6,'reaction returns to forward gaze');
+});
 test('Blender hero loads with the articulated nodes and game coordinate convention',()=>{
  for(const name of ['Hull','Fan','Barron','Nina','PointingArm'])assert.ok(scene.getObjectByName(name),name);
  const nina=scene.getObjectByName('Nina');assert.equal(scene.getObjectByName('PointingArm').parent,nina);

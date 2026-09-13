@@ -1,5 +1,6 @@
 import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 import {flamingo, textSign} from './art.js';
+import {makeCharacterMotion} from './character-motion.js';
 
 let template;
 export async function loadHeroArt(assetUrl = './assets/models/airboat-couple-v6.glb') {
@@ -17,6 +18,6 @@ export function heroAirboat() {
   const floatie = flamingo(true); floatie.visible = false; root.add(floatie);
   const label = textSign('BARRON + NINA',1.8,.23,{font:'900 80px Nunito',bg:'#f7eac9',color:'#1c6566',border:null});
   label.position.set(0,.38,3.08);root.add(label);
-  root.userData = {fan,nina,barron,hull,floatie};
+  root.userData = {fan,nina,barron,hull,floatie,characterMotion:makeCharacterMotion(root)};
   return root;
 }
