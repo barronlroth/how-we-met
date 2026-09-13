@@ -26,6 +26,8 @@ import {bindTouchControls,drivingInput} from './controls.js';
 import {graphicsProfile} from './graphics.js';
 import {createNinaBanter,CHECKPOINT_LINES} from './nina-lines.js';
 const $=id=>document.getElementById(id),reducedMotion=matchMedia('(prefers-reduced-motion: reduce)').matches;
+// Opt-in demo stress run exercises the same held-fire path as player controls.
+const benchmarkFire=new URLSearchParams(location.search).get('benchmarkFire')==='1';
 let storage;try{storage=localStorage}catch{storage={getItem:()=>null,setItem:()=>{}}}
 let race=createRace(),best=loadBest(storage),renderer,composer,scene,camera,boat,scenery,water,effects,targetHealth,sunshine,portraitFill,ambientOcclusion,openingFlamingo,storm;
 let countIn=0,pausedFrom='racing',lastTime=0,time=0,captionUntil=0,deflate=0,shake=0,cameraSnap=true,lastFocus=null,currentSpf=false;
@@ -162,7 +164,7 @@ function frame(now){
  else if(race.status==='racing'){
   if(countIn>-.6){countIn-=dt;if(countIn<=-.6)$('countdown').hidden=true}
   const manual=drivingInput(pressed,touch.state);
-  let left=dt;while(left>0){const step=Math.min(left,1/120);stepRace(race,race.demo?pilotInput(race):manual,step);left-=step}events();
+  let left=dt;while(left>0){const step=Math.min(left,1/120),input=race.demo?pilotInput(race):manual;if(race.demo&&benchmarkFire)input.fire=true;stepRace(race,input,step);left-=step}events();
  }
  const aside=banter.next({status:race.status,elapsed:race.elapsed,captionBusy:captionPriority>=1&&time<captionUntil+1.5});if(aside)setCaption(aside.text,aside.duration,1);
  updateHud();const ready=race.status==='ready',finished=race.status==='finished',staged=ready||finished,s=staged?COURSE_LENGTH-165:race.s,x=staged?4:race.x,p=pointAt(s,x),heading=staged?p.heading:race.heading;
