@@ -1,9 +1,11 @@
 import * as T from 'three';
+import {stormUniform,stormSkyGLSL} from './storm.js';
 
 // The visible dome frames separate cloud groups at this camera's low elevation
 // without filtering them through a small cube. Reflections use the original
 // spherical panorama through waterSkySamplingGLSL below.
 export const skySamplingGLSL=`
+${stormSkyGLSL}
 vec3 sampleFloridaSky(sampler2D panorama,vec3 direction,float rotation,float intensity,float mipBias){
   vec3 ray=normalize(direction);float c=cos(rotation),s=sin(rotation);
   ray=vec3(c*ray.x+s*ray.z,ray.y,-s*ray.x+c*ray.z);
@@ -17,13 +19,14 @@ vec3 sampleFloridaSky(sampler2D panorama,vec3 direction,float rotation,float int
   vec2 gradY=vec2((ray.x*dy.z-ray.z*dy.x)*angularScale,dFdy(uv.y));
   vec3 color=textureGrad(panorama,uv,gradX*exp2(mipBias),gradY*exp2(mipBias)).rgb;
   float luma=dot(color,vec3(.2126,.7152,.0722));
-  return max(vec3(0.0),mix(vec3(luma),color,.95))*intensity;
+  return stormSkyColor(max(vec3(0.0),mix(vec3(luma),color,.95))*intensity);
 }`;
 
 // Water and the PMREM environment use the original spherical panorama. The
 // visible dome's low-elevation cloud framing would clamp most reflected rays
 // onto one latitude and repeat cloud boundaries across every wave shoulder.
 export const waterSkySamplingGLSL=`
+${stormSkyGLSL}
 vec3 sampleWaterSky(sampler2D panorama,vec3 direction,float rotation,float intensity,float mipBias){
   vec3 ray=normalize(direction);float c=cos(rotation),s=sin(rotation);
   ray=vec3(c*ray.x+s*ray.z,ray.y,-s*ray.x+c*ray.z);
@@ -34,7 +37,7 @@ vec3 sampleWaterSky(sampler2D panorama,vec3 direction,float rotation,float inten
   vec2 gradY=vec2((ray.x*dy.z-ray.z*dy.x)*angularScale,dFdy(uv.y));
   vec3 color=textureGrad(panorama,uv,gradX*exp2(mipBias),gradY*exp2(mipBias)).rgb;
   float luma=dot(color,vec3(.2126,.7152,.0722));
-  return max(vec3(0.0),mix(vec3(luma),color,.95))*intensity;
+  return stormSkyColor(max(vec3(0.0),mix(vec3(luma),color,.95))*intensity);
 }`;
 
 let sky, visibleSky;
@@ -64,7 +67,7 @@ export function makeSky(scene,renderer) {
   // small filtered cubemap is appropriate for rough reflections, but softens
   // cumulus edges when used as the full-screen background.
   const material=new T.ShaderMaterial({
-    uniforms:{panorama:{value:visibleSky},rotation:{value:-1.2},intensity:{value:1.03},skyOpacity:skyReflectionOpacity},
+    uniforms:{panorama:{value:visibleSky},rotation:{value:-1.2},intensity:{value:1.03},skyOpacity:skyReflectionOpacity,stormStrength:stormUniform},
     vertexShader:`varying vec3 skyDirection;void main(){skyDirection=position;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);}`,
     fragmentShader:`uniform sampler2D panorama;uniform float rotation;uniform float intensity;uniform float skyOpacity;varying vec3 skyDirection;
       ${skySamplingGLSL}

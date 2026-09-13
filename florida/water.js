@@ -2,6 +2,7 @@ import * as T from 'three';
 import {Water} from 'three/addons/objects/Water.js';
 import {districtAt} from './course.js';
 import {waterSkySamplingGLSL,skyReflectionOpacity} from './sky.js';
+import {stormUniform} from './storm.js';
 import {makeWaterGrid,WATER_GRID_STEP,WATER_GRID_INNER_EXTENT,WATER_GRID_MIDDLE_STEP,WATER_DISPLACEMENT_START,WATER_DISPLACEMENT_END} from './water-grid.js';
 import {fixWaterReflectionFraming} from './planar-reflection.js';
 import {prepareReliefField} from './relief-field.js';
@@ -280,7 +281,7 @@ void main() {
   vec3 body=waterColor*.64*(.86+.20*ndl)*(.92+.16*waves.z);
   body*=.70+.45*ndv;
   body*=mix(1.0,clamp(1.0+waves.y*1.65-waves.x*.50,.52,1.55),.30);
-  body*=mix(.56,1.0,shadow);
+  body*=mix(.56,1.0,shadow)*mix(1.0,.72,stormStrength);
 
   // GGX sun reflection with pixel/mipmap variance: interrupted warm highlights
   // retain their energy as finer ripples become unresolved, without glitter.
@@ -294,7 +295,7 @@ void main() {
   float distribution=roughnessSquared/(3.14159265*denominator*denominator);
   float geometry=smithVisibility(ndv,roughnessSquared)*smithVisibility(max(ndl,.001),roughnessSquared);
   float sunFresnel=.020+.98*pow(1.0-vdh,5.0);
-  vec3 sunReflection=sunColor*(distribution*geometry*sunFresnel/(4.0*ndv))*3.3*shadow;
+  vec3 sunReflection=sunColor*(distribution*geometry*sunFresnel/(4.0*ndv))*3.3*shadow*mix(1.0,.18,stormStrength);
   vec3 outgoingLight=mix(body,reflection,fresnel)+sunReflection;
   gl_FragColor=vec4(outgoingLight,1.0);
   #include <tonemapping_fragment>
@@ -332,6 +333,7 @@ export function makeDreamWater(scene,sunDirection) {
   water.material.uniforms.skySampler={value:scene.background};
   water.material.uniforms.skyRotation={value:-scene.backgroundRotation.y};
   water.material.uniforms.skyIntensity={value:scene.backgroundIntensity};
+  water.material.uniforms.stormStrength=stormUniform;
   fixWaterReflectionFraming(water,skyReflectionOpacity);
   water.rotation.x=-Math.PI/2;water.position.y=.025;scene.add(water);
   const colors={downtown:new T.Color(0x166d74),marina:new T.Color(0x117c82),mangrove:new T.Color(0x2c6e59),cove:new T.Color(0x118e91),bridge:new T.Color(0x14797d)};
